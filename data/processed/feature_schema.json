@@ -1,0 +1,65 @@
+{
+  "version": "Model B (범주 일반화)",
+  "binary_cols": [
+    "Displaced",
+    "Educational special needs",
+    "Debtor",
+    "Tuition fees up to date",
+    "Gender",
+    "Scholarship holder",
+    "International",
+    "Daytime/evening attendance"
+  ],
+  "low_card_categorical": [
+    "Marital status",
+    "Admission_pathway",
+    "Major_field",
+    "Previous_education_level",
+    "Mother_education_level",
+    "Father_education_level",
+    "Mother_occupation_group",
+    "Father_occupation_group"
+  ],
+  "continuous_cols": [
+    "Previous qualification (grade)",
+    "Admission grade",
+    "Age at enrollment",
+    "Curricular units 1st sem (grade)",
+    "Curricular units 2nd sem (grade)",
+    "Application order",
+    "sem1_approval_rate",
+    "sem2_approval_rate",
+    "grade_change"
+  ],
+  "count_cols": [
+    "Curricular units 1st sem (credited)",
+    "Curricular units 1st sem (enrolled)",
+    "Curricular units 1st sem (evaluations)",
+    "Curricular units 1st sem (approved)",
+    "Curricular units 1st sem (without evaluations)",
+    "Curricular units 2nd sem (credited)",
+    "Curricular units 2nd sem (enrolled)",
+    "Curricular units 2nd sem (evaluations)",
+    "Curricular units 2nd sem (approved)",
+    "Curricular units 2nd sem (without evaluations)"
+  ],
+  "flag_cols": [
+    "zero_enrolled_1st_sem",
+    "financial_risk_score"
+  ],
+  "dropped_columns": [
+    "Nacionality",
+    "Unemployment rate",
+    "Inflation rate",
+    "GDP",
+    "Application mode",
+    "Course",
+    "Previous qualification",
+    "Mother's qualification",
+    "Father's qualification",
+    "Mother's occupation",
+    "Father's occupation"
+  ],
+  "final_feature_count": 81,
+  "target_definition": "1=Dropout, 0=Non-Dropout(Graduate+Enrolled)"
+}
