@@ -89,7 +89,9 @@ def plotly_globe(height: int = 380) -> go.Figure:
     fig.update_geos(
         projection_type="orthographic",
         projection_rotation=dict(lon=VIEW_LON, lat=VIEW_LAT),
-        projection_scale=1.06,
+        # 1.0 이 "그리는 영역에 꽉 차는" 크기다. 그보다 크게 잡으면 가장자리가 잘리고,
+        # PORTUGAL 라벨이 마커 오른쪽으로 뻗기 때문에 여유를 더 둔다.
+        projection_scale=0.88,
         showland=True,
         landcolor=PORTUGAL["land"],
         showocean=True,
@@ -112,7 +114,7 @@ def plotly_globe(height: int = 380) -> go.Figure:
     )
     fig.update_layout(
         height=height,
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=6, r=6, t=6, b=6),
         paper_bgcolor="rgba(0,0,0,0)",
         # geo 서브플롯에서 드래그로 지구본을 돌리려면 "pan" 이어야 한다.
         # "orbit"/"turntable" 은 3D scene 전용 값이라 지도에서는 드래그가 아예 먹지 않는다.
