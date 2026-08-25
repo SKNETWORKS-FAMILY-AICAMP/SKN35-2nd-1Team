@@ -1,0 +1,13 @@
+# 발표 PC 의 다크모드 설정 때문에 색이 뒤집히지 않도록 라이트 테마를 고정한다.
+[theme]
+base = "light"
+primaryColor = "#1E4B8F"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FA"
+textColor = "#0F172A"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
