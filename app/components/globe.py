@@ -114,7 +114,9 @@ def plotly_globe(height: int = 380) -> go.Figure:
         height=height,
         margin=dict(l=0, r=0, t=0, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
-        dragmode="orbit",
+        # geo 서브플롯에서 드래그로 지구본을 돌리려면 "pan" 이어야 한다.
+        # "orbit"/"turntable" 은 3D scene 전용 값이라 지도에서는 드래그가 아예 먹지 않는다.
+        dragmode="pan",
         # 마커 trace 를 두 개 겹쳐 광륜을 만들었기 때문에 범례를 켜 두면
         # "trace 1 / trace 2" 가 그대로 노출된다.
         showlegend=False,
@@ -239,6 +241,84 @@ def svg_globe(size: int = 340) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 3. 자동 회전
+# ---------------------------------------------------------------------------
+
+#: 지구본이 저절로 도는가. False 면 드래그로만 돈다.
+AUTOROTATE = True
+
+#: 한 바퀴 도는 데 걸리는 시간(초). 너무 빠르면 발표 중 시선을 뺏는다.
+ROTATION_PERIOD = 42.0
+
+#: 회전 갱신 주기(ms). 짧을수록 부드럽지만 CPU 를 더 쓴다.
+ROTATION_INTERVAL_MS = 70
+
+#: 사용자가 직접 돌린 뒤 자동 회전을 다시 시작하기까지의 대기(ms).
+RESUME_AFTER_MS = 4000
+
+
+def _autorotate_script() -> str:
+    """지구본을 계속 돌리는 스크립트.
+
+    Streamlit 은 <script> 를 살균해 지우므로 `components.v1.html` 의 iframe 에서 실행하고,
+    같은 오리진인 부모 문서의 Plotly 를 불러 회전값만 갱신한다.
+    (Streamlit 이 그린 차트는 부모 문서에 있고 window.Plotly 도 거기 있다.)
+
+    실패해도 화면은 멀쩡하다 — 자동 회전만 멈추고 드래그 회전은 그대로 남는다.
+    """
+    step = 360.0 * ROTATION_INTERVAL_MS / 1000.0 / ROTATION_PERIOD
+    return f"""
+<script>
+(function () {{
+  var parentWin, doc;
+  try {{ parentWin = window.parent; doc = parentWin.document; }}
+  catch (e) {{ return; }}                       // 다른 오리진이면 조용히 포기한다
+  if (!doc) return;
+
+  // 리런될 때마다 이 스크립트가 다시 실행되므로 이전 타이머를 반드시 끈다.
+  if (parentWin.__globeSpinTimer) clearInterval(parentWin.__globeSpinTimer);
+
+  var STEP = {step:.4f};
+  var RESUME_AFTER = {RESUME_AFTER_MS};
+  var pausedUntil = 0;
+  var bound = null;
+
+  function findGlobe() {{
+    var plots = doc.querySelectorAll('.js-plotly-plot');
+    for (var i = 0; i < plots.length; i++) {{
+      var gd = plots[i];
+      if (gd._fullLayout && gd._fullLayout.geo) return gd;
+    }}
+    return null;
+  }}
+
+  function bindPause(gd) {{
+    if (bound === gd) return;
+    bound = gd;
+    // 사용자가 직접 돌리는 동안에는 자동 회전이 끼어들지 않게 한다.
+    gd.addEventListener('mousedown', function () {{ pausedUntil = Date.now() + RESUME_AFTER; }});
+    gd.addEventListener('mousemove', function (e) {{
+      if (e.buttons) pausedUntil = Date.now() + RESUME_AFTER;
+    }});
+  }}
+
+  parentWin.__globeSpinTimer = setInterval(function () {{
+    var Plotly = parentWin.Plotly;
+    var gd = findGlobe();
+    if (!Plotly || !gd || !gd._fullLayout.geo) return;   // 아직 안 그려졌으면 다음 틱에
+    bindPause(gd);
+    if (Date.now() < pausedUntil) return;
+    // 안 보이는 탭은 브라우저가 알아서 타이머를 늦추므로 따로 막지 않는다.
+    var lon = gd._fullLayout.geo.projection.rotation.lon - STEP;
+    if (lon < -180) lon += 360;
+    Plotly.relayout(gd, {{'geo.projection.rotation.lon': lon}});
+  }}, {ROTATION_INTERVAL_MS});
+}})();
+</script>
+"""
+
+
+# ---------------------------------------------------------------------------
 # 화면이 부르는 단일 진입점
 # ---------------------------------------------------------------------------
 
@@ -255,7 +335,13 @@ def render(height: int = 340) -> None:
             config={**PLOTLY_CONFIG, "scrollZoom": False},
             key="home_globe",
         )
-        st.caption("드래그하면 지구본이 회전합니다. 붉게 표시된 곳이 포르투갈입니다.")
+        if AUTOROTATE:
+            from streamlit.components.v1 import html as _component_html
+
+            # 높이 0 — 보이는 것을 그리는 게 아니라 부모 문서의 차트를 돌리기만 한다.
+            _component_html(_autorotate_script(), height=0)
+        st.caption("지구본은 저절로 회전하며, 드래그해서 직접 돌릴 수도 있습니다. "
+                   "붉게 표시된 곳이 포르투갈입니다.")
     else:
         # Streamlit 의 HTML 살균기는 <svg> 를 통째로 걸러낸다 (st.markdown 도 st.html 도 마찬가지).
         # <img> 는 통과하므로 SVG 를 data URI 로 감싸서 넣는다. 여전히 외부 통신은 0이다.

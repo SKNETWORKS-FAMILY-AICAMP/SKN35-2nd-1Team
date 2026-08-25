@@ -405,6 +405,29 @@ class TestGlobeFallback(unittest.TestCase):
         self.assertIn("<polygon", self.svg)                   # 포르투갈 외곽선
         self.assertIn("PORTUGAL", self.svg)
 
+    def test_autorotate_script_clears_previous_timer(self):
+        """리런마다 스크립트가 다시 실행되므로 이전 타이머를 끄지 않으면 회전이 누적돼 빨라진다."""
+        from components.globe import _autorotate_script
+
+        script = _autorotate_script()
+        self.assertIn("clearInterval", script)
+        self.assertIn("__globeSpinTimer", script)
+        self.assertIn("setInterval", script)
+
+    def test_autorotate_step_matches_period(self):
+        """한 바퀴 도는 시간이 설정값과 맞는지 (문구와 실제가 어긋나지 않게)."""
+        import re
+
+        from components.globe import (
+            ROTATION_INTERVAL_MS,
+            ROTATION_PERIOD,
+            _autorotate_script,
+        )
+
+        step = float(re.search(r"var STEP = ([\d.]+);", _autorotate_script()).group(1))
+        seconds_per_turn = 360.0 / (step * 1000.0 / ROTATION_INTERVAL_MS)
+        self.assertAlmostEqual(seconds_per_turn, ROTATION_PERIOD, delta=0.5)
+
     def test_geometry_stays_inside_canvas(self):
         """인셋이 캔버스 밖으로 나가면 발표 화면에서 잘린다."""
         import re

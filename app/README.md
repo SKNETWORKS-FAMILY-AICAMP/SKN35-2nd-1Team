@@ -27,7 +27,7 @@ app/
 ├─ rules/                  # 규칙 기반 지원 추천 엔진
 ├─ utils/                  # 팀 전처리 스키마 매핑 · 더미 데이터
 ├─ data/dummy_students.csv # 합성 더미 80명 (원본 데이터 아님)
-└─ tests/                  # unittest 64개
+└─ tests/                  # unittest 66개
 ```
 
 화면을 하나 고치려면 `pages/` 의 파일 **하나만** 열면 됩니다. 서로를 import 하지 않으므로
@@ -100,7 +100,7 @@ cd app
 python -m unittest discover -s tests -t .
 ```
 
-**64개 통과** (로직 49 + 화면 15). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
+**66개 통과** (로직 51 + 화면 15). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
 학습된 모델이 없는 지금도 **팀 전처리기가 우리 입력을 그대로 받는지**는 실제로 확인할 수 있습니다.
 
 - 더미 80명 → `to_model_row()` → `preprocessor.transform()` 이 **경고 없이 (80, 81)** 을 반환
@@ -135,6 +135,9 @@ python -m unittest discover -s tests -t .
 - DummyPredictor 는 난수를 쓰지 않습니다. **입력이 같으면 결과가 항상 같습니다** —
   새로고침마다 등급이 바뀌면 발표 중 설명이 무너지기 때문입니다.
 - 더미 명단 80명은 시드 고정(`SEED = 20260831`)이라 CSV 를 지워도 같은 명단이 재생성됩니다.
-- 시작화면 지구본은 Plotly 지도라 국가 경계 데이터를 실행 시점에 받아옵니다.
+- 시작화면 지구본은 **저절로 회전합니다** (한 바퀴 42초). 드래그하면 직접 돌릴 수 있고,
+  손을 뗀 뒤 4초가 지나면 자동 회전이 다시 시작됩니다. 속도는 `components/globe.py` 의
+  `ROTATION_PERIOD`, 끄려면 `AUTOROTATE = False`.
+- 지구본은 Plotly 지도라 국가 경계 데이터를 실행 시점에 받아옵니다.
   **발표장 네트워크가 막혀 있으면** `components/globe.py` 의 `USE_PLOTLY_GLOBE = False` 로 바꾸세요.
-  외부 통신이 전혀 없는 SVG 지구본으로 즉시 교체됩니다 (화면 코드는 그대로).
+  외부 통신이 전혀 없는 SVG 지구본으로 즉시 교체됩니다 (화면 코드는 그대로 · 단 회전은 없습니다).
