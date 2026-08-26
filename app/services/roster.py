@@ -16,6 +16,7 @@ from services.predictor import RISK_CATEGORIES, RISK_LABELS_KO, PredictionResult
 from services.prediction_service import PredictionService
 from utils.dummy_data import load_students
 from utils.feature_mapping import TARGET_LABELS_KO, StudentInput
+from utils.real_data import load_real_students
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,8 @@ class RosterRow:
 class Roster:
     rows: list[RosterRow]
     frame: pd.DataFrame
+    source: str          # 화면에 그대로 밝힌다 ("실제 전처리 데이터" / "합성 더미")
+    is_real: bool
 
     def by_id(self, student_id: str) -> RosterRow | None:
         for row in self.rows:
@@ -47,9 +50,27 @@ class Roster:
         return None
 
 
-def build_roster(service: PredictionService) -> Roster:
-    """더미 명단 전체를 예측하고 규칙까지 평가한다."""
+def load_roster_students() -> tuple[list[StudentInput], str, bool]:
+    """명단으로 쓸 학생 목록을 고른다.
+
+    팀이 올린 전처리 CSV 가 있으면 **그걸 원래 값으로 되돌려** 쓴다. 없으면 합성 더미로
+    물러난다. 어느 쪽인지는 반환값으로 알려주고 화면이 그대로 표시한다 —
+    무엇을 보고 있는지 모르는 채로 발표하면 안 된다.
+    """
+    real = load_real_students()
+    if real is not None:
+        return (
+            real.students,
+            f"팀 전처리 실데이터 {len(real.students)}명 (data/processed/{real.source})",
+            True,
+        )
     students = load_students()
+    return students, f"합성 더미 {len(students)}명 (원본 데이터 아님)", False
+
+
+def build_roster(service: PredictionService) -> Roster:
+    """명단 전체를 예측하고 규칙까지 평가한다."""
+    students, source, is_real = load_roster_students()
     results = service.predict_many(students)
 
     rows: list[RosterRow] = []
@@ -82,4 +103,4 @@ def build_roster(service: PredictionService) -> Roster:
         )
 
     frame = pd.DataFrame.from_records(records)
-    return Roster(rows=rows, frame=frame)
+    return Roster(rows=rows, frame=frame, source=source, is_real=is_real)

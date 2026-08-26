@@ -1,23 +1,20 @@
 """
-화면 공통 컴포넌트.
+화면 공통 컴포넌트 — 디자인 시스템(`theme.py`)의 토큰만 써서 조립한 조각들.
 
-'학생 위험 예측' 화면과 '학생 목록'의 상세 패널은 완전히 같은 결과 화면을 쓴다.
-같은 걸 두 번 그리지 않도록 여기서 한 번만 정의한다.
+화면 파일은 여기 있는 함수만 부른다. `st.markdown` 으로 HTML 을 직접 쓰지 않는다.
+같은 의미(위험등급·카테고리·상태)는 어느 화면에서든 **같은 모양**으로 나와야 하기 때문이다.
 """
 
 from __future__ import annotations
 
 from html import escape
 
-import plotly.graph_objects as go
 import streamlit as st
 
 from components.theme import (
     CATEGORY_COLORS,
     CLASS_COLORS,
     COLORS,
-    FONT_STACK,
-    PLOTLY_CONFIG,
     RISK_COLORS,
     RISK_SOFT,
 )
@@ -31,158 +28,224 @@ from services.predictor import (
 from services.prediction_service import PredictionService
 from utils.feature_mapping import TARGET_CLASSES, TARGET_LABELS_KO, StudentInput
 
+
+def _html(markup: str) -> None:
+    st.markdown(markup, unsafe_allow_html=True)
+
+
 # ---------------------------------------------------------------------------
-# 레이아웃 조각
+# 레이아웃
 # ---------------------------------------------------------------------------
 
-def page_header(title: str, subtitle: str = "") -> None:
-    st.markdown(
-        f"""<div class="page-head">
-              <h1>{escape(title)}</h1>
-              {f'<p>{escape(subtitle)}</p>' if subtitle else ''}
-            </div>""",
-        unsafe_allow_html=True,
+def page_header(title: str, subtitle: str = "", meta: str = "") -> None:
+    """화면 상단. 오른쪽 `meta` 는 그 화면의 데이터 출처처럼 짧은 사실만 넣는다."""
+    sub = f"<p>{escape(subtitle)}</p>" if subtitle else ""
+    right = f'<div class="meta">{meta}</div>' if meta else ""
+    # 한 줄로 만든다 — HTML 문자열 안에 빈 줄이 있으면 마크다운이 블록을 끊어
+    # 닫는 태그가 그대로 글자로 새어 나온다 (실제로 겪었다).
+    _html(
+        f'<div class="page-head"><div class="titles">'
+        f"<h1>{escape(title)}</h1>{sub}</div>{right}</div>"
     )
 
 
 def section(title: str, desc: str = "") -> None:
-    st.markdown(f'<div class="section-title">{escape(title)}</div>', unsafe_allow_html=True)
-    if desc:
-        st.markdown(f'<div class="section-desc">{escape(desc)}</div>', unsafe_allow_html=True)
-
-
-def kpi_grid(items: list[tuple[str, str, str, str]]) -> None:
-    """(라벨, 값, 캡션, 강조색) 목록을 카드 그리드로 그린다."""
-    cards = "".join(
-        f"""<div class="kpi-card" style="--accent:{accent}">
-              <div class="kpi-label">{escape(label)}</div>
-              <div class="kpi-value">{escape(value)}</div>
-              <div class="kpi-caption">{escape(caption)}</div>
-            </div>"""
-        for label, value, caption, accent in items
+    tail = f'<div class="sec-desc">{escape(desc)}</div>' if desc else ""
+    _html(
+        f'<div class="sec"><div class="sec-row">'
+        f'<span class="sec-title">{escape(title)}</span>'
+        f'<span class="sec-rule"></span></div>{tail}</div>'
     )
-    st.markdown(f'<div class="kpi-grid">{cards}</div>', unsafe_allow_html=True)
 
 
-def risk_badge_html(level: str, large: bool = False) -> str:
-    color = RISK_COLORS.get(level, COLORS["muted"])
-    background = RISK_SOFT.get(level, COLORS["primary_soft"])
-    label = RISK_LABELS_KO.get(level, level)
-    size_class = " lg" if large else ""
+def spacer(size: int = 8) -> None:
+    _html(f'<div style="height:{size}px"></div>')
+
+
+# ---------------------------------------------------------------------------
+# 상태 표시 — 색만으로 구분하지 않는다 (항상 글자를 함께 쓴다)
+# ---------------------------------------------------------------------------
+
+def risk_pill_html(level: str, *, large: bool = False, with_label: bool = True) -> str:
+    text = f"{level} · {RISK_LABELS_KO.get(level, level)}" if with_label else level
     return (
-        f'<span class="risk-badge{size_class}" style="background:{background};color:{color}">'
-        f"{escape(level)} · 위험 {escape(label)}</span>"
+        f'<span class="pill pill-{escape(level)}{" lg" if large else ""}">'
+        f'<span class="dot"></span>{escape(text)}</span>'
     )
 
 
-def banner(text_html: str, accent: str, background: str) -> None:
-    st.markdown(
-        f'<div class="banner" style="--accent:{accent};--bg:{background}">{text_html}</div>',
-        unsafe_allow_html=True,
+def focus_pill_html(text: str = "집중관리") -> str:
+    return f'<span class="pill pill-focus"><span class="dot"></span>{escape(text)}</span>'
+
+
+def neutral_pill_html(text: str) -> str:
+    return f'<span class="pill pill-neutral">{escape(text)}</span>'
+
+
+def banner(
+    mark: str, body_html: str, *, foreground: str, background: str, border: str
+) -> None:
+    _html(
+        f'<div class="banner" style="--fg:{foreground};--bg:{background};--bd:{border}">'
+        f'<span class="mark">{escape(mark)}</span><div>{body_html}</div></div>'
     )
 
 
-def prototype_banner(service: PredictionService) -> None:
-    """지금 화면의 숫자가 어디서 나왔는지 항상 밝힌다. 발표에서 오해를 막는 장치다."""
+def prototype_banner(service: PredictionService, *, source_note: str = "") -> None:
+    """이 화면의 숫자가 어디서 나왔는지 항상 밝힌다. 발표에서 오해를 막는 장치다."""
+    extra = f" {escape(source_note)}" if source_note else ""
     if service.is_dummy:
         banner(
-            "<b>프로토타입 모드</b> — 현재 화면의 예측값과 위험요인은 학습된 모델이 아니라 "
-            "규칙 기반 <b>DummyPredictor</b> 가 만든 값입니다. 팀의 최종 모델이 "
-            "<code>models/</code> 에 들어오면 화면 수정 없이 같은 자리에 실제 예측 결과가 표시됩니다.",
-            COLORS["primary"],
-            COLORS["primary_soft"],
+            "Prototype Mode",
+            "학습된 모델이 아직 연결되지 않았습니다. 화면의 확률과 위험요인은 규칙 기반 "
+            "<b>DummyPredictor</b> 가 만든 값이며 <b>성능 수치를 주장하지 않습니다</b>. "
+            f"팀 최종 모델이 <code>models/</code> 에 들어오면 화면 수정 없이 대체됩니다.{extra}",
+            foreground=COLORS["primary"],
+            background=COLORS["primary_soft"],
+            border=COLORS["primary_line"],
         )
     else:
         banner(
-            f"<b>실제 모델 연결됨</b> — {escape(service.model_label)}",
-            RISK_COLORS["LOW"],
-            RISK_SOFT["LOW"],
+            "Live Model",
+            f"<b>{escape(service.model_label)}</b> 이 연결되어 실제 예측을 표시하고 있습니다.{extra}",
+            foreground=RISK_COLORS["LOW"],
+            background=RISK_SOFT["LOW"],
+            border="#C5E3D7",
         )
 
 
+def empty_state(title: str, desc: str = "") -> None:
+    _html(
+        f'<div class="empty"><div class="t">{escape(title)}</div>'
+        f'{f"<div class=\'d\'>{escape(desc)}</div>" if desc else ""}</div>'
+    )
+
+
 # ---------------------------------------------------------------------------
-# 예측 결과 표시
+# KPI
 # ---------------------------------------------------------------------------
 
-def dropout_gauge(result: PredictionResult, height: int = 220) -> go.Figure:
-    """중도탈락 확률 게이지. 등급 경계(30% / 60%)를 배경 띠로 함께 보여준다."""
-    medium, high = RISK_THRESHOLDS["MEDIUM"] * 100, RISK_THRESHOLDS["HIGH"] * 100
-    color = RISK_COLORS.get(result.risk_level, COLORS["primary"])
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=result.dropout_percent,
-            number={"suffix": "%", "font": {"size": 40, "color": color, "family": FONT_STACK}},
-            gauge={
-                "axis": {
-                    "range": [0, 100],
-                    "tickvals": [0, medium, high, 100],
-                    "ticksuffix": "%",
-                    "tickfont": {"size": 11, "color": COLORS["muted"], "family": FONT_STACK},
-                },
-                "bar": {"color": color, "thickness": 0.72},
-                "bgcolor": "rgba(0,0,0,0)",
-                "borderwidth": 0,
-                "steps": [
-                    {"range": [0, medium], "color": RISK_SOFT["LOW"]},
-                    {"range": [medium, high], "color": RISK_SOFT["MEDIUM"]},
-                    {"range": [high, 100], "color": RISK_SOFT["HIGH"]},
-                ],
-            },
+def kpi_hero(label: str, value: str, caption: str, accent: str, *, unit: str = "",
+             share: float | None = None) -> None:
+    """화면에서 가장 먼저 읽혀야 하는 지표 하나. 남발하면 계층이 사라진다."""
+    bar = (
+        f'<div class="kpi-bar"><span style="width:{max(min(share, 1.0), 0.0) * 100:.1f}%"></span></div>'
+        if share is not None else ""
+    )
+    _html(
+        f"""<div class="kpi-hero" style="--accent:{accent}">
+              <div class="lab">{escape(label)}</div>
+              <div class="val">{escape(value)}{f'<span class="unit">{escape(unit)}</span>' if unit else ''}</div>
+              <div class="cap">{escape(caption)}</div>{bar}
+            </div>"""
+    )
+
+
+def kpi_row(items: list[dict], columns: int = 4) -> None:
+    """보조 지표. `{label, value, caption, accent, unit?, share?}` 목록."""
+    cards = []
+    for it in items:
+        share = it.get("share")
+        bar = (
+            f'<div class="kpi-bar"><span style="width:{max(min(share, 1.0), 0.0) * 100:.1f}%"></span></div>'
+            if share is not None else ""
         )
-    )
-    fig.update_layout(
-        height=height,
-        margin=dict(l=40, r=40, t=12, b=0),
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family=FONT_STACK),
-    )
-    return fig
-
-
-def probability_bars(result: PredictionResult) -> None:
-    """이진 확률 막대 (Dropout / Non-Dropout)."""
-    rows = []
-    for cls in TARGET_CLASSES:
-        value = result.class_probabilities.get(cls, 0.0)
-        color = CLASS_COLORS[cls]
-        weight = "700" if cls == result.predicted_class else "600"
-        rows.append(
-            f"""<div class="prob-row">
-                  <div class="prob-name" style="font-weight:{weight}">
-                    {escape(TARGET_LABELS_KO[cls])}</div>
-                  <div class="prob-track">
-                    <div class="prob-fill" style="width:{value * 100:.1f}%;background:{color}"></div>
-                  </div>
-                  <div class="prob-value">{value * 100:.1f}%</div>
+        unit = it.get("unit", "")
+        cards.append(
+            f"""<div class="kpi" style="--accent:{it.get('accent', COLORS['primary'])}">
+                  <div class="lab">{escape(it['label'])}</div>
+                  <div class="val">{escape(it['value'])}
+                    {f'<span class="unit">{escape(unit)}</span>' if unit else ''}</div>
+                  <div class="cap">{escape(it.get('caption', ''))}</div>{bar}
                 </div>"""
         )
-    st.markdown("".join(rows), unsafe_allow_html=True)
+    _html(
+        f'<div class="kpi-row" style="grid-template-columns:repeat({columns},1fr)">'
+        f'{"".join(cards)}</div>'
+    )
 
+
+# ---------------------------------------------------------------------------
+# 위험 미터 — 속도계 대신 "구간이 보이는" 가로 미터
+# ---------------------------------------------------------------------------
+
+def risk_meter(result: PredictionResult) -> None:
+    """중도탈락 확률 + 등급 경계.
+
+    속도계(gauge)를 쓰지 않는 이유: 바늘 각도는 값을 읽기 어렵고 자동차 계기판 인상을 준다.
+    담당자가 알아야 하는 것은 **"이 학생이 어느 구간에 있는가"** 이므로 구간을 그대로 그린다.
+    """
+    medium = RISK_THRESHOLDS["MEDIUM"] * 100
+    high = RISK_THRESHOLDS["HIGH"] * 100
+    value = result.dropout_percent
+    color = RISK_COLORS[result.risk_level]
+
+    _html(
+        f"""<div style="--accent:{color}">
+          <div class="meter-val">
+            <span class="n ds-num">{value:.1f}<span class="p">%</span></span>
+            {risk_pill_html(result.risk_level, large=True)}
+          </div>
+          <div class="meter-cap">중도탈락 확률 · 등급 경계 {medium:.0f}% / {high:.0f}%</div>
+          <div class="meter">
+            <div class="track">
+              <div class="zone" style="width:{medium}%;background:{RISK_COLORS['LOW']}"></div>
+              <div class="zone" style="width:{high - medium}%;background:{RISK_COLORS['MEDIUM']}"></div>
+              <div class="zone" style="width:{100 - high}%;background:{RISK_COLORS['HIGH']}"></div>
+              <div class="mark" style="left:calc({value}% - 1.5px)"></div>
+            </div>
+            <div class="zones">
+              <span style="color:{RISK_COLORS['LOW']}">LOW</span>
+              <span style="color:{RISK_COLORS['MEDIUM']}">MEDIUM</span>
+              <span style="color:{RISK_COLORS['HIGH']}">HIGH</span>
+            </div>
+            <div class="ticks"><span>0%</span><span>{medium:.0f}%</span>
+              <span>{high:.0f}%</span><span>100%</span></div>
+          </div>
+        </div>"""
+    )
+
+
+def probability_split(result: PredictionResult) -> None:
+    """이진 확률을 한 줄 막대로. 두 클래스뿐이라 파이차트를 쓸 이유가 없다."""
+    p = result.dropout_probability * 100
+    _html(
+        f"""<div style="margin-top:12px">
+          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#EDF1F6">
+            <div style="width:{p:.1f}%;background:{CLASS_COLORS['Dropout']}"></div>
+            <div style="width:{100 - p:.1f}%;background:{CLASS_COLORS['Non-Dropout']}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;
+                      font-size:.72rem;font-weight:700;letter-spacing:.04em">
+            <span style="color:{CLASS_COLORS['Dropout']}">
+              {escape(TARGET_LABELS_KO['Dropout'])} {p:.1f}%</span>
+            <span style="color:{CLASS_COLORS['Non-Dropout']}">
+              {escape(TARGET_LABELS_KO['Non-Dropout'])} {100 - p:.1f}%</span>
+          </div>
+        </div>"""
+    )
+
+
+# ---------------------------------------------------------------------------
+# 위험요인
+# ---------------------------------------------------------------------------
 
 def factor_list(result: PredictionResult) -> None:
-    """주요 위험요인 목록."""
     if not result.top_factors:
-        st.markdown(
-            '<div class="card-sub">기준선을 넘는 위험요인이 확인되지 않았습니다.</div>',
-            unsafe_allow_html=True,
-        )
+        _html('<div class="ds-sub">기준선을 넘는 위험요인이 확인되지 않았습니다.</div>')
         return
 
     blocks = []
-    for rank, factor in enumerate(result.top_factors, start=1):
+    for factor in result.top_factors:
         color = CATEGORY_COLORS.get(factor.category, COLORS["primary"])
         width = max(factor.contribution * 100, 3)
         blocks.append(
             f"""<div class="factor">
-                  <div class="factor-head">
-                    <span class="factor-rank">{rank}</span>
-                    <span class="factor-label">{escape(factor.label)}</span>
-                    <span class="factor-chip" style="background:{color}1A;color:{color}">
+                  <div class="factor-top">
+                    <span class="factor-name">{escape(factor.label)}</span>
+                    <span class="pill pill-neutral" style="color:{color};border-color:{color}33">
                       {escape(factor.category_label)}</span>
-                    <span style="margin-left:auto;font-size:.8rem;color:{COLORS['muted']};
-                                 font-variant-numeric:tabular-nums">
-                      {factor.contribution * 100:.0f}%</span>
+                    <span class="factor-pct ds-num">{factor.contribution * 100:.0f}%</span>
                   </div>
                   <div class="factor-detail">{escape(factor.detail)}</div>
                   <div class="factor-track">
@@ -190,95 +253,106 @@ def factor_list(result: PredictionResult) -> None:
                   </div>
                 </div>"""
         )
-    st.markdown("".join(blocks), unsafe_allow_html=True)
+    _html("".join(blocks))
 
     if result.explanation_source == EXPLANATION_DUMMY:
         st.caption(
-            "위 목록은 SHAP 분석 결과가 아니라 DummyPredictor 의 가중치를 그대로 풀어 쓴 "
-            "프로토타입용 설명입니다. 백분율은 요인 간 상대 비중입니다."
+            "SHAP 분석 결과가 아니라 DummyPredictor 의 가중치를 그대로 풀어 쓴 프로토타입 설명입니다. "
+            "백분율은 요인 간 상대 비중이며 모델 기여도가 아닙니다."
         )
     else:
         st.caption(
-            f"확률은 실제 모델 값이고, 위 설명의 출처는 {escape(result.explanation_source)} 입니다. "
+            f"확률은 실제 모델 값이고 설명의 출처는 {escape(result.explanation_source)} 입니다. "
             "SHAP explainer 가 연결되면 이 자리는 실제 기여도로 바뀝니다."
         )
 
 
-def recommendation_block(recommendation: RecommendationSet) -> None:
-    """규칙 기반 맞춤지원 추천."""
+# ---------------------------------------------------------------------------
+# 지원 추천 — 이 프로젝트의 차별점이라 카드로 세워 보여준다
+# ---------------------------------------------------------------------------
+
+_PRIORITY_LABEL = {1: "즉시", 2: "이번 학기", 3: "모니터링"}
+
+
+def support_cards(recommendation: RecommendationSet, *, columns: int = 3) -> None:
     if recommendation.is_priority_case:
         banner(
+            "Priority",
             f"<b>집중관리 우선 대상</b> — {escape(recommendation.priority_reason)}",
-            RISK_COLORS["HIGH"],
-            RISK_SOFT["HIGH"],
+            foreground=RISK_COLORS["HIGH"],
+            background=RISK_SOFT["HIGH"],
+            border="#F0CBC6",
         )
-        st.write("")
+        spacer(12)
 
     if not recommendation.matched:
-        st.markdown(
-            '<div class="card"><div class="card-title">해당하는 지원 규칙 없음</div>'
-            '<div class="card-sub">현재 입력값에서는 발동한 지원 규칙이 없습니다. '
-            "정기 모니터링 대상으로만 유지합니다.</div></div>",
-            unsafe_allow_html=True,
+        empty_state(
+            "발동한 지원 규칙 없음",
+            "현재 입력값에서는 조건을 넘는 규칙이 없습니다. 정기 모니터링 대상으로만 유지합니다.",
         )
-    else:
-        for matched in recommendation.matched:
-            rule = matched.rule
+        _html(f'<div class="ds-caption" style="margin-top:12px">{escape(recommendation.disclaimer)}</div>')
+        return
+
+    matched = recommendation.matched
+    for start in range(0, len(matched), columns):
+        chunk = matched[start : start + columns]
+        cols = st.columns(columns, gap="small")
+        for col, m in zip(cols, chunk):
+            rule = m.rule
             color = CATEGORY_COLORS.get(rule.category, COLORS["primary"])
             programs = "".join(
-                f"""<div class="program">▸ {escape(p.name)}
-                      <span class="owner">{escape(p.owner)}</span>
-                      <span class="action">{escape(p.action)}</span></div>"""
+                f'<div class="act-prog">{escape(p.name)}'
+                f'<span class="owner">{escape(p.owner)}</span>'
+                f'<span class="todo">{escape(p.action)}</span></div>'
                 for p in rule.programs
             )
-            feature = (
-                f'<span class="rule-id">근거 피처 · {escape(rule.feature)}</span>'
-                if rule.feature
-                else ""
-            )
-            st.markdown(
-                f"""<div class="rule-card" style="--accent:{color}">
-                      <div class="rule-head">
-                        <span class="factor-chip" style="background:{color}1A;color:{color}">
-                          {escape(rule.category_label)}</span>
-                        <span class="rule-title">{escape(rule.title)}</span>
-                        <span class="rule-id">RULE {escape(rule.id)}</span>
-                      </div>
-                      <div class="rule-reason">{escape(matched.reason)}</div>
-                      {programs}
-                      <div style="margin-top:.45rem">{feature}</div>
-                    </div>""",
-                unsafe_allow_html=True,
-            )
+            with col:
+                _html(
+                    f"""<div class="act" style="--accent:{color}">
+                          <div class="act-head">
+                            <span class="pill pill-neutral"
+                                  style="color:{color};border-color:{color}33">
+                              {escape(rule.category_label)}</span>
+                            <span class="pill pill-neutral">
+                              {escape(_PRIORITY_LABEL.get(rule.priority, '검토'))}</span>
+                          </div>
+                          <div class="act-title">{escape(rule.title)}</div>
+                          <div class="act-reason">{escape(m.reason)}</div>
+                          {programs}
+                          <div class="act-feat">RULE {escape(rule.id)} · {escape(rule.feature)}</div>
+                        </div>"""
+                )
+        if start + columns < len(matched):
+            spacer(10)
 
-    st.markdown(
-        f'<div class="disclaimer">{escape(recommendation.disclaimer)}</div>',
-        unsafe_allow_html=True,
-    )
+    _html(f'<div class="ds-caption" style="margin-top:16px">{escape(recommendation.disclaimer)}</div>')
 
+
+# ---------------------------------------------------------------------------
+# 학생 요약 / 결과 패널
+# ---------------------------------------------------------------------------
 
 def student_summary(student: StudentInput) -> None:
-    """상세 화면 상단의 학생 요약 줄."""
     items = [
         ("학생 ID", student.student_id),
         ("전공 계열", student.major_field),
+        ("입학 전형", student.admission_pathway),
         ("입학 시 나이", f"{student.age_at_enrollment}세"),
         ("수업 시간대", "주간" if student.attendance == 1 else "야간"),
         ("2학기 이수율", f"{student.sem2_approval_rate:.0%}"),
         ("평균 성적", f"{student.average_grade:.1f} / 20"),
-        ("성적 변화", f"{student.grade_change:+.1f}"),
-        ("재정위험점수", f"{student.financial_risk_score} / 3"),
+        ("재정위험", f"{student.financial_risk_score} / 3"),
     ]
     cells = "".join(
-        f"""<div><div class="kpi-label">{escape(label)}</div>
-              <div style="font-size:.95rem;font-weight:600;color:{COLORS['ink']}">
-                {escape(value)}</div></div>"""
-        for label, value in items
+        f'<div><div class="lab" style="font-size:.72rem;font-weight:700;letter-spacing:.09em;'
+        f'text-transform:uppercase;color:{COLORS["muted"]}">{escape(k)}</div>'
+        f'<div style="font-size:.92rem;font-weight:600;color:{COLORS["ink"]};margin-top:4px">'
+        f"{escape(v)}</div></div>"
+        for k, v in items
     )
-    st.markdown(
-        f'<div class="card"><div style="display:grid;gap:.9rem;'
-        f'grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">{cells}</div></div>',
-        unsafe_allow_html=True,
+    _html(
+        '<div class="card"><div style="display:grid;gap:16px;'
+        f'grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">{cells}</div></div>'
     )
 
 
@@ -289,44 +363,76 @@ def result_panel(
     *,
     show_summary: bool = True,
 ) -> None:
-    """예측 결과 전체 패널. 예측 화면과 목록 상세가 공유한다."""
+    """예측 결과 전체. 예측 화면과 목록 상세가 공유한다.
+
+    왼쪽 **얼마나 위험한가** → 가운데 **왜 위험한가** → 아래 **그래서 무엇을 할 것인가**.
+    이 순서가 이 제품이 하는 말 전부다.
+    """
     if show_summary:
         student_summary(student)
-        st.write("")
+        spacer(12)
 
-    left, right = st.columns([1, 1.25], gap="large")
+    left, right = st.columns([1, 1.35], gap="large")
 
-    with left:
-        st.markdown(
-            '<div class="card-title">중도탈락 위험도</div>'
-            '<div class="card-sub">위험등급 경계: 30% 미만 LOW · 60% 이상 HIGH</div>',
-            unsafe_allow_html=True,
-        )
-        st.plotly_chart(
-            dropout_gauge(result),
-            width="stretch",
-            config=PLOTLY_CONFIG,
-            key=f"gauge_{student.student_id}_{result.dropout_percent}",
-        )
-        st.markdown(
-            f'<div style="text-align:center;margin-top:-.6rem">'
-            f"{risk_badge_html(result.risk_level, large=True)}</div>",
-            unsafe_allow_html=True,
-        )
+    # st.markdown 은 호출마다 독립된 블록이라 여는 태그와 닫는 태그를 따로 내보내면
+    # 감싸지지 않는다. 위젯을 감싸야 할 때는 Streamlit 컨테이너를 쓰고 CSS 로 카드를 입힌다.
+    with left, st.container(border=True):
+        risk_meter(result)
+        probability_split(result)
 
-    with right:
-        predicted_ko = TARGET_LABELS_KO.get(result.predicted_class, result.predicted_class)
-        st.markdown(
-            f'<div class="card-title">예측 클래스 · {escape(predicted_ko)} '
-            f'<span class="rule-id">({escape(result.predicted_class)})</span></div>'
-            '<div class="card-sub">팀 전처리 정의 기준 이진 분류 (1=Dropout / 0=Non-Dropout)</div>',
-            unsafe_allow_html=True,
+    with right, st.container(border=True):
+        _html(
+            '<div class="card-title">왜 이 학생이 위험한가</div>'
+            '<div class="card-sub">기여도가 큰 순서입니다.</div>'
         )
-        st.write("")
-        probability_bars(result)
-        st.write("")
-        st.markdown('<div class="card-title">주요 위험요인</div>', unsafe_allow_html=True)
         factor_list(result)
 
-    section("맞춤 지원 추천", "규칙 엔진(rules/recommendation_rules.py)이 판정한 결과입니다.")
-    recommendation_block(recommendation)
+    section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
+    support_cards(recommendation)
+
+
+# ---------------------------------------------------------------------------
+# 우선 확인 명단 — 기본 dataframe 대신 직접 그린다
+# ---------------------------------------------------------------------------
+
+def priority_table(rows: list[dict]) -> None:
+    """`{rank, sid, major, probability, level, category, focus}` 목록.
+
+    `st.dataframe` 은 정렬·스크롤이 필요할 때 쓴다. 여기는 '먼저 볼 8명' 이라
+    **읽히는 것**이 목적이므로 직접 그려서 위험 막대와 배지를 함께 보여준다.
+    """
+    if not rows:
+        empty_state("표시할 학생이 없습니다.")
+        return
+
+    body = []
+    for r in rows:
+        color = RISK_COLORS[r["level"]]
+        pct = r["probability"] * 100
+        body.append(
+            f"""<tr>
+                  <td class="rank">{r['rank']:02d}</td>
+                  <td class="sid">{escape(r['sid'])}</td>
+                  <td>{escape(r['major'])}</td>
+                  <td>
+                    <div class="riskbar">
+                      <span class="track"><span class="fill"
+                        style="width:{pct:.0f}%;background:{color}"></span></span>
+                      <span class="pct" style="color:{color}">{pct:.0f}%</span>
+                    </div>
+                  </td>
+                  <td>{risk_pill_html(r['level'], with_label=False)}</td>
+                  <td>{escape(r['category'])}</td>
+                  <td>{focus_pill_html() if r['focus'] else ''}</td>
+                </tr>"""
+        )
+    _html(
+        '<div class="card" style="padding:16px 8px">'
+        '<table class="dt"><thead><tr>'
+        "<th></th><th>학생</th><th>전공 계열</th><th>중도탈락 확률</th>"
+        "<th>등급</th><th>주요 위험</th><th></th>"
+        f'</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
+    )
+
+
+_KEEP = TARGET_CLASSES  # 화면이 클래스 순서를 이 모듈 경유로도 얻을 수 있게 남긴다.

@@ -338,10 +338,13 @@ def render(height: int = 340) -> None:
             key="home_globe",
         )
         if AUTOROTATE:
-            from streamlit.components.v1 import html as _component_html
-
             # 높이 0 — 보이는 것을 그리는 게 아니라 부모 문서의 차트를 돌리기만 한다.
-            _component_html(_autorotate_script(), height=0)
+            # st.components.v1.html 은 폐기 예고돼 있어 st.iframe 을 쓴다 (없으면 예전 API).
+            render_iframe = getattr(st, "iframe", None)
+            if render_iframe is None:
+                from streamlit.components.v1 import html as render_iframe
+            # height=0 은 st.iframe 이 거부한다 (양수여야 한다). 1px 은 눈에 띄지 않는다.
+            render_iframe(_autorotate_script(), height=1)
         st.caption("지구본은 저절로 회전하며, 드래그해서 직접 돌릴 수도 있습니다. "
                    "붉게 표시된 곳이 포르투갈입니다.")
     else:
