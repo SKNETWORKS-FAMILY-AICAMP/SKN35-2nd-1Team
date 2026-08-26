@@ -57,6 +57,45 @@ PAGES = [
 ]
 
 
+def _block_auto_translate() -> None:
+    """브라우저 자동 번역을 막는다.
+
+    화면에 영문(Student Dropout Intelligence, Prototype Mode …)과 한글이 섞여 있어서
+    Chrome 이 페이지를 영어로 판정하고 한국어로 자동 번역해 버린다. 그러면
+    **이미 한국어인 문장까지 다시 번역돼** "학생 목록" 이 "당신 목록" 이 되는 식으로 깨진다.
+    발표 PC 에서 그대로 나면 손쓸 방법이 없으므로 문서 속성으로 미리 막는다.
+
+    Streamlit 은 <script> 를 살균하므로 같은 오리진 iframe 에서 부모 문서를 고친다.
+    실패해도 화면은 멀쩡하다 — 번역 차단만 안 될 뿐이다.
+    """
+    render_iframe = getattr(st, "iframe", None)
+    if render_iframe is None:  # 구버전 대비
+        from streamlit.components.v1 import html as render_iframe
+
+    render_iframe(
+        """
+<script>
+(function () {
+  try {
+    var doc = window.parent.document;
+    doc.documentElement.lang = "ko";
+    doc.documentElement.translate = false;
+    doc.documentElement.classList.add("notranslate");
+    var meta = doc.querySelector('meta[name="google"]');
+    if (!meta) {
+      meta = doc.createElement("meta");
+      meta.name = "google";
+      doc.head.appendChild(meta);
+    }
+    meta.content = "notranslate";
+  } catch (e) { /* 다른 오리진이면 조용히 포기한다 */ }
+})();
+</script>
+""",
+        height=1,
+    )
+
+
 def _sidebar() -> None:
     """화면 이동 위젯 아래에 붙는 공통 정보.
 
@@ -115,9 +154,10 @@ def _sidebar() -> None:
         )
 
 
-# st.navigation 을 진입점의 첫 출력으로 둔다. views/ 폴더가 함께 있으면 Streamlit 이
-# 자동 MPA 로 돌아갈 여지가 있어, 라우팅을 먼저 확정한 뒤 스타일을 넣는다.
+# st.navigation 을 진입점의 첫 출력으로 둔다 — 라우팅을 먼저 확정한 뒤 스타일을 넣는다.
+# (화면 폴더 이름이 pages/ 가 아니라 views/ 인 이유는 README 1장 참고)
 navigation = st.navigation(PAGES, position="sidebar")
 inject_css()
+_block_auto_translate()
 _sidebar()
 navigation.run()
