@@ -1,180 +1,239 @@
-"""화면 0 — 시작화면. 이 서비스가 무엇이고, 어떤 데이터로 만들어졌고, 어디까지 넓어지는가."""
+"""화면 0 — 시작화면. 무엇을 하는 제품이고, 어떤 데이터로 만들었고, 어디까지 넓어지는가."""
 
 from __future__ import annotations
+
+from html import escape
 
 import streamlit as st
 
 from components import ui
 from components.globe import render as render_globe
-from components.state import PAGE_DASHBOARD, PAGE_PREDICTION, start_page
-from components.theme import COLORS, RISK_COLORS
+from components.state import PAGE_DASHBOARD, PAGE_PREDICTION, roster_source, start_page
+from components.theme import CATEGORY_COLORS, COLORS, RISK_COLORS
 from services.prediction_service import get_service
 from utils.schema import dropped_columns, final_feature_count, target_definition
 
 start_page("")
 
+_, is_real = roster_source()
+
 # ---------------------------------------------------------------------------
-# 히어로
+# 1. Hero — 첫 5초
 # ---------------------------------------------------------------------------
 
 st.markdown(
-    """<div class="hero">
-         <div class="eyebrow">SK네트웍스 FAMILY AI 캠프 · 2nd Team Project</div>
-         <h1>대학생 중도탈락 위험 예측 및<br>맞춤 지원 시스템</h1>
-         <p>학생지원 담당자·지도교수·학사관리자가 <b>중도탈락 위험이 높은 학생을 학기 중에 먼저 찾고</b>,
-            그 학생의 위험요인에 대응하는 교내 지원 프로그램까지 연결하도록 만든 의사결정 보조 도구입니다.
-            예측값 하나를 띄우고 끝내지 않고 <b>"왜 위험한가"</b> 와 <b>"그래서 무엇을 할 것인가"</b> 를 함께 답합니다.</p>
-         <div class="flow">
-           <span class="step">학생 정보</span><span class="arrow">→</span>
-           <span class="step">중도탈락 위험 예측</span><span class="arrow">→</span>
-           <span class="step">위험요인 분석</span><span class="arrow">→</span>
-           <span class="step">규칙 기반 맞춤지원 추천</span>
-         </div>
-       </div>""",
+    f"""<div class="hero">
+      <div class="eyebrow">SKN35 · 2nd Team Project · Student Success Analytics</div>
+      <h1>Student Dropout<br>Intelligence</h1>
+      <div class="kr">대학생 중도탈락 위험 예측 및 맞춤 지원 시스템</div>
+      <p>학업·경제·입학 배경 데이터를 기반으로 <b style="color:#EAF2FC">중도탈락 위험을 학기 중에 조기 식별</b>하고,
+         그 학생의 위험요인에 대응하는 교내 지원 방향까지 제안합니다.
+         예측값 하나를 띄우고 끝내지 않고 <b style="color:#EAF2FC">왜 위험한가</b>와
+         <b style="color:#EAF2FC">그래서 무엇을 할 것인가</b>를 함께 답합니다.</p>
+      <div class="hero-meta">
+        <div class="item"><div class="k">Students</div><div class="v">4,424</div></div>
+        <div class="item"><div class="k">Source</div><div class="v">UCI Dataset</div></div>
+        <div class="item"><div class="k">Origin</div><div class="v">Portugal</div></div>
+        <div class="item"><div class="k">Model</div><div class="v">Binary Risk</div></div>
+        <div class="item"><div class="k">Features</div><div class="v">{final_feature_count() or 81}</div></div>
+      </div>
+    </div>""",
     unsafe_allow_html=True,
 )
 
-st.write("")
-ui.prototype_banner(get_service())
+ui.spacer(20)
+ui.prototype_banner(
+    get_service(),
+    source_note=(
+        "명단 화면은 팀이 올린 전처리 데이터를 원래 값으로 되돌려 표시합니다."
+        if is_real else ""
+    ),
+)
 
 # ---------------------------------------------------------------------------
-# 데이터 출처 + 지구본
+# 2. 파이프라인 — 이 제품이 무엇을 하는지 한 줄로
+# ---------------------------------------------------------------------------
+
+ui.section("어떻게 작동하는가", "네 단계가 이 시스템의 전부입니다.")
+
+st.markdown(
+    f"""<div class="flow">
+      <div class="step" style="--accent:{COLORS['primary']}">
+        <div class="n">01</div><div class="k">Data</div>
+        <div class="t">학적 · 학업 · 재정</div>
+        <div class="d">포르투갈 고등교육기관 학생 4,424명의 입학 시점 정보와
+          1·2학기 학업 성과.</div>
+      </div>
+      <div class="step" style="--accent:{CATEGORY_COLORS['adaptation']}">
+        <div class="n">02</div><div class="k">Model</div>
+        <div class="t">범주 일반화 + 파생변수</div>
+        <div class="d">제도 종속 범주를 상위 개념으로 묶고 이수율·재정위험 등
+          파생변수 5종을 더해 {final_feature_count() or 81}개 피처로.</div>
+      </div>
+      <div class="step" style="--accent:{RISK_COLORS['HIGH']}">
+        <div class="n">03</div><div class="k">Risk Signal</div>
+        <div class="t">중도탈락 확률 + 위험요인</div>
+        <div class="d">{escape(target_definition())} 기준 이진 예측.
+          확률만이 아니라 무엇이 위험을 올렸는지 함께 낸다.</div>
+      </div>
+      <div class="step" style="--accent:{RISK_COLORS['LOW']}">
+        <div class="n">04</div><div class="k">Support Action</div>
+        <div class="t">규칙 기반 지원 연결</div>
+        <div class="d">학업·경제·진로적응 12개 규칙이 위험요인에 대응하는
+          교내 프로그램을 연결한다. LLM 을 쓰지 않는다.</div>
+      </div>
+    </div>""",
+    unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------------
+# 3. 데이터 출처 + 지구본
 # ---------------------------------------------------------------------------
 
 ui.section("어떤 데이터로 만들었는가", "포르투갈 고등교육기관의 실제 학적·학업·재정 기록입니다.")
 
-left, right = st.columns([1.15, 1], gap="large")
+left, right = st.columns([1.25, 1], gap="large")
 
 with left:
     st.markdown(
-        f"""<div class="card">
-              <div class="card-title">UCI — Predict Students' Dropout and Academic Success</div>
-              <div class="card-sub">포르투갈 폴리테크닉 기관 · 학사 데이터베이스 기반 공개 데이터셋</div>
-              <div style="margin-top:.9rem;font-size:.87rem;color:{COLORS['ink_soft']};line-height:1.75">
+        f"""<div class="card card-lg">
+              <div class="ds-eyebrow">Training data</div>
+              <div class="ds-h2" style="margin-top:8px">
+                UCI — Predict Students' Dropout and Academic Success</div>
+              <div class="ds-sub" style="margin-top:6px">
+                포르투갈 폴리테크닉 기관 · 학사 데이터베이스 기반 공개 데이터셋</div>
+              <div class="ds-body" style="margin-top:16px">
                 입학 시점의 인구·사회·경제 정보와 1·2학기 학업 성과를 함께 담고 있어,
-                <b>학기가 끝나는 시점마다</b> 위험 신호를 다시 계산할 수 있는 구조입니다.<br>
-                본 시스템의 Target 정의는 팀 전처리 기준
-                <code>{target_definition()}</code> 입니다.
+                <b>학기가 끝나는 시점마다</b> 위험 신호를 다시 계산할 수 있는 구조입니다.
+              </div>
+              <div class="ds-caption" style="margin-top:14px">
+                Target 정의 · <span class="ds-mono">{escape(target_definition())}</span>
               </div>
             </div>""",
         unsafe_allow_html=True,
     )
-    st.write("")
-    ui.kpi_grid(
+    ui.spacer(12)
+    ui.kpi_row(
         [
-            ("데이터 규모", "4,424명", "학생 단위 레코드", COLORS["primary"]),
-            ("원본 변수", "37개", "Target 포함", COLORS["ink"]),
-            ("중도탈락 비율", "32.1%", "Non-Dropout 67.9%", RISK_COLORS["HIGH"]),
-            (
-                "모델 입력 피처",
-                f"{final_feature_count() or 81}개",
-                "범주 일반화 + 원-핫 인코딩 후",
-                COLORS["primary"],
-            ),
-        ]
+            {"label": "Students", "value": "4,424", "caption": "학생 단위 레코드",
+             "accent": COLORS["primary"]},
+            {"label": "Raw variables", "value": "37", "caption": "Target 포함",
+             "accent": COLORS["ink"]},
+            {"label": "Dropout rate", "value": "32.1", "unit": "%",
+             "caption": "Non-Dropout 67.9%", "accent": RISK_COLORS["HIGH"], "share": 0.321},
+            {"label": "Model features", "value": f"{final_feature_count() or 81}",
+             "caption": "일반화 + 인코딩 후", "accent": CATEGORY_COLORS["adaptation"]},
+        ],
+        columns=4,
     )
 
 with right:
     render_globe(height=330)
 
 # ---------------------------------------------------------------------------
-# 미래 확장 — 다른 나라에도 적용할 수 있는가
+# 4. 이식성 — 프로덕트 전략처럼
 # ---------------------------------------------------------------------------
 
 ui.section(
-    "다른 나라에서도 쓸 수 있는가",
-    "포르투갈 데이터로 만들었지만, 팀의 전처리 설계 자체가 이미 '옮겨 쓰기'를 염두에 둔 구조입니다.",
+    "Designed for localization",
+    "지금 모델을 다른 나라에 그대로 쓰는 것이 아닙니다. 같은 상위 Feature Schema 를 두고 "
+    "각국 데이터를 매핑한 뒤 현지 데이터로 재학습하는 구조입니다.",
 )
 
-dropped = dropped_columns()
-macro = [c for c in dropped if c in ("Unemployment rate", "Inflation rate", "GDP")]
+chain_col, why_col = st.columns([1, 1.15], gap="large")
 
-col1, col2, col3 = st.columns(3, gap="medium")
-
-with col1:
+with chain_col:
     st.markdown(
-        f"""<div class="port-card">
-              <span class="tag">근거 1</span>
-              <h4>국가·시점에 묶인 변수는 이미 뺐다</h4>
-              <p>{', '.join(macro) if macro else '거시경제 변수 3종'} 은
-                 특정 시점의 <b>포르투갈 경제 상황</b>이라 제거했습니다
-                 (Target 과의 상관도 0.05 미만). 국적(Nacionality)도
-                 97.5%가 포르투갈로 쏠려 정보 가치가 없어 제외했습니다.<br>
-                 → 남은 변수는 <b>어느 나라 학생에게나 정의되는 값</b>입니다.</p>
-            </div>""",
+        """<div class="chain">
+          <div class="node"><span class="i">01</span>
+            <span class="t">Portugal-specific raw categories</span>
+            <span class="d">학과 17 · 전형 18 · 학력 17</span></div>
+          <div class="arrow">↓</div>
+          <div class="node"><span class="i">02</span>
+            <span class="t">Generalized academic schema</span>
+            <span class="d">계열 10 · 전형 8 · 학력 6</span></div>
+          <div class="arrow">↓</div>
+          <div class="node"><span class="i">03</span>
+            <span class="t">Local university mapping</span>
+            <span class="d">각국 제도를 같은 상위 개념에</span></div>
+          <div class="arrow">↓</div>
+          <div class="node"><span class="i">04</span>
+            <span class="t">Local retraining</span>
+            <span class="d">현지 데이터로 재학습</span></div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
-with col2:
+with why_col:
+    macro = [c for c in dropped_columns() if c in ("Unemployment rate", "Inflation rate", "GDP")]
     st.markdown(
-        """<div class="port-card">
-              <span class="tag">근거 2</span>
-              <h4>제도에 묶인 범주는 상위 개념으로 올렸다</h4>
-              <p>포르투갈 제도에 종속된 세부 범주를 보편적으로 이해되는 상위 개념으로 재분류했습니다.<br>
-                 · 학과 <b>17종 → 전공계열 10개</b><br>
-                 · 입학전형 <b>18종 → 전형유형 8개</b><br>
-                 · 이전 학력 <b>17종 → 학력수준 6단계</b><br>
-                 → 다른 나라는 <b>자기 제도를 같은 상위 개념에 다시 매핑</b>하기만 하면 됩니다.</p>
-            </div>""",
+        f"""<div class="card card-lg" style="height:100%">
+          <div class="ds-eyebrow">왜 옮겨 쓸 수 있는가</div>
+          <div style="margin-top:14px">
+            <div class="ds-h3">국가·시점에 묶인 변수는 이미 뺐다</div>
+            <div class="ds-sub" style="margin-top:6px">
+              {escape(', '.join(macro) if macro else '거시경제 변수 3종')} 은 특정 시점의
+              포르투갈 경제 상황이라 제거했습니다 (Target 과의 상관 0.05 미만).
+              국적도 97.5%가 포르투갈로 쏠려 제외했습니다.</div>
+          </div>
+          <div style="margin-top:18px;padding-top:18px;border-top:1px solid {COLORS['line_soft']}">
+            <div class="ds-h3">가장 강한 신호는 제도와 무관하다</div>
+            <div class="ds-sub" style="margin-top:8px">
+              <span class="ds-mono">sem2_approval_rate</span> 상관 <b>−0.659</b><br>
+              <span class="ds-mono">sem1_approval_rate</span> 상관 <b>−0.591</b><br>
+              <span class="ds-mono">financial_risk_score</span> 상관 <b>+0.435</b><br>
+              <span style="display:inline-block;margin-top:8px">
+                이수율과 재정 상태는 <b>어느 대학 행정 시스템에나 있는 값</b>입니다.</span>
+            </div>
+          </div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
-with col3:
-    st.markdown(
-        """<div class="port-card">
-              <span class="tag">근거 3</span>
-              <h4>가장 강한 신호는 제도와 무관하다</h4>
-              <p>예측력이 가장 높은 변수는 특수한 제도가 아니라
-                 <b>어느 대학 행정 시스템에나 있는 값</b>입니다.<br>
-                 · <code>sem2_approval_rate</code> (이수율) 상관 <b>-0.659</b><br>
-                 · <code>sem1_approval_rate</code> 상관 <b>-0.591</b><br>
-                 · <code>financial_risk_score</code> (재정위험) 상관 <b>+0.435</b><br>
-                 → 학사·등록 데이터만 있으면 같은 신호를 만들 수 있습니다.</p>
-            </div>""",
-        unsafe_allow_html=True,
-    )
+ui.spacer(18)
+st.markdown('<div class="ds-eyebrow">필요 데이터 체크리스트</div>', unsafe_allow_html=True)
+ui.spacer(8)
 
-st.write("")
+_CHECKLIST = [
+    ("Student registry", "학적 정보", "나이 · 성별 · 혼인상태 · 거주 이동 · 특별지원 대상", "적응 위험"),
+    ("Academic performance", "학기별 학업 성과", "수강/이수 과목 수 · 평균 성적 · 평가 응시",
+     "sem1/2_approval_rate · grade_change"),
+    ("Tuition & payment", "등록금 납부", "납부 상태 · 미납 여부", "financial_risk_score"),
+    ("Scholarship & debt", "장학·채무", "장학금 수혜 · 채무 보유", "financial_risk_score"),
+    ("Admission information", "입학 정보", "전형 유형 · 지망 순위 · 입학 성적 · 이전 학력",
+     "전공 적합도 · 학업 준비도"),
+]
+
+rows = "".join(
+    f"""<tr>
+          <td style="width:34px;color:{RISK_COLORS['LOW']};font-weight:700">✓</td>
+          <td><span class="ds-mono" style="color:{COLORS['muted']}">{escape(en)}</span><br>
+              <span style="font-weight:600;color:{COLORS['ink']}">{escape(ko)}</span></td>
+          <td class="ds-sub">{escape(items)}</td>
+          <td class="ds-caption" style="color:{COLORS['primary']}">{escape(signal)}</td>
+        </tr>"""
+    for en, ko, items, signal in _CHECKLIST
+)
 st.markdown(
-    '<div class="card-title">다른 나라에 적용하려면 이만큼의 데이터가 필요합니다</div>'
-    '<div class="section-desc">아래 4종은 한국 대학의 학사종합정보시스템에도 대부분 이미 존재하는 항목입니다.</div>',
+    f"""<div class="card" style="padding:16px 8px">
+      <table class="dt"><thead><tr>
+        <th></th><th>필요 데이터</th><th>구체 항목</th><th>만들어지는 신호</th>
+      </tr></thead><tbody>{rows}</tbody></table></div>""",
     unsafe_allow_html=True,
 )
-
-st.dataframe(
-    {
-        "필요 데이터": ["학적 정보", "학기별 학업 성과", "재정 상태", "입학 정보"],
-        "구체 항목": [
-            "입학 시 나이 · 성별 · 혼인상태 · 거주 이동 여부 · 특별지원 대상 여부",
-            "학기별 수강/이수 과목 수 · 평균 성적 · 평가 응시 여부",
-            "등록금 납부 상태 · 채무 보유 · 장학금 수혜",
-            "전형 유형 · 지망 순위 · 입학 성적 · 이전 학력 수준",
-        ],
-        "이 시스템에서 만들어지는 신호": [
-            "적응 위험 (야간·타지·만학)",
-            "sem1/2_approval_rate · grade_change · zero_enrolled_1st_sem",
-            "financial_risk_score (0~3)",
-            "전공 적합도 · 학업 준비도",
-        ],
-        "한국 대학 보유 여부": ["보유", "보유", "보유", "보유"],
-    },
-    hide_index=True,
-    width="stretch",
-)
-
 st.caption(
-    "위 '한국 대학 보유 여부'는 일반적인 학사종합정보시스템의 표준 항목을 기준으로 한 판단이며, "
+    "위 항목은 일반적인 학사종합정보시스템의 표준 항목을 기준으로 정리한 것이며, "
     "실제 도입 시에는 개별 대학의 데이터 보유 현황과 개인정보 처리 근거를 별도로 확인해야 합니다."
 )
 
 # ---------------------------------------------------------------------------
-# 이동 버튼
+# 5. 이동
 # ---------------------------------------------------------------------------
 
 ui.section("바로 보기")
 go_dashboard, go_prediction = st.columns(2, gap="medium")
 with go_dashboard:
-    if st.button("전체 현황 대시보드 열기", width="stretch", type="primary"):
+    if st.button("전체 현황 대시보드", width="stretch", type="primary"):
         st.switch_page(PAGE_DASHBOARD)
 with go_prediction:
     if st.button("학생 한 명 예측해 보기", width="stretch"):

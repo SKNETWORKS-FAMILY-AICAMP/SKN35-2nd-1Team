@@ -10,10 +10,10 @@
     pages/2_prediction.py  학생 1명 위험 예측
     pages/3_students.py    학생 목록 · 상세
 
-    components/  화면 공통 UI·테마·지구본·상태
+    components/  디자인 시스템(theme) · 공통 UI · 지구본 · 상태
     services/    예측 계층 (더미 ↔ 실제 모델 교체 지점)
     rules/       규칙 기반 지원 추천 엔진
-    utils/       팀 전처리 스키마 매핑 · 더미 데이터
+    utils/       팀 전처리 스키마 매핑 · 실데이터 복원 · 더미 데이터
 
 왜 `st.navigation` 인가
     Streamlit 은 pages/ 폴더를 자동 멀티페이지로 인식해 라우팅을 가져가 버린다.
@@ -27,6 +27,8 @@ services/prediction_service.py 의 USE_REAL_MODEL 스위치 두 곳뿐이다.
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from components.state import (
@@ -34,13 +36,14 @@ from components.state import (
     PAGE_HOME,
     PAGE_PREDICTION,
     PAGE_STUDENTS,
+    roster_source,
 )
-from components.theme import COLORS
+from components.theme import inject_css
 from services.prediction_service import get_service
-from utils.schema import schema_available
+from utils.schema import final_feature_count, schema_available
 
 st.set_page_config(
-    page_title="중도탈락 위험 예측 시스템",
+    page_title="Student Dropout Intelligence",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -48,39 +51,72 @@ st.set_page_config(
 
 PAGES = [
     st.Page(PAGE_HOME, title="시작", icon=":material/home:", default=True),
-    st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/dashboard:"),
+    st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/monitoring:"),
     st.Page(PAGE_PREDICTION, title="학생 위험 예측", icon=":material/person_search:"),
-    st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/list:"),
+    st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/table_rows:"),
 ]
 
 
 def _sidebar() -> None:
-    """화면 이동 위젯 아래에 붙는 공통 정보. 숫자의 출처를 항상 사이드바에 남긴다."""
-    with st.sidebar:
-        st.divider()
+    """화면 이동 위젯 아래에 붙는 공통 정보.
 
-        service = get_service()
-        schema_line = (
-            "팀 전처리 스키마 연결됨<br>(data/processed/feature_schema.json)"
-            if schema_available()
-            else "<b style='color:#C2453D'>스키마 파일 없음</b><br>"
-            "data/processed/feature_schema.json 을 확인하세요"
-        )
+    **숫자의 출처를 항상 사이드바에 남긴다.** 어느 화면에 있든 지금 보고 있는 것이
+    실제 모델인지 프로토타입인지, 실데이터인지 더미인지 한눈에 보여야 한다.
+    """
+    service = get_service()
+    source, is_real = roster_source()
+
+    mode = "Live Model" if not service.is_dummy else "Prototype"
+    mode_color = "#1B6E54" if not service.is_dummy else "#1B4F91"
+    data_color = "#1B6E54" if is_real else "#A66A05"
+
+    schema_line = (
+        "팀 전처리 스키마 연결됨<br><code>data/processed/feature_schema.json</code>"
+        f"<br>인코딩 후 {final_feature_count() or 81} 피처"
+        if schema_available()
+        else "<b style='color:#B3382F'>스키마 파일 없음</b><br>"
+        "<code>data/processed/feature_schema.json</code> 을 확인하세요"
+    )
+
+    with st.sidebar:
         st.markdown(
-            f'<div style="font-size:.78rem;color:{COLORS["muted"]};line-height:1.7">'
-            f'<b style="color:{COLORS["ink_soft"]}">예측기</b><br>{service.model_label}<br><br>'
-            f'<b style="color:{COLORS["ink_soft"]}">전처리</b><br>{schema_line}<br><br>'
-            f'<b style="color:{COLORS["ink_soft"]}">화면 데이터</b><br>'
-            "UCI 데이터셋의 컬럼 구조를 따른 합성 더미 80명 (원본 데이터가 아님)</div>",
+            f"""
+            <div class="sb-brand">
+              <div class="n">Student Dropout Intelligence</div>
+              <div class="s">SKN35 · 2ND TEAM PROJECT</div>
+            </div>
+            <div class="sb-block">
+              <div class="k">Mode</div>
+              <div class="v">
+                <span class="pill" style="color:{mode_color};background:#F4F6F9;
+                      border-color:{mode_color}33">{mode}</span><br>
+                <span style="display:inline-block;margin-top:6px">
+                  {escape(service.model_label)}</span>
+              </div>
+            </div>
+            <div class="sb-block">
+              <div class="k">Roster</div>
+              <div class="v">
+                <span class="pill" style="color:{data_color};background:#F4F6F9;
+                      border-color:{data_color}33">{'REAL DATA' if is_real else 'SYNTHETIC'}</span><br>
+                <span style="display:inline-block;margin-top:6px">{escape(source)}</span>
+              </div>
+            </div>
+            <div class="sb-block">
+              <div class="k">Preprocessing</div>
+              <div class="v">{schema_line}</div>
+            </div>
+            <div class="sb-foot">
+              이 시스템은 위험요인에 대응하는 지원 프로그램을 연결할 뿐,
+              중도탈락을 단정하거나 예방을 보장하지 않습니다.
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-        st.divider()
-        st.caption(
-            "이 시스템은 위험요인에 대응하는 지원 프로그램을 연결할 뿐, "
-            "중도탈락을 단정하거나 예방을 보장하지 않습니다."
-        )
 
 
+# CSS 는 화면보다 먼저 들어가야 첫 프레임이 스타일 없이 번쩍이지 않는다.
+inject_css()
 navigation = st.navigation(PAGES, position="sidebar")
 _sidebar()
 navigation.run()
