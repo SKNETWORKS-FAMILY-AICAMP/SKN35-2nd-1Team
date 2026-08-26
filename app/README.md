@@ -16,26 +16,56 @@ streamlit run app/app.py             # 반드시 저장소 루트에서 실행
 
 ```
 app/
-├─ app.py                  # 진입점 — 전역 설정 + st.navigation 라우팅만
-├─ views/
-│  ├─ 0_home.py            # 시작화면 — 서비스 소개 · 데이터 출처(지구본) · 확장 가능성
-│  ├─ 1_dashboard.py       # 전체 현황 — KPI 6종 · 분포 4종 · 우선 확인 명단
-│  ├─ 2_prediction.py      # 학생 1명 예측 — 입력 32개 → 위험도 · 위험요인 · 지원 추천
-│  └─ 3_students.py        # 학생 목록 — 필터 4종 · 행 선택 시 상세
-├─ components/             # 화면 공통 (테마 · UI 조각 · 지구본 · 캐시)
+├─ app.py                  # 진입점 — 전역 설정 + st.navigation 라우팅 + 사이드바
+├─ views/                  # 화면 하나당 파일 하나
+│  ├─ 0_home.py            # 시작 — 히어로 · 파이프라인 · 데이터 출처(지구본) · 이식성
+│  ├─ 1_dashboard.py       # 현황 — 3단 계층(규모 → 성격 → 우선 명단)
+│  ├─ 2_prediction.py      # 예측 — 입력 32개를 4탭으로 → 위험도 · 위험요인 · 지원
+│  └─ 3_students.py        # 목록 — 툴바 필터 + master-detail
+├─ components/
+│  ├─ theme.py             # ★ 디자인 시스템 (색·타이포·간격·상태) — 여기만 고친다
+│  ├─ ui.py                # 공통 조각 (KPI · 배지 · 위험 미터 · 액션 카드 · 표)
+│  ├─ globe.py             # 포르투갈 지구본 (자동 회전 + 오프라인 SVG 폴백)
+│  └─ state.py             # 화면 간 상태 · 명단 캐시
 ├─ services/               # 예측 계층 (더미 ↔ 실제 모델 교체 지점)
 ├─ rules/                  # 규칙 기반 지원 추천 엔진
-├─ utils/                  # 팀 전처리 스키마 매핑 · 더미 데이터
-├─ data/dummy_students.csv # 합성 더미 80명 (원본 데이터 아님)
-└─ tests/                  # unittest 66개
+├─ utils/                  # 전처리 스키마 매핑 · 실데이터 복원 · 더미 데이터
+├─ data/dummy_students.csv # 합성 더미 80명 (실데이터가 없을 때만 쓰는 폴백)
+└─ tests/                  # unittest 75개
 ```
+
+> 폴더 이름이 `pages/` 가 아니라 `views/` 인 이유: `pages/` 가 있으면 Streamlit 이
+> 자동 멀티페이지로 인식해서, **콜드 상태에서 `/dashboard` 로 직접 들어올 때
+> 사이드바가 통째로 사라진다.** (링크 클릭은 멀쩡해서 잘 안 보이는 사고다.)
+> 화면이 파일 하나씩 나뉜 구조는 그대로다.
 
 화면을 하나 고치려면 `views/` 의 파일 **하나만** 열면 됩니다. 서로를 import 하지 않으므로
 여러 사람이 동시에 다른 화면을 작업해도 충돌하지 않습니다.
 
-> `st.navigation` 을 쓰는 이유: Streamlit 은 `views/` 폴더를 자동 멀티페이지로 인식해
-> 라우팅을 가져가 버립니다. `st.navigation` 으로 라우팅을 직접 잡으면 사이드바 구성과
-> 화면 간 값 전달을 통제하면서도 화면별 파일 분리를 그대로 얻습니다.
+> `st.navigation` 을 쓰는 이유: 라우팅을 직접 잡아야 사이드바 구성과 화면 간 값 전달을
+> 통제할 수 있고, 그러면서도 화면별 파일 분리를 그대로 얻습니다.
+
+---
+
+## 1.5 팀원용 — 최종 데이터·모델은 여기에 넣으면 됩니다
+
+**코드를 고칠 필요가 없습니다.** 파일을 제 위치에 두기만 하면 화면이 알아서 바뀝니다.
+
+| 넣을 것 | 위치 | 넣으면 생기는 일 |
+|---|---|---|
+| 전처리 CSV | `data/processed/test.csv`<br>(`val.csv`·`train.csv` 도 인식) | 명단이 **합성 더미 → 실제 학생**으로 바뀐다 |
+| 학습된 모델 | `models/best_model.joblib`<br>(`.pkl`·`model.joblib` 도 인식) | `USE_REAL_MODEL = True` 로 바꾸면 실제 예측 |
+| 전처리기 | `models/preprocessor.joblib` | 이미 있음 |
+| 스키마 | `data/processed/feature_schema.json` | 이미 있음 |
+
+지금 무엇을 쓰고 있는지는 **사이드바에 항상 표시**됩니다 (`REAL DATA` / `SYNTHETIC`,
+`Prototype` / `Live Model`). 파일이 없으면 조용히 더미로 물러나고 앱은 그대로 뜹니다.
+
+> 전처리 CSV 는 표준화·인코딩된 상태라 그대로는 화면에 못 씁니다.
+> `utils/real_data.py` 가 `preprocessor.joblib` 의 스케일러·인코더로 **역변환해
+> 원래 값을 복원**합니다 — 지어낸 값이 아니라 UCI 원본 그대로입니다.
+> 정답 라벨(`target`)은 읽지만 **화면에 쓰지 않습니다.** DummyPredictor 와 나란히
+> 놓이면 정확도처럼 읽히기 때문이고, 실제 모델이 붙은 뒤 평가 화면을 만들 때 쓰면 됩니다.
 
 ---
 
@@ -100,7 +130,7 @@ cd app
 python -m unittest discover -s tests -t .
 ```
 
-**66개 통과** (로직 51 + 화면 15). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
+**75개 통과** (로직 51 + 화면 24). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
 학습된 모델이 없는 지금도 **팀 전처리기가 우리 입력을 그대로 받는지**는 실제로 확인할 수 있습니다.
 
 - 더미 80명 → `to_model_row()` → `preprocessor.transform()` 이 **경고 없이 (80, 81)** 을 반환
