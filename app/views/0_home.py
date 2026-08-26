@@ -21,8 +21,12 @@ _, is_real = roster_source()
 # 1. Hero — 첫 5초
 # ---------------------------------------------------------------------------
 
-st.markdown(
-    f"""<div class="hero">
+# 지구본을 히어로 배경 위에 올린다. 데이터 출처가 어디인지 첫 화면에서 바로 읽히게 —
+# 별도 섹션의 삽화로 두면 "장식" 이 되고, 여기 두면 "이 제품의 근거" 가 된다.
+with st.container(key="hero", horizontal=True, gap="large", vertical_alignment="center"):
+    with st.container(key="hero_text"):
+        st.markdown(
+            f"""<div class="hero">
       <div class="eyebrow">SKN35 · 2nd Team Project · Student Success Analytics</div>
       <h1>Student Dropout<br>Intelligence</h1>
       <div class="kr">대학생 중도탈락 위험 예측 및 맞춤 지원 시스템</div>
@@ -38,8 +42,10 @@ st.markdown(
         <div class="item"><div class="k">Features</div><div class="v">{final_feature_count() or 81}</div></div>
       </div>
     </div>""",
-    unsafe_allow_html=True,
-)
+            unsafe_allow_html=True,
+        )
+    with st.container(key="hero_globe"):
+        render_globe(height=330)
 
 ui.spacer(20)
 ui.prototype_banner(
@@ -92,43 +98,37 @@ st.markdown(
 
 ui.section("어떤 데이터로 만들었는가", "포르투갈 고등교육기관의 실제 학적·학업·재정 기록입니다.")
 
-left, right = st.columns([1.25, 1], gap="large")
-
-with left:
-    st.markdown(
-        f"""<div class="card card-lg">
-              <div class="ds-eyebrow">Training data</div>
-              <div class="ds-h2" style="margin-top:8px">
-                UCI — Predict Students' Dropout and Academic Success</div>
-              <div class="ds-sub" style="margin-top:6px">
-                포르투갈 폴리테크닉 기관 · 학사 데이터베이스 기반 공개 데이터셋</div>
-              <div class="ds-body" style="margin-top:16px">
-                입학 시점의 인구·사회·경제 정보와 1·2학기 학업 성과를 함께 담고 있어,
-                <b>학기가 끝나는 시점마다</b> 위험 신호를 다시 계산할 수 있는 구조입니다.
-              </div>
-              <div class="ds-caption" style="margin-top:14px">
-                Target 정의 · <span class="ds-mono">{escape(target_definition())}</span>
-              </div>
-            </div>""",
-        unsafe_allow_html=True,
-    )
-    ui.spacer(12)
-    ui.kpi_row(
-        [
-            {"label": "Students", "value": "4,424", "caption": "학생 단위 레코드",
-             "accent": COLORS["primary"]},
-            {"label": "Raw variables", "value": "37", "caption": "Target 포함",
-             "accent": COLORS["ink"]},
-            {"label": "Dropout rate", "value": "32.1", "unit": "%",
-             "caption": "Non-Dropout 67.9%", "accent": RISK_COLORS["HIGH"], "share": 0.321},
-            {"label": "Model features", "value": f"{final_feature_count() or 81}",
-             "caption": "일반화 + 인코딩 후", "accent": CATEGORY_COLORS["adaptation"]},
-        ],
-        columns=4,
-    )
-
-with right:
-    render_globe(height=330)
+st.markdown(
+    f"""<div class="card card-lg">
+          <div class="ds-eyebrow">Training data</div>
+          <div class="ds-h2" style="margin-top:8px">
+            UCI — Predict Students' Dropout and Academic Success</div>
+          <div class="ds-sub" style="margin-top:6px">
+            포르투갈 폴리테크닉 기관 · 학사 데이터베이스 기반 공개 데이터셋</div>
+          <div class="ds-body" style="margin-top:16px;max-width:88ch">
+            입학 시점의 인구·사회·경제 정보와 1·2학기 학업 성과를 함께 담고 있어,
+            <b>학기가 끝나는 시점마다</b> 위험 신호를 다시 계산할 수 있는 구조입니다.
+          </div>
+          <div class="ds-caption" style="margin-top:14px">
+            Target 정의 · <span class="ds-mono">{escape(target_definition())}</span>
+          </div>
+        </div>""",
+    unsafe_allow_html=True,
+)
+ui.spacer(12)
+ui.kpi_row(
+    [
+        {"label": "Students", "value": "4,424", "caption": "학생 단위 레코드",
+         "accent": COLORS["primary"]},
+        {"label": "Raw variables", "value": "37", "caption": "Target 포함",
+         "accent": COLORS["ink"]},
+        {"label": "Dropout rate", "value": "32.1", "unit": "%",
+         "caption": "Non-Dropout 67.9%", "accent": RISK_COLORS["HIGH"], "share": 0.321},
+        {"label": "Model features", "value": f"{final_feature_count() or 81}",
+         "caption": "일반화 + 인코딩 후", "accent": CATEGORY_COLORS["adaptation"]},
+    ],
+    columns=4,
+)
 
 # ---------------------------------------------------------------------------
 # 4. 이식성 — 프로덕트 전략처럼

@@ -64,9 +64,11 @@ CATEGORY_COLORS: dict[str, str] = {
 CLASS_COLORS: dict[str, str] = {"Dropout": "#B3382F", "Non-Dropout": "#1B6E54"}
 
 #: 시작화면 지구본
+#  히어로(진한 남색) 위에 올라가므로 배경보다 **어두운 바다 + 밝은 육지**로 잡는다.
+#  배경과 톤이 겹치면 구가 아니라 얼룩으로 보인다.
 PORTUGAL: dict[str, str] = {
-    "ocean": "#12335C",
-    "land": "#2C5E96",
+    "ocean": "#0A2242",
+    "land": "#3D7AB8",
     "border": "rgba(255,255,255,.28)",
     "graticule": "rgba(255,255,255,.16)",
     "highlight": "#FF6B5B",
@@ -405,47 +407,62 @@ def _css() -> str:
   .empty .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['2']}; }}
 
   /* ── 히어로 (시작화면) ─────────────────────────────────────────────── */
-  .hero {{
+  /* 지구본(Plotly 차트)을 히어로 배경 위에 얹어야 해서 markdown 한 덩어리가 아니라
+     Streamlit 컨테이너에 배경을 입힌다. `st.container(key="hero")` 가 붙여 주는
+     `.st-key-hero` 는 문서화된 훅이라 DOM 을 깊게 찌르지 않아도 된다. */
+  .st-key-hero {{
     position: relative; overflow: hidden;
     background:
       radial-gradient(1100px 420px at 88% -20%, rgba(78,140,214,.30), transparent 62%),
       linear-gradient(135deg, {c["deep"]} 0%, {c["deep_mid"]} 58%, #17406F 100%);
-    border-radius: var(--radius-lg); padding: {s['12']} {s['12']} {s['8']} {s['12']};
+    border-radius: var(--radius-lg);
+    padding: {s['12']} {s['12']} {s['8']} {s['12']};
     color: #FFFFFF;
   }}
-  .hero::after {{
-    content: ""; position: absolute; inset: 0; pointer-events: none;
+  .st-key-hero::after {{
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
     background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
                       linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
     background-size: 44px 44px; mask-image: linear-gradient(105deg, transparent 38%, #000 100%);
   }}
-  .hero > * {{ position: relative; z-index: 1; }}
-  .hero .eyebrow {{
+  .st-key-hero > div {{ position: relative; z-index: 1; }}
+  /* 어두운 히어로 위에서는 캡션도 밝아야 읽힌다 */
+  .st-key-hero [data-testid="stCaptionContainer"],
+  .st-key-hero [data-testid="stCaptionContainer"] p {{ color: #9DBBE4 !important; }}
+
+  /* 보이지 않는 도우미 iframe(지구본 자동회전 · 번역 차단)이 1px 흰 조각으로 남는다.
+     이 앱은 st.iframe 을 눈에 보이는 용도로 쓰지 않으므로 컨테이너째 숨긴다.
+     나중에 iframe 으로 무언가를 보여줄 일이 생기면 이 규칙을 좁혀야 한다. */
+  [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) {{ display: none; }}
+  /* 지구본이 히어로 오른쪽에서 살짝 넘쳐 보이도록 — 액자 안에 갇힌 인상을 없앤다 */
+  .st-key-hero-globe {{ margin: -{s['6']} -{s['4']} -{s['8']} 0; }}
+  .hero {{ color: #FFFFFF; }}
+  .st-key-hero .eyebrow {{
     font-size: {t['label']}; font-weight: 700; letter-spacing: .16em;
     text-transform: uppercase; color: #8FB4E4;
   }}
-  .hero h1 {{
+  .st-key-hero h1 {{
     font-size: {t['display']}; font-weight: 700; color: #FFFFFF;
     letter-spacing: -.035em; line-height: 1.14; margin: {s['3']} 0 0 0;
   }}
-  .hero .kr {{
+  .st-key-hero .kr {{
     font-size: {t['h2']}; font-weight: 600; color: #C9DBF2;
     margin-top: {s['2']}; letter-spacing: -.01em;
   }}
-  .hero p {{
+  .st-key-hero p {{
     font-size: {t['body']}; line-height: 1.72; color: #B9CDE8;
     margin: {s['4']} 0 0 0; max-width: 62ch;
   }}
-  .hero-meta {{
+  .st-key-hero .hero-meta {{
     display: flex; flex-wrap: wrap; gap: {s['8']};
     margin-top: {s['8']}; padding-top: {s['6']};
     border-top: 1px solid rgba(255,255,255,.16);
   }}
-  .hero-meta .item .k {{
+  .st-key-hero .hero-meta .item .k {{
     font-size: {t['label']}; font-weight: 700; letter-spacing: .11em;
     text-transform: uppercase; color: #7FA5D6;
   }}
-  .hero-meta .item .v {{
+  .st-key-hero .hero-meta .item .v {{
     font-size: {t['h2']}; font-weight: 700; color: #FFFFFF;
     margin-top: {s['1']}; font-variant-numeric: tabular-nums; letter-spacing: -.01em;
   }}
@@ -574,12 +591,44 @@ def _css() -> str:
   ::-webkit-scrollbar-thumb:hover {{ background: #BCC7D6; }}
   ::-webkit-scrollbar-track {{ background: transparent; }}
 
+  /* ── 모션 — 값이 "찼다"는 것만 보여주고 끝낸다 ─────────────────────── */
+  /* 기관용 분석 제품이라 절제한다. 등장 애니메이션은 **막대와 마커에만** 쓰고
+     화면 전체를 움직이지 않는다. 접근성 설정을 켠 사용자에겐 전부 끈다. */
+  @keyframes ds-grow {{ from {{ transform: scaleX(0); }} to {{ transform: scaleX(1); }} }}
+  @keyframes ds-rise {{ from {{ opacity: 0; transform: translateY(6px); }}
+                        to   {{ opacity: 1; transform: translateY(0); }} }}
+  @keyframes ds-mark {{ from {{ opacity: 0; transform: translateX(-10px); }}
+                        to   {{ opacity: 1; transform: translateX(0); }} }}
+
+  .factor-fill, .kpi-bar > span, .riskbar .fill {{
+    transform-origin: left center;
+    animation: ds-grow .5s cubic-bezier(.2,.75,.3,1) both;
+  }}
+  /* 위험요인은 위에서부터 차례로 — 기여도 순서가 눈에 남는다 */
+  .factor:nth-child(2) .factor-fill {{ animation-delay: .05s; }}
+  .factor:nth-child(3) .factor-fill {{ animation-delay: .10s; }}
+  .factor:nth-child(4) .factor-fill {{ animation-delay: .15s; }}
+  .factor:nth-child(5) .factor-fill {{ animation-delay: .20s; }}
+
+  .meter .mark {{ animation: ds-mark .45s cubic-bezier(.2,.75,.3,1) both .12s; }}
+  .meter-val .n {{ animation: ds-rise .4s ease-out both; }}
+  .kpi-hero .val {{ animation: ds-rise .4s ease-out both; }}
+
+  .kpi, .act, .card {{ transition: border-color .15s ease, box-shadow .15s ease; }}
+  .kpi:hover {{ border-color: var(--primary-line); }}
+
+  @media (prefers-reduced-motion: reduce) {{
+    .factor-fill, .kpi-bar > span, .riskbar .fill,
+    .meter .mark, .meter-val .n, .kpi-hero .val {{ animation: none !important; }}
+    * {{ transition-duration: .01ms !important; }}
+  }}
+
   /* 좁은 화면에서 파이프라인/그리드가 찌그러지지 않게 */
   @media (max-width: 1180px) {{
     .flow {{ grid-template-columns: repeat(2, 1fr); }}
     .flow .step {{ border-right: 1px solid var(--line); border-radius: var(--radius-md); }}
-    .hero {{ padding: {s['8']}; }}
-    .hero h1 {{ font-size: 1.95rem; }}
+    .st-key-hero {{ padding: {s['8']}; }}
+    .st-key-hero h1 {{ font-size: 1.95rem; }}
   }}
 </style>
 """

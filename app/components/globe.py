@@ -73,16 +73,15 @@ def plotly_globe(height: int = 380) -> go.Figure:
             hoverinfo="skip",
         )
     )
+    # 라벨을 붙이지 않는다. 지구본이 돌면 포르투갈이 가장자리로 가고, 그때 글자가
+    # 그리는 영역 밖으로 잘린다. 어디가 포르투갈인지는 아래 캡션이 말한다.
     fig.add_trace(
         go.Scattergeo(
             lon=[PORTUGAL_LON],
             lat=[PORTUGAL_LAT],
-            mode="markers+text",
-            marker=dict(size=10, color=PORTUGAL["highlight"],
-                        line=dict(color="#FFFFFF", width=1.6)),
-            text=["  PORTUGAL"],
-            textposition="middle right",
-            textfont=dict(family=FONT_STACK, size=13, color="#FFFFFF"),
+            mode="markers",
+            marker=dict(size=11, color=PORTUGAL["highlight"],
+                        line=dict(color="#FFFFFF", width=1.8)),
             hovertemplate="포르투갈<br>UCI 원본 데이터의 수집 국가<extra></extra>",
         )
     )
@@ -91,7 +90,7 @@ def plotly_globe(height: int = 380) -> go.Figure:
         projection_rotation=dict(lon=VIEW_LON, lat=VIEW_LAT),
         # 1.0 이 "그리는 영역에 꽉 차는" 크기다. 그보다 크게 잡으면 가장자리가 잘리고,
         # PORTUGAL 라벨이 마커 오른쪽으로 뻗기 때문에 여유를 더 둔다.
-        projection_scale=0.88,
+        projection_scale=0.94,
         showland=True,
         landcolor=PORTUGAL["land"],
         showocean=True,
@@ -345,8 +344,8 @@ def render(height: int = 340) -> None:
                 from streamlit.components.v1 import html as render_iframe
             # height=0 은 st.iframe 이 거부한다 (양수여야 한다). 1px 은 눈에 띄지 않는다.
             render_iframe(_autorotate_script(), height=1)
-        st.caption("지구본은 저절로 회전하며, 드래그해서 직접 돌릴 수도 있습니다. "
-                   "붉게 표시된 곳이 포르투갈입니다.")
+        st.caption("Training data origin · Portugal — 붉은 점이 포르투갈이며, "
+                   "저절로 회전하고 드래그로 직접 돌릴 수도 있습니다.")
     else:
         # Streamlit 의 HTML 살균기는 <svg> 를 통째로 걸러낸다 (st.markdown 도 st.html 도 마찬가지).
         # <img> 는 통과하므로 SVG 를 data URI 로 감싸서 넣는다. 여전히 외부 통신은 0이다.
@@ -357,7 +356,7 @@ def render(height: int = 340) -> None:
             'style="width:100%;height:auto;display:block;margin:0 auto"/>',
             unsafe_allow_html=True,
         )
-        st.caption("붉게 표시된 곳이 포르투갈입니다.")
+        st.caption("Training data origin · Portugal — 붉게 표시된 곳입니다.")
 
 
 _KEEP = escape  # 향후 라벨을 동적으로 넣을 때 쓴다.
