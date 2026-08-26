@@ -166,6 +166,42 @@ def kpi_row(items: list[dict], columns: int = 4) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 막대 차트 — Plotly 대신 직접 그린다
+# ---------------------------------------------------------------------------
+
+def bar_chart(
+    rows: list[dict],
+    *,
+    label_width: int = 118,
+    hint: str = "막대를 가리키면 나머지는 옅어집니다.",
+) -> None:
+    """가로 막대 목록. `{label, value, display, color}` 를 큰 값부터 넣는다.
+
+    Plotly 를 쓰지 않는 이유: **가리킨 막대만 또렷하게** 만들려면 나머지를 눌러야 하는데,
+    Plotly 막대에서는 JS 콜백 없이 못 한다. 직접 그리면 CSS 몇 줄이고,
+    렌더 비용도 차트 하나만큼 줄어든다. 좌표가 필요한 그래프(산점도)만 Plotly 에 남긴다.
+    """
+    if not rows:
+        empty_state("표시할 값이 없습니다.")
+        return
+
+    top = max((r["value"] for r in rows), default=0) or 1
+    body = []
+    for r in rows:
+        width = max(r["value"] / top * 100, 1.5)
+        body.append(
+            f'<div class="row"><span class="lab">{escape(str(r["label"]))}</span>'
+            f'<span class="track"><span class="fill" '
+            f'style="width:{width:.1f}%;background:{r.get("color", COLORS["primary"])}"></span></span>'
+            f'<span class="val">{escape(str(r["display"]))}</span></div>'
+        )
+    _html(
+        f'<div class="bars" style="--labelw:{label_width}px">{"".join(body)}</div>'
+        f'{f"<div class='bars-hint'>{escape(hint)}</div>" if hint else ""}'
+    )
+
+
+# ---------------------------------------------------------------------------
 # 위험 미터 — 속도계 대신 "구간이 보이는" 가로 미터
 # ---------------------------------------------------------------------------
 

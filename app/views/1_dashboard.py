@@ -62,56 +62,40 @@ def risk_composition(roster: Roster) -> go.Figure:
     return style_figure(fig, height=54, show_legend=False, grid="none")
 
 
-def category_chart(roster: Roster) -> go.Figure:
+def category_rows(roster: Roster) -> list[dict]:
     """어떤 성격의 지원이 얼마나 필요한가 — 부서 배분의 근거."""
     counts = roster.frame["주요 위험"].value_counts()
-    keys = list(RISK_CATEGORIES)
-    labels = [RISK_CATEGORIES[k] for k in keys]
-    values = [int(counts.get(label, 0)) for label in labels]
-    colors = [CATEGORY_COLORS[k] for k in keys]
+    total = len(roster.frame) or 1
+    items = []
+    for key, label in RISK_CATEGORIES.items():
+        n = int(counts.get(label, 0))
+        items.append({"label": label, "value": n, "color": CATEGORY_COLORS[key],
+                      "display": f"{n:,}명 · {n / total * 100:.0f}%"})
     if "-" in counts.index:
-        labels.append("해당 없음")
-        values.append(int(counts.get("-", 0)))
-        colors.append(COLORS["faint"])
-
-    order = sorted(range(len(values)), key=lambda i: values[i])
-    fig = go.Figure(
-        go.Bar(
-            x=[values[i] for i in order], y=[labels[i] for i in order], orientation="h",
-            marker=dict(color=[colors[i] for i in order], line=dict(width=0)),
-            text=[f"{values[i]}명" for i in order], textposition="outside",
-            textfont=dict(size=11, color=COLORS["ink_soft"]),
-            hovertemplate="%{y}: %{x}명<extra></extra>",
-        )
-    )
-    fig.update_xaxes(range=[0, max(values) * 1.28 or 1], visible=False)
-    return style_figure(fig, height=210, grid="none")
+        n = int(counts.get("-", 0))
+        items.append({"label": "해당 없음", "value": n, "color": COLORS["faint"],
+                      "display": f"{n:,}명 · {n / total * 100:.0f}%"})
+    return sorted(items, key=lambda r: r["value"], reverse=True)
 
 
-def major_chart(roster: Roster) -> go.Figure:
+def major_rows(roster: Roster) -> list[dict]:
     """어느 전공계열에 위험이 몰려 있는가 — 학과 단위 대응의 출발점."""
     grouped = (
         roster.frame.groupby("전공 계열")
         .agg(mean=("중도탈락 확률", "mean"), n=("중도탈락 확률", "size"))
-        .sort_values("mean")
+        .sort_values("mean", ascending=False)
     )
-    values = (grouped["mean"] * 100).round(1)
-    colors = [
-        RISK_COLORS["HIGH"] if v >= 60 else RISK_COLORS["MEDIUM"] if v >= 30
-        else COLORS["primary"]
-        for v in values
-    ]
-    fig = go.Figure(
-        go.Bar(
-            x=values, y=grouped.index, orientation="h",
-            marker=dict(color=colors, line=dict(width=0)),
-            text=[f"{v:.0f}%  ·  {n}명" for v, n in zip(values, grouped["n"])],
-            textposition="outside", textfont=dict(size=11, color=COLORS["ink_soft"]),
-            hovertemplate="%{y}<br>평균 중도탈락 확률 %{x:.1f}%<extra></extra>",
+    rows = []
+    for name, row in grouped.iterrows():
+        pct = row["mean"] * 100
+        color = (
+            RISK_COLORS["HIGH"] if pct >= 60
+            else RISK_COLORS["MEDIUM"] if pct >= 30
+            else COLORS["primary"]
         )
-    )
-    fig.update_xaxes(range=[0, 118], visible=False)
-    return style_figure(fig, height=max(230, 26 * len(grouped)), grid="none")
+        rows.append({"label": name, "value": pct, "color": color,
+                     "display": f"{pct:.0f}% · {int(row['n']):,}명"})
+    return rows
 
 
 def approval_scatter(roster: Roster) -> go.Figure:
@@ -236,8 +220,7 @@ with c1, st.container(border=True):
         "부서별 대응 규모를 여기서 잡습니다.</div>",
         unsafe_allow_html=True,
     )
-    st.plotly_chart(category_chart(roster), width="stretch",
-                    config=PLOTLY_CONFIG, key="c_cat")
+    ui.bar_chart(category_rows(roster), label_width=92)
 with c2, st.container(border=True):
     st.markdown(
         '<div class="card-title">2학기 이수율과 위험</div>'
@@ -256,8 +239,7 @@ with st.container(border=True):
         "표본이 적은 계열은 값이 크게 흔들릴 수 있으니 인원 수를 함께 봅니다.</div>",
         unsafe_allow_html=True,
     )
-    st.plotly_chart(major_chart(roster), width="stretch",
-                    config=PLOTLY_CONFIG, key="c_major")
+    ui.bar_chart(major_rows(roster), label_width=110)
 
 # ── Level 3 — 그래서 이 학생부터 ───────────────────────────────────────────
 ui.section("먼저 확인할 학생", "중도탈락 확률이 높은 순서입니다.")

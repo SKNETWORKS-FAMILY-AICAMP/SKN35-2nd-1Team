@@ -591,6 +591,42 @@ def _css() -> str:
   ::-webkit-scrollbar-thumb:hover {{ background: #BCC7D6; }}
   ::-webkit-scrollbar-track {{ background: transparent; }}
 
+  /* ── 막대 차트 (직접 그린다) ───────────────────────────────────────── */
+  /* Plotly 막대로는 "가리킨 막대만 또렷하게" 를 JS 없이 못 한다. 직접 그리면
+     포커스 처리가 CSS 몇 줄이고 테마도 완전히 맞는다. 산점도처럼 좌표가 필요한
+     그래프만 Plotly 에 남긴다. */
+  .bars {{ display: flex; flex-direction: column; gap: 2px; }}
+  .bars .row {{
+    display: grid; grid-template-columns: var(--labelw, 118px) 1fr auto;
+    align-items: center; gap: {s['3']};
+    padding: {s['2']} {s['2']}; border-radius: var(--radius-sm);
+    transition: opacity .18s ease, background .18s ease, filter .18s ease;
+  }}
+  /* 하나를 가리키면 나머지는 물러난다 — 흐리게 하는 대신 **옅게** 한다.
+     작은 한글 라벨에 blur 를 걸면 뭉개져서 오히려 읽기 나빠진다. */
+  .bars:hover .row {{ opacity: .34; filter: saturate(.55); }}
+  .bars .row:hover {{ opacity: 1; filter: none; background: var(--raised); }}
+  .bars .lab {{
+    font-size: {t['secondary']}; color: var(--ink-soft); font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }}
+  .bars .row:hover .lab {{ color: var(--ink); }}
+  /* span 은 인라인이라 width/height 가 먹지 않는다 — 반드시 블록으로 만든다 */
+  .bars .track {{
+    display: block; height: 10px; border-radius: 5px; background: var(--line-soft);
+  }}
+  .bars .fill {{
+    display: block; height: 100%; border-radius: 5px; transform-origin: left center;
+    animation: ds-grow .55s cubic-bezier(.2,.75,.3,1) both;
+  }}
+  .bars .val {{
+    font-size: {t['caption']}; font-weight: 700; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 74px;
+    text-align: right;
+  }}
+  .bars .row:hover .val {{ color: var(--ink); }}
+  .bars-hint {{ font-size: {t['label']}; color: var(--faint); margin-top: {s['2']}; }}
+
   /* ── 모션 — 값이 "찼다"는 것만 보여주고 끝낸다 ─────────────────────── */
   /* 기관용 분석 제품이라 절제한다. 등장 애니메이션은 **막대와 마커에만** 쓰고
      화면 전체를 움직이지 않는다. 접근성 설정을 켠 사용자에겐 전부 끈다. */
@@ -618,7 +654,7 @@ def _css() -> str:
   .kpi:hover {{ border-color: var(--primary-line); }}
 
   @media (prefers-reduced-motion: reduce) {{
-    .factor-fill, .kpi-bar > span, .riskbar .fill,
+    .factor-fill, .kpi-bar > span, .riskbar .fill, .bars .fill,
     .meter .mark, .meter-val .n, .kpi-hero .val {{ animation: none !important; }}
     * {{ transition-duration: .01ms !important; }}
   }}

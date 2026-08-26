@@ -45,7 +45,7 @@ with st.container(key="hero", horizontal=True, gap="large", vertical_alignment="
             unsafe_allow_html=True,
         )
     with st.container(key="hero_globe"):
-        render_globe(height=330)
+        render_globe(height=420)
 
 ui.spacer(20)
 ui.prototype_banner(
