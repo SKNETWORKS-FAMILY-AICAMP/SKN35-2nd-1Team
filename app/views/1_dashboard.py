@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from html import escape
+from urllib.parse import quote
 
 import plotly.graph_objects as go
 import streamlit as st
@@ -31,6 +32,9 @@ from services.prediction_service import get_service
 from services.roster import Roster
 
 RISK_ORDER = ("HIGH", "MEDIUM", "LOW")
+
+#: 우선 명단에서 학생을 눌렀을 때 열 주소. st.navigation 이 붙이는 경로와 같아야 한다.
+STUDENT_DETAIL_URL = "students"
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +272,8 @@ ui.priority_table(
             "category": row["주요 위험"],
             "rules": int(row["발동규칙"]),
             "focus": row["집중관리"] == "●",
+            # 학생 목록 화면이 이 값을 읽어 바로 상세를 연다.
+            "href": f"{STUDENT_DETAIL_URL}?student={quote(str(row['학생 ID']))}",
         }
         for i, (_, row) in enumerate(ordered.iterrows())
     ]

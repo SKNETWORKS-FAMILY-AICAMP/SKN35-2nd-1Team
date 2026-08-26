@@ -458,12 +458,17 @@ def priority_table(rows: list[dict]) -> None:
     for r in rows:
         color = RISK_COLORS[r["level"]]
         pct = r["probability"] * 100
-        # tabindex 를 주면 클릭이 곧 focus 다 — JS 없이 "눌러서 고정" 이 되고
-        # 키보드로도 줄을 옮겨 다닐 수 있다.
+        # 학생 ID 를 링크로 만들고 CSS 로 그 링크를 줄 전체로 늘린다.
+        # 진짜 <a> 라 클릭·키보드·새 탭이 모두 브라우저 기본 동작으로 처리된다.
+        link = r.get("href")
+        sid_cell = (
+            f'<a class="rowlink" href="{escape(link)}">{escape(r["sid"])}</a>'
+            if link else escape(r["sid"])
+        )
         body.append(
-            f"""<tr tabindex="0">
+            f"""<tr>
                   <td class="rank">{r['rank']:02d}</td>
-                  <td class="sid">{escape(r['sid'])}</td>
+                  <td class="sid">{sid_cell}</td>
                   <td>{escape(r['major'])}</td>
                   <td>
                     <div class="riskbar">
@@ -476,16 +481,17 @@ def priority_table(rows: list[dict]) -> None:
                   <td>{escape(r['category'])}</td>
                   <td class="num">{r.get('rules', 0)}건</td>
                   <td>{focus_pill_html() if r['focus'] else ''}</td>
+                  <td class="go">상세 →</td>
                 </tr>"""
         )
     _html(
         '<div class="card" style="padding:16px 8px">'
         '<table class="dt"><thead><tr>'
         "<th></th><th>학생</th><th>전공 계열</th><th>중도탈락 확률</th>"
-        "<th>등급</th><th>주요 위험</th><th>발동 규칙</th><th></th>"
+        "<th>등급</th><th>주요 위험</th><th>발동 규칙</th><th></th><th></th>"
         f'</tr></thead><tbody>{"".join(body)}</tbody></table>'
         '<div class="bars-hint" style="padding:0 12px">'
-        "줄을 가리키면 나머지가 옅어지고, 클릭하면 그대로 고정됩니다.</div></div>"
+        "줄을 가리키면 나머지가 옅어지고, 클릭하면 그 학생의 상세 분석으로 이동합니다.</div></div>"
     )
 
 

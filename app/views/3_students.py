@@ -66,11 +66,19 @@ start_page(
 
 ui.prototype_banner(service)
 
+# 대시보드의 "먼저 확인할 학생" 에서 넘어온 경우 — ?student=S0068
+# 검색창을 그 학생으로 채우고, 표를 클릭하지 않아도 상세가 바로 열리게 한다.
+requested = str(st.query_params.get("student") or "").strip()
+if requested and st.session_state.get("_student_from_url") != requested:
+    st.session_state["roster_search"] = requested
+    st.session_state["_student_from_url"] = requested
+
 # ── 툴바 ───────────────────────────────────────────────────────────────────
 with st.container(border=True):
     t1, t2, t3, t4 = st.columns([1.1, 1.2, 1.2, 0.8], gap="medium")
     with t1:
-        keyword = st.text_input("학생 검색", placeholder="예: S0012", label_visibility="collapsed")
+        keyword = st.text_input("학생 검색", placeholder="예: S0012",
+                                label_visibility="collapsed", key="roster_search")
     with t2:
         # 기본값을 "전부 선택" 으로 두면 칩 3개가 툴바를 두 줄로 밀어낸다.
         # 비어 있으면 전체로 본다 — 필터 UI 의 일반적인 약속이기도 하다.
@@ -135,7 +143,12 @@ event = st.dataframe(
 )
 
 selected = list(getattr(event.selection, "rows", []) or [])
-if not selected:
+if selected:
+    student_id = str(filtered.iloc[selected[0]]["학생 ID"])
+elif requested and roster.by_id(requested) is not None:
+    # 대시보드에서 학생을 지정해 들어온 경우 — 한 번 더 클릭하게 만들지 않는다.
+    student_id = requested
+else:
     ui.spacer(10)
     ui.empty_state(
         "학생을 선택하지 않았습니다",
@@ -143,7 +156,6 @@ if not selected:
     )
     st.stop()
 
-student_id = str(filtered.iloc[selected[0]]["학생 ID"])
 row = roster.by_id(student_id)
 if row is None:
     ui.empty_state("상세 정보를 찾지 못했습니다", f"학생 {student_id} 가 명단에 없습니다.")

@@ -405,20 +405,33 @@ def _css() -> str:
   /* tabindex 를 주면 클릭이 곧 focus 라서 **JS 없이** "눌러서 고정" 이 된다.
      덤으로 키보드(Tab)로도 줄을 옮겨 다닐 수 있다. */
   .dt tbody tr {{
+    position: relative;                 /* 줄 전체를 덮는 링크의 기준점 */
     transition: opacity .18s ease, filter .18s ease, background .18s ease;
-    outline: none; cursor: default;
+    outline: none;
   }}
-  .dt tbody:hover tr, .dt tbody:has(tr:focus) tr {{ opacity: .34; filter: saturate(.55); }}
+  /* 줄 전체가 링크다. <tr> 를 <a> 로 감쌀 수 없으므로 링크의 가상요소를 줄 전체로 늘린다.
+     진짜 <a> 라서 키보드로도 열리고, 새 탭으로 열기 같은 브라우저 기능도 그대로 쓴다. */
+  .dt a.rowlink {{ color: inherit; text-decoration: none; }}
+  .dt a.rowlink::after {{ content: ""; position: absolute; inset: 0; z-index: 1; }}
+  .dt tbody tr:has(a.rowlink) {{ cursor: pointer; }}
+  .dt tbody tr:has(a.rowlink):hover td {{ background: var(--primary-soft); }}
+
+  .dt tbody:hover tr,
+  .dt tbody:has(a.rowlink:focus-visible) tr {{ opacity: .34; filter: saturate(.55); }}
   /* `:has()` 는 인자만큼 특이도를 올린다. 그래서 되살리는 쪽도 같은 형태로 써야
-     흐리게 하는 규칙을 이긴다 — 안 그러면 클릭한 줄까지 같이 흐려진다 (실제로 겪었다). */
+     흐리게 하는 규칙을 이긴다 — 안 그러면 가리킨 줄까지 같이 흐려진다 (실제로 겪었다). */
   .dt tbody tr:hover,
-  .dt tbody:has(tr:focus) tr:focus {{ opacity: 1; filter: none; }}
-  .dt tbody tr:focus td {{
+  .dt tbody:has(a.rowlink:focus-visible) tr:has(a.rowlink:focus-visible)
+    {{ opacity: 1; filter: none; }}
+  .dt tbody tr:has(a.rowlink:focus-visible) td {{
     background: var(--primary-soft);
     box-shadow: inset 0 0 0 1px var(--primary-line);
   }}
-  .dt tbody tr:focus td:first-child {{ border-radius: var(--radius-sm) 0 0 var(--radius-sm); }}
-  .dt tbody tr:focus td:last-child {{ border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }}
+  .dt .go {{
+    font-size: {t['label']}; font-weight: 700; color: var(--primary);
+    opacity: 0; transition: opacity .18s ease; white-space: nowrap;
+  }}
+  .dt tbody tr:hover .go, .dt tbody tr:has(a.rowlink:focus-visible) .go {{ opacity: 1; }}
   .riskbar .pct {{
     font-size: {t['secondary']}; font-weight: 700; font-variant-numeric: tabular-nums;
     width: 46px; text-align: right;

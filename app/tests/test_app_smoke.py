@@ -255,6 +255,23 @@ class TestStudents(unittest.TestCase):
         assert_clean(self, app)
         self.assertIn("조건에 맞는 학생이 없습니다", text_of(app))
 
+    def test_deeplink_opens_detail_without_table_click(self):
+        """대시보드에서 넘어온 ?student=... 는 표를 다시 누르지 않아도 상세가 열려야 한다."""
+        import sys
+
+        sys.path.insert(0, str(APP_ROOT))
+        from components.state import cached_roster
+
+        sid = cached_roster().rows[0].student.student_id
+        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
+        app.query_params["student"] = sid
+        app.switch_page(PAGE_STUDENTS)
+        app.run()
+        assert_clean(self, app)
+        body = text_of(app)
+        self.assertIn(f"{sid} 상세 분석", body)
+        self.assertNotIn("학생을 선택하지 않았습니다", body)
+
     def test_keyword_filter_does_not_crash(self):
         app = run_page(PAGE_STUDENTS)
         app.text_input[0].set_value("S0001").run()
