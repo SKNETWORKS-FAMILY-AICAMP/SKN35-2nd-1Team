@@ -12,7 +12,7 @@ TODO 가 아니라 실제 코드로 들어가 있고, 남은 것은 **모델 파
        models/best_model.pkl
        models/model.joblib
 2. `services/prediction_service.py` 의 `USE_REAL_MODEL` 을 True 로 바꾼다.
-3. 끝이다. **화면 코드(pages/·components/)는 한 줄도 고치지 않는다.**
+3. 끝이다. **화면 코드(views/·components/)는 한 줄도 고치지 않는다.**
 
 받아야 할 것 / 확인할 것
     · 모델이 `predict_proba` 를 제공하는지 (sklearn 계열이면 있다).

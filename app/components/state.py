@@ -15,10 +15,10 @@ from services.roster import Roster, build_roster
 from utils.feature_mapping import StudentInput
 
 #: 화면 파일 경로 — st.switch_page 가 이 값을 쓴다. 파일을 옮기면 여기만 고친다.
-PAGE_HOME = "pages/0_home.py"
-PAGE_DASHBOARD = "pages/1_dashboard.py"
-PAGE_PREDICTION = "pages/2_prediction.py"
-PAGE_STUDENTS = "pages/3_students.py"
+PAGE_HOME = "views/0_home.py"
+PAGE_DASHBOARD = "views/1_dashboard.py"
+PAGE_PREDICTION = "views/2_prediction.py"
+PAGE_STUDENTS = "views/3_students.py"
 
 
 @st.cache_resource(show_spinner="학생 명단을 예측하는 중입니다…")
@@ -26,7 +26,7 @@ def cached_roster() -> Roster:
     """명단 전체 예측은 페이지를 옮길 때마다 다시 할 필요가 없다.
 
     `cache_resource` 인 이유: 예측기 인스턴스와 묶인 객체라 프로세스당 하나면 충분하다.
-    **예측기를 바꿨을 때는** 앱을 재시작하거나 우측 상단 메뉴에서 Clear cache 를 쓴다 —
+    **예측기를 바꿨을 때는** 앱을 재시작하거나 앱을 재시작한다 (발표용으로 상단 툴바를 숨겨 뒀다) —
     캐시가 남아 옛 예측기의 결과를 계속 보여주면 안 되기 때문이다.
     """
     return build_roster(get_service())

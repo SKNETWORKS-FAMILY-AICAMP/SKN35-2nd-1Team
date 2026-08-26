@@ -17,7 +17,7 @@ streamlit run app/app.py             # 반드시 저장소 루트에서 실행
 ```
 app/
 ├─ app.py                  # 진입점 — 전역 설정 + st.navigation 라우팅만
-├─ pages/
+├─ views/
 │  ├─ 0_home.py            # 시작화면 — 서비스 소개 · 데이터 출처(지구본) · 확장 가능성
 │  ├─ 1_dashboard.py       # 전체 현황 — KPI 6종 · 분포 4종 · 우선 확인 명단
 │  ├─ 2_prediction.py      # 학생 1명 예측 — 입력 32개 → 위험도 · 위험요인 · 지원 추천
@@ -30,10 +30,10 @@ app/
 └─ tests/                  # unittest 66개
 ```
 
-화면을 하나 고치려면 `pages/` 의 파일 **하나만** 열면 됩니다. 서로를 import 하지 않으므로
+화면을 하나 고치려면 `views/` 의 파일 **하나만** 열면 됩니다. 서로를 import 하지 않으므로
 여러 사람이 동시에 다른 화면을 작업해도 충돌하지 않습니다.
 
-> `st.navigation` 을 쓰는 이유: Streamlit 은 `pages/` 폴더를 자동 멀티페이지로 인식해
+> `st.navigation` 을 쓰는 이유: Streamlit 은 `views/` 폴더를 자동 멀티페이지로 인식해
 > 라우팅을 가져가 버립니다. `st.navigation` 으로 라우팅을 직접 잡으면 사이드바 구성과
 > 화면 간 값 전달을 통제하면서도 화면별 파일 분리를 그대로 얻습니다.
 
@@ -80,7 +80,7 @@ app/
    (`.pkl` · `model.joblib` 도 인식합니다 — `services/real_predictor.py` 의 `MODEL_CANDIDATES`)
 2. `services/prediction_service.py` 의 `USE_REAL_MODEL = False` → `True`
 
-**화면 코드(`pages/`, `components/`)는 한 줄도 고치지 않습니다.**
+**화면 코드(`views/`, `components/`)는 한 줄도 고치지 않습니다.**
 전처리는 `real_predictor.py` 안에서 `preprocessor.joblib` 으로 끝냅니다 (`transform` 만, `fit` 금지).
 
 모델 담당자에게 확인해 주세요.

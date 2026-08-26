@@ -72,17 +72,19 @@ with st.container(border=True):
     with t1:
         keyword = st.text_input("학생 검색", placeholder="예: S0012", label_visibility="collapsed")
     with t2:
+        # 기본값을 "전부 선택" 으로 두면 칩 3개가 툴바를 두 줄로 밀어낸다.
+        # 비어 있으면 전체로 본다 — 필터 UI 의 일반적인 약속이기도 하다.
         levels = st.multiselect(
-            "위험등급", options=list(RISK_LEVELS), default=list(RISK_LEVELS),
+            "위험등급", options=list(RISK_LEVELS), default=[],
             format_func=lambda level: f"{level} · {RISK_LABELS_KO[level]}",
-            label_visibility="collapsed", placeholder="위험등급",
-        )
+            label_visibility="collapsed", placeholder="위험등급 전체",
+        ) or list(RISK_LEVELS)
     with t3:
         classes = st.multiselect(
-            "예측", options=list(TARGET_CLASSES), default=list(TARGET_CLASSES),
+            "예측", options=list(TARGET_CLASSES), default=[],
             format_func=lambda cls: TARGET_LABELS_KO[cls],
-            label_visibility="collapsed", placeholder="예측 클래스",
-        )
+            label_visibility="collapsed", placeholder="예측 전체",
+        ) or list(TARGET_CLASSES)
     with t4:
         focus_only = st.checkbox("집중관리만", value=False)
 

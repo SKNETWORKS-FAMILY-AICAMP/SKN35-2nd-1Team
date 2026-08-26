@@ -27,8 +27,10 @@ COLORS: dict[str, str] = {
     # 잉크 (텍스트)
     "ink": "#0B1524",          # 제목·수치
     "ink_soft": "#3D4C61",     # 본문
-    "muted": "#6B7A90",        # 보조·캡션
-    "faint": "#95A2B5",        # 비활성·단위
+    # 명암비를 실측해서 정했다 (흰 배경 기준). 캡션·단위까지 읽혀야 하므로
+    # 예쁜 회색보다 읽히는 회색을 쓴다 — 이전 값(#95A2B5)은 2.6:1 로 기준 미달이었다.
+    "muted": "#616F87",        # 보조·캡션      5.08:1
+    "faint": "#707F95",        # 비활성·단위    4.07:1
     # 표면
     "canvas": "#F4F6F9",       # 페이지 바닥
     "surface": "#FFFFFF",      # 카드
@@ -42,18 +44,19 @@ COLORS: dict[str, str] = {
     "primary_line": "#C7DAF0",
     # 히어로
     "deep": "#0A1E3C",
-    "deep_2": "#153A६E".replace("६", "6"),  # #153A6E
+    "deep_mid": "#143462",
 }
 
 #: 위험등급 — 화면 전체(배지·표·차트)에서 같은 값을 쓴다.
-RISK_COLORS: dict[str, str] = {"HIGH": "#B3382F", "MEDIUM": "#A66A05", "LOW": "#1B6E54"}
+#  명암비(흰 배경): HIGH 5.96:1 · MEDIUM 5.28:1 · LOW 6.17:1
+RISK_COLORS: dict[str, str] = {"HIGH": "#B3382F", "MEDIUM": "#96600A", "LOW": "#1B6E54"}
 RISK_SOFT: dict[str, str] = {"HIGH": "#FCEEEC", "MEDIUM": "#FCF4E4", "LOW": "#E9F4EF"}
 RISK_LINE: dict[str, str] = {"HIGH": "#F0CBC6", "MEDIUM": "#EFDDB4", "LOW": "#C5E3D7"}
 
 #: 위험요인 카테고리 (services.predictor.RISK_CATEGORIES 의 키와 같다)
 CATEGORY_COLORS: dict[str, str] = {
     "academic": "#1B4F91",
-    "financial": "#A66A05",
+    "financial": "#96600A",
     "adaptation": "#5B6B8C",
 }
 
@@ -247,6 +250,8 @@ def _css() -> str:
     border-left: 3px solid var(--accent, var(--primary));
     box-shadow: var(--shadow-raise);
     border-radius: var(--radius-md); padding: {s['6']};
+    /* 옆 열이 두 줄이면 빈 공간이 생긴다 — 높이를 채워 카드가 떠 보이지 않게 한다 */
+    height: 100%; display: flex; flex-direction: column; justify-content: center;
   }}
   .kpi-hero .lab {{
     font-size: {t['label']}; font-weight: 700; letter-spacing: .1em;
@@ -353,9 +358,14 @@ def _css() -> str:
   .act-prog .owner {{ font-size: {t['caption']}; color: var(--muted); margin-left: {s['1']}; }}
   .act-prog .todo {{ display: block; font-size: {t['caption']}; color: var(--ink-soft); margin-top: 1px; }}
   .act-feat {{
-    margin-top: auto; padding-top: {s['2']}; border-top: 1px dashed var(--line);
+    padding-top: {s['2']}; margin-top: {s['2']}; border-top: 1px dashed var(--line);
     font-family: {MONO_STACK}; font-size: {t['label']}; color: var(--faint);
   }}
+  /* 카테고리 카드 안에서 규칙 여러 개를 세로로 쌓는다 */
+  .act-item + .act-item {{
+    margin-top: {s['3']}; padding-top: {s['3']}; border-top: 1px solid var(--line-soft);
+  }}
+  .act-item .act-title {{ font-size: {t['secondary']}; }}
 
   /* ── 데이터 테이블 (직접 그리는 우선순위 표) ───────────────────────── */
   .dt {{ width: 100%; border-collapse: separate; border-spacing: 0; }}
@@ -399,7 +409,7 @@ def _css() -> str:
     position: relative; overflow: hidden;
     background:
       radial-gradient(1100px 420px at 88% -20%, rgba(78,140,214,.30), transparent 62%),
-      linear-gradient(135deg, {c['deep']} 0%, #143462 58%, #17406F 100%);
+      linear-gradient(135deg, {c["deep"]} 0%, {c["deep_mid"]} 58%, #17406F 100%);
     border-radius: var(--radius-lg); padding: {s['12']} {s['12']} {s['8']} {s['12']};
     color: #FFFFFF;
   }}

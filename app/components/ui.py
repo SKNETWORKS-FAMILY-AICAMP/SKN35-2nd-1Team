@@ -293,37 +293,46 @@ def support_cards(recommendation: RecommendationSet, *, columns: int = 3) -> Non
         _html(f'<div class="ds-caption" style="margin-top:12px">{escape(recommendation.disclaimer)}</div>')
         return
 
-    matched = recommendation.matched
-    for start in range(0, len(matched), columns):
-        chunk = matched[start : start + columns]
-        cols = st.columns(columns, gap="small")
-        for col, m in zip(cols, chunk):
-            rule = m.rule
-            color = CATEGORY_COLORS.get(rule.category, COLORS["primary"])
+    # 규칙마다 카드를 하나씩 세우면 복합 위험 학생에서 10장이 넘어가고,
+    # 그러면 "무엇부터 하라는 것인가" 가 사라진다. **대응 영역 단위로 묶는다** —
+    # 담당 부서가 나뉘는 단위가 곧 카테고리이므로 실무 단위와도 맞는다.
+    grouped: dict[str, list] = {}
+    for m in recommendation.matched:
+        grouped.setdefault(m.rule.category, []).append(m)
+
+    cols = st.columns(max(len(grouped), 1), gap="small")
+    for col, (category, items) in zip(cols, grouped.items()):
+        color = CATEGORY_COLORS.get(category, COLORS["primary"])
+        label = items[0].rule.category_label
+        top_priority = min(m.rule.priority for m in items)
+
+        blocks = []
+        for m in items:
             programs = "".join(
                 f'<div class="act-prog">{escape(p.name)}'
                 f'<span class="owner">{escape(p.owner)}</span>'
                 f'<span class="todo">{escape(p.action)}</span></div>'
-                for p in rule.programs
+                for p in m.rule.programs
             )
-            with col:
-                _html(
-                    f"""<div class="act" style="--accent:{color}">
-                          <div class="act-head">
-                            <span class="pill pill-neutral"
-                                  style="color:{color};border-color:{color}33">
-                              {escape(rule.category_label)}</span>
-                            <span class="pill pill-neutral">
-                              {escape(_PRIORITY_LABEL.get(rule.priority, '검토'))}</span>
-                          </div>
-                          <div class="act-title">{escape(rule.title)}</div>
-                          <div class="act-reason">{escape(m.reason)}</div>
-                          {programs}
-                          <div class="act-feat">RULE {escape(rule.id)} · {escape(rule.feature)}</div>
-                        </div>"""
-                )
-        if start + columns < len(matched):
-            spacer(10)
+            blocks.append(
+                f'<div class="act-item"><div class="act-title">{escape(m.rule.title)}</div>'
+                f'<div class="act-reason">{escape(m.reason)}</div>{programs}'
+                f'<div class="act-feat">RULE {escape(m.rule.id)} · '
+                f"{escape(m.rule.feature)}</div></div>"
+            )
+
+        with col:
+            _html(
+                f'<div class="act" style="--accent:{color}">'
+                f'<div class="act-head">'
+                f'<span class="pill pill-neutral" style="color:{color};border-color:{color}33">'
+                f"{escape(label)}</span>"
+                f'<span class="pill pill-neutral">'
+                f"{escape(_PRIORITY_LABEL.get(top_priority, '검토'))}</span>"
+                f'<span class="ds-caption" style="margin-left:auto">'
+                f"{len(items)}건</span></div>"
+                f'{"".join(blocks)}</div>'
+            )
 
     _html(f'<div class="ds-caption" style="margin-top:16px">{escape(recommendation.disclaimer)}</div>')
 

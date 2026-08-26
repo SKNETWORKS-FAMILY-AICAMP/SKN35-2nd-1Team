@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from services.predictor import (
+    RISK_THRESHOLDS,
     EXPLANATION_DUMMY,
     PredictionResult,
     RiskFactor,
@@ -94,6 +95,27 @@ def _sigmoid(logit: float) -> float:
         return 1.0 / (1.0 + math.exp(-logit))
     exp = math.exp(logit)
     return exp / (1.0 + exp)
+
+
+#: 손으로 정한 가중치가 낼 수 있는 확신의 한계. 규칙식은 "99.6% 확실히 탈락" 같은
+#  말을 할 자격이 없다 — 발표 화면에 그런 숫자가 뜨면 없는 성능을 주장하는 셈이다.
+CONFIDENCE_CAP = 0.94
+CONFIDENCE_FLOOR = 0.02
+
+
+def _temper(probability: float) -> float:
+    """확률의 양 끝만 눌러 과장된 확신을 없앤다.
+
+    **등급 경계(0.30 / 0.60)는 건드리지 않는다.** 경계 밖 구간만 선형으로 다시 매핑하므로
+    순서도, HIGH/MEDIUM/LOW 판정도 그대로다. 바뀌는 것은 "얼마나 극단적으로 보이는가" 뿐이다.
+    """
+    high = RISK_THRESHOLDS["HIGH"]
+    medium = RISK_THRESHOLDS["MEDIUM"]
+    if probability > high:
+        return high + (probability - high) * (CONFIDENCE_CAP - high) / (1.0 - high)
+    if probability < medium:
+        return CONFIDENCE_FLOOR + probability * (medium - CONFIDENCE_FLOOR) / medium
+    return probability
 
 
 def _build_terms(student: StudentInput) -> list[_Term]:
@@ -242,7 +264,7 @@ class DummyPredictor:
     def predict(self, student: StudentInput) -> PredictionResult:
         terms = _build_terms(student)
         risk_score = sum(t.value for t in terms)
-        probability = _sigmoid(INTERCEPT + RISK_SCALE * risk_score)
+        probability = _temper(_sigmoid(INTERCEPT + RISK_SCALE * risk_score))
 
         return make_result(
             probability,

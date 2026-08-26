@@ -18,9 +18,9 @@ from streamlit.testing.v1 import AppTest
 APP_ROOT = Path(__file__).resolve().parent.parent
 ENTRYPOINT = str(APP_ROOT / "app.py")
 
-PAGE_DASHBOARD = "pages/1_dashboard.py"
-PAGE_PREDICTION = "pages/2_prediction.py"
-PAGE_STUDENTS = "pages/3_students.py"
+PAGE_DASHBOARD = "views/1_dashboard.py"
+PAGE_PREDICTION = "views/2_prediction.py"
+PAGE_STUDENTS = "views/3_students.py"
 
 #: 명단 예측 + 차트가 있어 기본 3초로는 모자란다.
 TIMEOUT = 120
@@ -242,9 +242,16 @@ class TestStudents(unittest.TestCase):
     def test_no_selection_shows_empty_state(self):
         self.assertIn("학생을 선택하지 않았습니다", text_of(run_page(PAGE_STUDENTS)))
 
-    def test_empty_filter_shows_empty_state_not_error(self):
+    def test_empty_selection_means_all_not_none(self):
+        """필터를 비우면 '아무것도 없음' 이 아니라 '전체' 다 (필터 UI 의 일반적 약속)."""
         app = run_page(PAGE_STUDENTS)
         app.multiselect[0].set_value([]).run()
+        assert_clean(self, app)
+        self.assertNotIn("조건에 맞는 학생이 없습니다", text_of(app))
+
+    def test_no_match_shows_empty_state_not_error(self):
+        app = run_page(PAGE_STUDENTS)
+        app.text_input[0].set_value("없는학생ID").run()
         assert_clean(self, app)
         self.assertIn("조건에 맞는 학생이 없습니다", text_of(app))
 

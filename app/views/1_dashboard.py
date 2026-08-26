@@ -55,10 +55,11 @@ def risk_composition(roster: Roster) -> go.Figure:
             textfont=dict(color="#FFFFFF", size=12),
             hovertemplate=f"{level}: {n}명 (%{{x:.1f}}%)<extra></extra>",
         )
-    fig.update_layout(barmode="stack", bargap=0.35)
+    fig.update_layout(barmode="stack", bargap=0.1)
     fig.update_xaxes(visible=False, range=[0, 100])
     fig.update_yaxes(visible=False)
-    return style_figure(fig, height=104, show_legend=True, grid="none")
+    # plotly 범례는 이 높이에서 눌려 잘린다. 범례는 화면 아래에 배지로 따로 그린다.
+    return style_figure(fig, height=54, show_legend=False, grid="none")
 
 
 def category_chart(roster: Roster) -> go.Figure:
@@ -213,6 +214,16 @@ with side_col:
 ui.spacer(18)
 st.plotly_chart(risk_composition(roster), width="stretch",
                 config=PLOTLY_CONFIG, key="c_comp")
+st.markdown(
+    '<div style="display:flex;gap:10px;margin-top:-6px">'
+    + "".join(
+        ui.risk_pill_html(level) + f'<span class="ds-caption ds-num">'
+        f'{int(counts.get(level, 0)):,}명 · {int(counts.get(level, 0)) / total * 100:.1f}%</span>'
+        for level in RISK_ORDER
+    )
+    + "</div>",
+    unsafe_allow_html=True,
+)
 
 # ── Level 2 — 그 위험이 어떤 성격인가 ──────────────────────────────────────
 ui.section("위험의 성격", "무엇을 준비해야 하고, 어디에 몰려 있는가.")
