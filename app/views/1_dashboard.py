@@ -244,7 +244,19 @@ with st.container(border=True):
 # ── Level 3 — 그래서 이 학생부터 ───────────────────────────────────────────
 ui.section("먼저 확인할 학생", "중도탈락 확률이 높은 순서입니다.")
 
-top = frame.sort_values("중도탈락 확률", ascending=False).head(8)
+# 확률만으로 정렬하면 위쪽이 서로 붙는다 (위험 점수가 최대치인 학생이 수백 명이다).
+# **발동 규칙 수**로 동점을 가른다 — 여러 영역이 동시에 무너진 학생이 먼저다.
+rule_counts = {row.student.student_id: len(row.recommendation.matched) for row in roster.rows}
+# 확률을 그대로 정렬 키로 쓰면 소수점 여섯째 자리에서 갈려 동점이 성립하지 않는다.
+# 화면에 보이는 자리수(0.1%)로 반올림해서 묶어야 규칙 수가 실제로 순위를 가른다.
+ordered = (
+    frame.assign(
+        발동규칙=frame["학생 ID"].map(rule_counts),
+        표시확률=frame["중도탈락 확률"].round(3),
+    )
+    .sort_values(["표시확률", "발동규칙"], ascending=[False, False])
+    .head(8)
+)
 ui.priority_table(
     [
         {
@@ -254,9 +266,10 @@ ui.priority_table(
             "probability": float(row["중도탈락 확률"]),
             "level": row["위험등급"],
             "category": row["주요 위험"],
+            "rules": int(row["발동규칙"]),
             "focus": row["집중관리"] == "●",
         }
-        for i, (_, row) in enumerate(top.iterrows())
+        for i, (_, row) in enumerate(ordered.iterrows())
     ]
 )
 

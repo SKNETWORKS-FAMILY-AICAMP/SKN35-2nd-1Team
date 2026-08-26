@@ -389,10 +389,36 @@ def _css() -> str:
   .dt .sid {{ font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }}
   .dt .num {{ font-variant-numeric: tabular-nums; }}
   .riskbar {{
-    display: flex; align-items: center; gap: {s['2']}; min-width: 132px;
+    display: flex; align-items: center; gap: {s['2']}; min-width: 148px;
   }}
-  .riskbar .track {{ flex: 1; height: 5px; border-radius: 3px; background: var(--line-soft); }}
-  .riskbar .fill {{ height: 100%; border-radius: 3px; }}
+  /* span 은 인라인이라 width/height 가 먹지 않는다 — 반드시 블록으로 만든다
+     (막대 차트에서 똑같이 겪은 문제다) */
+  .riskbar .track {{
+    display: block; flex: 1; height: 7px; border-radius: 4px; background: var(--line-soft);
+  }}
+  .riskbar .fill {{
+    display: block; height: 100%; border-radius: 4px; transform-origin: left center;
+    animation: ds-grow .55s cubic-bezier(.2,.75,.3,1) both;
+  }}
+
+  /* ── 우선 명단 — 가리키거나 클릭한 줄만 또렷하게 ───────────────────── */
+  /* tabindex 를 주면 클릭이 곧 focus 라서 **JS 없이** "눌러서 고정" 이 된다.
+     덤으로 키보드(Tab)로도 줄을 옮겨 다닐 수 있다. */
+  .dt tbody tr {{
+    transition: opacity .18s ease, filter .18s ease, background .18s ease;
+    outline: none; cursor: default;
+  }}
+  .dt tbody:hover tr, .dt tbody:has(tr:focus) tr {{ opacity: .34; filter: saturate(.55); }}
+  /* `:has()` 는 인자만큼 특이도를 올린다. 그래서 되살리는 쪽도 같은 형태로 써야
+     흐리게 하는 규칙을 이긴다 — 안 그러면 클릭한 줄까지 같이 흐려진다 (실제로 겪었다). */
+  .dt tbody tr:hover,
+  .dt tbody:has(tr:focus) tr:focus {{ opacity: 1; filter: none; }}
+  .dt tbody tr:focus td {{
+    background: var(--primary-soft);
+    box-shadow: inset 0 0 0 1px var(--primary-line);
+  }}
+  .dt tbody tr:focus td:first-child {{ border-radius: var(--radius-sm) 0 0 var(--radius-sm); }}
+  .dt tbody tr:focus td:last-child {{ border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }}
   .riskbar .pct {{
     font-size: {t['secondary']}; font-weight: 700; font-variant-numeric: tabular-nums;
     width: 46px; text-align: right;

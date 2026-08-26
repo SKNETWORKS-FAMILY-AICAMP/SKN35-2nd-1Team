@@ -441,10 +441,14 @@ def result_panel(
 # ---------------------------------------------------------------------------
 
 def priority_table(rows: list[dict]) -> None:
-    """`{rank, sid, major, probability, level, category, focus}` 목록.
+    """`{rank, sid, major, probability, level, category, rules, focus}` 목록.
 
     `st.dataframe` 은 정렬·스크롤이 필요할 때 쓴다. 여기는 '먼저 볼 8명' 이라
     **읽히는 것**이 목적이므로 직접 그려서 위험 막대와 배지를 함께 보여준다.
+
+    확률만으로는 위쪽이 갈리지 않는다 — 위험 점수가 이미 최대치인 학생이 수백 명이라
+    상위권 확률이 서로 붙는다. 그래서 **발동한 규칙 수**를 함께 보여주고 동점을 그것으로
+    가른다. 규칙이 많이 걸린 학생일수록 여러 영역이 동시에 무너진 학생이다.
     """
     if not rows:
         empty_state("표시할 학생이 없습니다.")
@@ -454,8 +458,10 @@ def priority_table(rows: list[dict]) -> None:
     for r in rows:
         color = RISK_COLORS[r["level"]]
         pct = r["probability"] * 100
+        # tabindex 를 주면 클릭이 곧 focus 다 — JS 없이 "눌러서 고정" 이 되고
+        # 키보드로도 줄을 옮겨 다닐 수 있다.
         body.append(
-            f"""<tr>
+            f"""<tr tabindex="0">
                   <td class="rank">{r['rank']:02d}</td>
                   <td class="sid">{escape(r['sid'])}</td>
                   <td>{escape(r['major'])}</td>
@@ -463,11 +469,12 @@ def priority_table(rows: list[dict]) -> None:
                     <div class="riskbar">
                       <span class="track"><span class="fill"
                         style="width:{pct:.0f}%;background:{color}"></span></span>
-                      <span class="pct" style="color:{color}">{pct:.0f}%</span>
+                      <span class="pct" style="color:{color}">{pct:.1f}%</span>
                     </div>
                   </td>
                   <td>{risk_pill_html(r['level'], with_label=False)}</td>
                   <td>{escape(r['category'])}</td>
+                  <td class="num">{r.get('rules', 0)}건</td>
                   <td>{focus_pill_html() if r['focus'] else ''}</td>
                 </tr>"""
         )
@@ -475,8 +482,10 @@ def priority_table(rows: list[dict]) -> None:
         '<div class="card" style="padding:16px 8px">'
         '<table class="dt"><thead><tr>'
         "<th></th><th>학생</th><th>전공 계열</th><th>중도탈락 확률</th>"
-        "<th>등급</th><th>주요 위험</th><th></th>"
-        f'</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
+        "<th>등급</th><th>주요 위험</th><th>발동 규칙</th><th></th>"
+        f'</tr></thead><tbody>{"".join(body)}</tbody></table>'
+        '<div class="bars-hint" style="padding:0 12px">'
+        "줄을 가리키면 나머지가 옅어지고, 클릭하면 그대로 고정됩니다.</div></div>"
     )
 
 
