@@ -213,13 +213,23 @@ if row is None:
     st.stop()
 
 ui.section(f"{student_id} 상세 분석")
-ui.result_panel(row.student, row.result, row.recommendation)
 
-ui.spacer(10)
-ui.case_downloads(row.student, row.result, row.recommendation, key="detail")
+# 세로로 다 쌓으면 한 화면에 블록이 열 개를 넘어가고, 그러면 담당자가 매일 쓰는
+# **조치**가 근거·시뮬레이션에 묻힌다. 셋으로 접어 기본값을 조치로 둔다 —
+# 내용을 버리지 않으면서 한 번에 보이는 양만 줄이는 방법이다.
+tab_action, tab_evidence, tab_whatif = st.tabs(["조치", "근거", "What-if"])
 
-ui.spacer(18)
-whatif.render(row.student, row.result, row.recommendation, service, key=student_id)
+with tab_action:
+    ui.action_panel(row.student, row.result, row.recommendation)
+    ui.spacer(14)
+    ui.case_downloads(row.student, row.result, row.recommendation, key="detail")
+
+with tab_evidence:
+    ui.evidence_panel(row.student, row.result, row.recommendation)
+
+with tab_whatif:
+    whatif.render(row.student, row.result, row.recommendation, service,
+                  key=student_id, show_heading=False)
 
 ui.spacer(10)
 if st.button("이 학생을 예측 화면으로 보내기", key=f"send_{student_id}", width="stretch"):

@@ -54,6 +54,7 @@ def render(
     service: PredictionService,
     *,
     key: str,
+    show_heading: bool = True,
 ) -> None:
     """학생 1명의 What-if 패널.
 
@@ -62,10 +63,11 @@ def render(
     """
     prefix = f"wi_{key}_"
 
-    ui.section(
-        "What-if — 값을 움직이면 추천이 어떻게 바뀌는가",
-        "추천의 근거가 된 값을 직접 바꿔 보면, 그 규칙이 실제로 빠지는지 확인할 수 있습니다.",
-    )
+    if show_heading:
+        ui.section(
+            "What-if — 값을 움직이면 추천이 어떻게 바뀌는가",
+            "추천의 근거가 된 값을 직접 바꿔 보면, 그 규칙이 실제로 빠지는지 확인할 수 있습니다.",
+        )
     ui.banner(
         "Simulation",
         WHATIF_NOTE,

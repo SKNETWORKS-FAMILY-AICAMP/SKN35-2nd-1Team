@@ -614,27 +614,15 @@ def student_summary(student: StudentInput) -> None:
     )
 
 
-def result_panel(
-    student: StudentInput,
+def risk_and_factors(
     result: PredictionResult,
-    recommendation: RecommendationSet,
-    *,
-    show_summary: bool = True,
+    recommendation: RecommendationSet | None = None,
 ) -> None:
-    """예측 결과 전체. 예측 화면과 목록 상세가 공유한다.
+    """**얼마나 위험한가** + **왜 위험한가** 두 칸.
 
-    왼쪽 **얼마나 위험한가** → 가운데 **왜 위험한가** → 아래 **그래서 무엇을 할 것인가**.
-    이 순서가 이 제품이 하는 말 전부다.
+    두 화면(예측 · 목록 상세)이 이 블록을 같은 모양으로 쓴다. 예측 화면은 한 흐름으로
+    읽고 상세 화면은 '근거' 탭 안에 넣는데, **모양이 갈리면 같은 것을 두 번 배우게 된다.**
     """
-    if show_summary:
-        # 카드가 첫 블록이다 — 담당자가 실제로 쓰는 세 가지(누구·얼마나 급하게·무엇부터)를
-        # 먼저 주고, 나머지는 아래에서 펼친다.
-        report_card(student, result, recommendation)
-        spacer(12)
-        with st.expander("학생 기본 정보 전체", expanded=False):
-            student_summary(student)
-        spacer(4)
-
     left, right = st.columns([1, 1.35], gap="large")
 
     # st.markdown 은 호출마다 독립된 블록이라 여는 태그와 닫는 태그를 따로 내보내면
@@ -650,15 +638,74 @@ def result_panel(
         )
         factor_list(result, recommendation)
 
-    section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
-    support_cards(recommendation, result=result)
 
+def trace_expander(
+    student: StudentInput, recommendation: RecommendationSet, *, expanded: bool = False
+) -> None:
     with st.expander(
         f"규칙 판정 전체 보기 · 발동 {len(recommendation.matched)}건 / "
         f"미발동 {len(recommendation.unmatched)}건",
-        expanded=False,
+        expanded=expanded,
     ):
         rule_trace(recommendation, student)
+
+
+def action_panel(
+    student: StudentInput,
+    result: PredictionResult,
+    recommendation: RecommendationSet,
+) -> None:
+    """**조치** — 담당자가 실제로 들고 나가는 것만.
+
+    운영 화면에서는 이 탭이 기본값이다. 담당자에게 필요한 건 누구를 · 얼마나 급하게 ·
+    무엇부터이고, 근거는 설명을 요구받았을 때 옆 탭에서 펼치면 된다.
+    """
+    report_card(student, result, recommendation)
+    spacer(16)
+    section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
+    support_cards(recommendation, result=result)
+
+
+def evidence_panel(
+    student: StudentInput,
+    result: PredictionResult,
+    recommendation: RecommendationSet,
+) -> None:
+    """**근거** — "왜 그렇게 판단했나" 를 요구받았을 때 여는 것."""
+    with st.expander("학생 기본 정보 전체", expanded=False):
+        student_summary(student)
+    spacer(8)
+    risk_and_factors(result, recommendation)
+    spacer(10)
+    trace_expander(student, recommendation, expanded=True)
+
+
+def result_panel(
+    student: StudentInput,
+    result: PredictionResult,
+    recommendation: RecommendationSet,
+    *,
+    show_summary: bool = True,
+) -> None:
+    """예측 결과를 **한 흐름으로** 읽는 구성. 예측 화면이 쓴다.
+
+    왼쪽 **얼마나 위험한가** → 가운데 **왜 위험한가** → 아래 **그래서 무엇을 할 것인가**.
+    이 순서가 이 제품이 하는 말 전부라, 처음 보는 사람에게 설명할 때는 이대로 간다.
+    (매일 쓰는 담당자 화면은 순서가 다르다 — `action_panel` 참조.)
+    """
+    if show_summary:
+        report_card(student, result, recommendation)
+        spacer(12)
+        with st.expander("학생 기본 정보 전체", expanded=False):
+            student_summary(student)
+        spacer(4)
+
+    risk_and_factors(result, recommendation)
+
+    section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
+    support_cards(recommendation, result=result)
+
+    trace_expander(student, recommendation)
 
 
 # ---------------------------------------------------------------------------
