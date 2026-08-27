@@ -19,6 +19,7 @@ PAGE_HOME = "views/0_home.py"
 PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_PREDICTION = "views/2_prediction.py"
 PAGE_STUDENTS = "views/3_students.py"
+PAGE_MODEL = "views/4_model.py"
 
 
 @st.cache_resource(show_spinner="학생 명단을 예측하는 중입니다…")
@@ -57,6 +58,19 @@ def cached_export(student_ids: tuple[str, ...]) -> tuple[bytes, bytes, int]:
         case_sheet.to_csv(actions, case_sheet.ACTION_FIELDS),
         len(actions),
     )
+
+
+def cached_evaluation() -> tuple[list[int], list[float]]:
+    """채점용 (정답 라벨, 예측 확률). 순서는 명단과 같다.
+
+    명단은 이미 예측을 끝냈으므로 **다시 예측하지 않는다.** 여기서 새로 predict 하면
+    화면이 보는 확률과 채점하는 확률이 갈라질 수 있고, 그러면 성능 화면이 다른 모델을
+    채점하는 셈이 된다.
+    """
+    roster = cached_roster()
+    if not roster.has_labels:
+        return [], []
+    return list(roster.labels), [row.result.dropout_probability for row in roster.rows]
 
 
 def roster_source() -> tuple[str, bool]:

@@ -9,6 +9,7 @@
     views/1_dashboard.py   전체 현황 대시보드
     views/2_prediction.py  학생 1명 위험 예측
     views/3_students.py    학생 목록 · 상세
+    views/4_model.py       모델 성능 (학습 결과서 + 정답 라벨 채점)
 
     components/  디자인 시스템(theme) · 공통 UI · 지구본 · 상태
     services/    예측 계층 (더미 ↔ 실제 모델 교체 지점)
@@ -34,6 +35,7 @@ import streamlit as st
 from components.state import (
     PAGE_DASHBOARD,
     PAGE_HOME,
+    PAGE_MODEL,
     PAGE_PREDICTION,
     PAGE_STUDENTS,
     roster_source,
@@ -54,6 +56,7 @@ PAGES = [
     st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/monitoring:"),
     st.Page(PAGE_PREDICTION, title="학생 위험 예측", icon=":material/person_search:"),
     st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/table_rows:"),
+    st.Page(PAGE_MODEL, title="모델 성능", icon=":material/analytics:"),
 ]
 
 

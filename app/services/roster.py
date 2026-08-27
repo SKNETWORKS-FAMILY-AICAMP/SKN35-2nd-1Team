@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pandas as pd
 
@@ -42,6 +42,13 @@ class Roster:
     frame: pd.DataFrame
     source: str          # 화면에 그대로 밝힌다 ("실제 전처리 데이터" / "합성 더미")
     is_real: bool
+    #: 정답 라벨 (1=Dropout). **명단 화면에는 절대 쓰지 않는다** — 예측 옆에 놓이면
+    #  정확도처럼 읽힌다. 모델 성능 화면이 채점할 때만 쓰고, 순서는 rows 와 같다.
+    labels: list[int] = field(default_factory=list)
+
+    @property
+    def has_labels(self) -> bool:
+        return len(self.labels) == len(self.rows) and bool(self.labels)
 
     def by_id(self, student_id: str) -> RosterRow | None:
         for row in self.rows:
@@ -50,7 +57,7 @@ class Roster:
         return None
 
 
-def load_roster_students() -> tuple[list[StudentInput], str, bool]:
+def load_roster_students() -> tuple[list[StudentInput], str, bool, list[int]]:
     """명단으로 쓸 학생 목록을 고른다.
 
     팀이 올린 전처리 CSV 가 있으면 **그걸 원래 값으로 되돌려** 쓴다. 없으면 합성 더미로
@@ -63,14 +70,16 @@ def load_roster_students() -> tuple[list[StudentInput], str, bool]:
             real.students,
             f"팀 전처리 실데이터 {len(real.students)}명 (data/processed/{real.source})",
             True,
+            list(real.labels),
         )
     students = load_students()
-    return students, f"합성 더미 {len(students)}명 (원본 데이터 아님)", False
+    # 합성 더미에는 정답이 없다. 없는 것을 지어내지 않고 빈 목록으로 둔다.
+    return students, f"합성 더미 {len(students)}명 (원본 데이터 아님)", False, []
 
 
 def build_roster(service: PredictionService) -> Roster:
     """명단 전체를 예측하고 규칙까지 평가한다."""
-    students, source, is_real = load_roster_students()
+    students, source, is_real, labels = load_roster_students()
     results = service.predict_many(students)
 
     rows: list[RosterRow] = []
@@ -103,4 +112,4 @@ def build_roster(service: PredictionService) -> Roster:
         )
 
     frame = pd.DataFrame.from_records(records)
-    return Roster(rows=rows, frame=frame, source=source, is_real=is_real)
+    return Roster(rows=rows, frame=frame, source=source, is_real=is_real, labels=labels)

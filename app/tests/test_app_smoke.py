@@ -23,6 +23,7 @@ ENTRYPOINT = str(APP_ROOT / "app.py")
 PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_PREDICTION = "views/2_prediction.py"
 PAGE_STUDENTS = "views/3_students.py"
+PAGE_MODEL = "views/4_model.py"
 
 #: 명단 예측 + 차트가 있어 기본 3초로는 모자란다.
 TIMEOUT = 120
@@ -60,7 +61,7 @@ def click(app: AppTest, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 class TestEveryPage(unittest.TestCase):
-    PAGES = (None, PAGE_DASHBOARD, PAGE_PREDICTION, PAGE_STUDENTS)
+    PAGES = (None, PAGE_DASHBOARD, PAGE_PREDICTION, PAGE_STUDENTS, PAGE_MODEL)
 
     def test_all_pages_render(self):
         for page in self.PAGES:
@@ -277,6 +278,88 @@ class TestRecommendationEvidence(unittest.TestCase):
         labels = [b.label for b in app.download_button]
         self.assertTrue(any("명단 요약" in label for label in labels), labels)
         assert_clean(self, app)
+
+
+# ---------------------------------------------------------------------------
+# 모델 성능 — 없는 성능을 주장하지 않는지가 핵심이다
+# ---------------------------------------------------------------------------
+
+class TestModelPage(unittest.TestCase):
+    def test_page_renders(self):
+        assert_clean(self, run_page(PAGE_MODEL))
+
+    def test_dummy_mode_refuses_to_score(self):
+        """🔴 회귀 방지 — 학습되지 않은 확률로 혼동행렬을 그리면 없는 성능을 주장하는 것이다."""
+        app = run_page(PAGE_MODEL)
+        body = text_of(app)
+        self.assertIn("학습된 모델이 연결되지 않았습니다", body)
+        # 채점 결과에만 나오는 것들이 하나도 없어야 한다.
+        for marker in ("놓친 위험학생", "재현율", "정밀도", "상담 대상", "운영 권고"):
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, body)
+        self.assertEqual(list(app.slider), [], "더미 모드에서 임계값 슬라이더가 뜨면 안 됩니다.")
+
+    def test_missing_report_explains_what_to_deliver(self):
+        """팀원이 화면만 보고도 무엇을 올리면 되는지 알 수 있어야 한다."""
+        import sys
+
+        sys.path.insert(0, str(APP_ROOT))
+        from services import model_metrics
+
+        if model_metrics.available():
+            self.skipTest("학습 결과서가 이미 들어와 있습니다.")
+        app = run_page(PAGE_MODEL)
+        self.assertIn("학습 결과서가 아직 없습니다", text_of(app))
+        self.assertTrue(
+            any("파일 형식" in e.label for e in app.expander),
+            [e.label for e in app.expander],
+        )
+
+
+class TestModelPageWithTrainedModel(unittest.TestCase):
+    """모델이 붙었을 때만 도는 경로를 **발표 당일에 처음 실행하지 않기 위한** 테스트.
+
+    진짜 모델 파일은 아직 없으므로, 예측은 그대로 두고 `is_dummy` 만 False 인
+    대역을 끼워 화면의 채점 경로를 실제로 렌더한다. 여기서 재는 것은 성능이 아니라
+    **화면이 죽지 않고 필요한 블록을 그리는가** 다.
+    """
+
+    def _reset(self):
+        import streamlit as st
+        from services.prediction_service import reset_service
+
+        st.cache_resource.clear()
+        st.cache_data.clear()
+        reset_service(None)
+
+    def test_scoring_path_renders_end_to_end(self):
+        import sys
+
+        sys.path.insert(0, str(APP_ROOT))
+        import streamlit as st
+        from services.dummy_predictor import DummyPredictor
+        from services.prediction_service import reset_service
+
+        class StandInTrainedModel(DummyPredictor):
+            name = "StandInTrainedModel (테스트 대역)"
+            version = "test"
+            is_dummy = False
+
+        try:
+            st.cache_resource.clear()
+            st.cache_data.clear()
+            reset_service(StandInTrainedModel())
+
+            app = run_page(PAGE_MODEL)
+            assert_clean(self, app)
+            body = text_of(app)
+            for marker in ("놓친 위험학생", "상담 대상", "이 임계값에서의 판정",
+                           "재현율과 정밀도의 교환", "임계값을 어떻게 정하는가"):
+                with self.subTest(marker=marker):
+                    self.assertIn(marker, body)
+            self.assertTrue(app.slider, "임계값 슬라이더가 없습니다.")
+        finally:
+            self._reset()
 
 
 # ---------------------------------------------------------------------------
