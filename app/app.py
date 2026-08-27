@@ -7,7 +7,8 @@
 
     views/0_home.py        시작화면 (서비스 소개 · 데이터 출처 · 확장 가능성)
     views/1_dashboard.py   전체 현황 대시보드
-    views/2_prediction.py  학생 1명 위험 예측
+    views/2_prediction.py  학생 1명 위험 예측 — 안 A (한 화면)
+    views/5_prediction_steps.py  학생 1명 위험 예측 — 안 B (단계형)
     views/3_students.py    학생 목록 · 상세
     views/4_model.py       모델 성능 (학습 결과서 + 정답 라벨 채점)
 
@@ -37,6 +38,7 @@ from components.state import (
     PAGE_HOME,
     PAGE_MODEL,
     PAGE_PREDICTION,
+    PAGE_PREDICTION_STEPS,
     PAGE_STUDENTS,
     roster_source,
 )
@@ -54,7 +56,11 @@ st.set_page_config(
 PAGES = [
     st.Page(PAGE_HOME, title="시작", icon=":material/home:", default=True),
     st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/monitoring:"),
-    st.Page(PAGE_PREDICTION, title="학생 위험 예측", icon=":material/person_search:"),
+    # 예측 화면은 지금 **두 안이 나란히** 있다 (팀원 비교용). 정해지면 한쪽을 지운다.
+    st.Page(PAGE_PREDICTION, title="학생 위험 예측 (A · 한 화면)",
+            icon=":material/person_search:"),
+    st.Page(PAGE_PREDICTION_STEPS, title="학생 위험 예측 (B · 단계형)",
+            icon=":material/conversion_path:"),
     st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/table_rows:"),
     st.Page(PAGE_MODEL, title="모델 성능", icon=":material/analytics:"),
 ]

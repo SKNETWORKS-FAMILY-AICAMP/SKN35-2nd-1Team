@@ -24,6 +24,7 @@ PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_PREDICTION = "views/2_prediction.py"
 PAGE_STUDENTS = "views/3_students.py"
 PAGE_MODEL = "views/4_model.py"
+PAGE_STEPS = "views/5_prediction_steps.py"
 
 #: 명단 예측 + 차트가 있어 기본 3초로는 모자란다.
 TIMEOUT = 120
@@ -61,7 +62,7 @@ def click(app: AppTest, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 class TestEveryPage(unittest.TestCase):
-    PAGES = (None, PAGE_DASHBOARD, PAGE_PREDICTION, PAGE_STUDENTS, PAGE_MODEL)
+    PAGES = (None, PAGE_DASHBOARD, PAGE_PREDICTION, PAGE_STUDENTS, PAGE_MODEL, PAGE_STEPS)
 
     def test_all_pages_render(self):
         for page in self.PAGES:
@@ -360,6 +361,83 @@ class TestModelPageWithTrainedModel(unittest.TestCase):
             self.assertTrue(app.slider, "임계값 슬라이더가 없습니다.")
         finally:
             self._reset()
+
+
+# ---------------------------------------------------------------------------
+# 예측 화면 A/B — 팀원이 견줘 보는 동안만 둘 다 있다
+# ---------------------------------------------------------------------------
+
+class TestPredictionLayouts(unittest.TestCase):
+    def test_both_layouts_announce_the_comparison(self):
+        """어느 쪽을 보고 있는지, 다른 쪽은 어디 있는지 화면이 말해야 한다."""
+        for page, mine, other in ((PAGE_PREDICTION, "한 화면", "B"),
+                                  (PAGE_STEPS, "단계형", "A")):
+            with self.subTest(page=page):
+                body = text_of(run_page(page))
+                self.assertIn(mine, body)
+                self.assertIn(f"학생 위험 예측 ({other}", body)
+                self.assertIn("한쪽은 지웁니다", body)
+
+    def test_steps_layout_starts_at_the_first_step(self):
+        app = run_page(PAGE_STEPS)
+        assert_clean(self, app)
+        body = text_of(app)
+        self.assertIn("Step 1 / 4", body)
+        self.assertIn("학생은 누구인가", body)
+
+    def test_next_advances_and_keeps_earlier_answers(self):
+        """🔴 회귀 방지 — 단계형 화면이 밟기 쉬운 가장 큰 함정.
+
+        Streamlit 은 이번 실행에서 그려지지 않은 위젯의 state 를 버린다. 1단계 값을
+        위젯 key 에만 두면 2단계로 넘어가는 순간 조용히 기본값으로 돌아간다.
+        에러가 나지 않아서 발표 중에는 알아채지 못한다.
+        """
+        app = run_page(PAGE_STEPS)
+        click(app, "HIGH · 복합 위험 예시")
+        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
+
+        click(app, "다음 →")
+        assert_clean(self, app)
+        self.assertIn("Step 2 / 4", text_of(app))
+        # 1단계에서 넣은 값이 살아 있어야 한다.
+        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
+        self.assertEqual(app.session_state["wz_data"]["attendance"], 0)
+
+    def test_findings_accumulate_as_steps_pass(self):
+        """단계를 지날수록 '알아낸 것' 이 늘어야 한다 — 이 흐름의 값어치다."""
+        app = run_page(PAGE_STEPS)
+        click(app, "HIGH · 복합 위험 예시")
+        first = text_of(app)
+        self.assertIn("전공", first)
+        self.assertNotIn("2학기 이수율", first)   # 아직 학업 단계를 안 지났다
+
+        click(app, "다음 →")
+        self.assertIn("2학기 이수율", text_of(app))
+
+    def test_result_step_shows_the_same_output_as_layout_a(self):
+        app = run_page(PAGE_STEPS)
+        click(app, "HIGH · 복합 위험 예시")
+        for _ in range(3):
+            click(app, "다음 →")
+        click(app, "위험도 분석하기 →")
+        assert_clean(self, app)
+        body = text_of(app)
+        self.assertIn("이 판단에 쓰인 사실", body)
+        self.assertIn("무엇을 할 것인가", body)
+        self.assertIn("지금 할 일", body)          # 상담 카드
+        self.assertTrue(
+            any("상담 카드" in b.label for b in app.download_button),
+            [b.label for b in app.download_button],
+        )
+
+    def test_going_back_does_not_lose_answers(self):
+        app = run_page(PAGE_STEPS)
+        click(app, "HIGH · 복합 위험 예시")
+        click(app, "다음 →")
+        click(app, "← 이전")
+        assert_clean(self, app)
+        self.assertIn("Step 1 / 4", text_of(app))
+        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
 
 
 # ---------------------------------------------------------------------------

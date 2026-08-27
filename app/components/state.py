@@ -20,6 +20,8 @@ PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_PREDICTION = "views/2_prediction.py"
 PAGE_STUDENTS = "views/3_students.py"
 PAGE_MODEL = "views/4_model.py"
+#: 예측 화면 B안 — A/B 비교가 끝나면 한쪽과 함께 이 상수도 지운다.
+PAGE_PREDICTION_STEPS = "views/5_prediction_steps.py"
 
 
 @st.cache_resource(show_spinner="학생 명단을 예측하는 중입니다…")

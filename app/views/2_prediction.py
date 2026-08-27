@@ -17,6 +17,7 @@ from typing import Any
 import streamlit as st
 
 from components import ui
+from components.ab import ab_notice
 from components.state import start_page
 from components.theme import CATEGORY_COLORS, COLORS, RISK_COLORS
 from rules import recommendation_rules as rules
@@ -161,10 +162,12 @@ start_page(
     "학생 한 명의 정보를 입력하면 중도탈락 위험도와 위험요인, 그에 대응하는 "
     "교내 지원 프로그램을 함께 보여줍니다.",
     meta=(
-        '<div class="ds-eyebrow">Inputs</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{len(UI_FIELDS)}개 입력 · 파생변수 5종 자동 계산</div>'
+        '<div class="ds-eyebrow">Layout A</div>'
+        f'<div class="ds-sub" style="margin-top:4px">한 화면 · {len(UI_FIELDS)}개 입력</div>'
     ),
 )
+
+ab_notice("A")
 
 consume_prefill()
 init_defaults()
