@@ -21,10 +21,13 @@ from components.state import (
     start_page,
 )
 from components.theme import COLORS, RISK_COLORS
-from services.predictor import RISK_LABELS_KO, RISK_LEVELS
+from services.predictor import RISK_CATEGORIES, RISK_LABELS_KO, RISK_LEVELS
 from services import case_sheet
 from services.prediction_service import get_service
 from utils.feature_mapping import TARGET_CLASSES, TARGET_LABELS_KO
+
+#: '주요 위험' 필터의 선택지. 규칙이 하나도 안 걸린 학생("-")도 골라 볼 수 있어야 한다.
+CATEGORY_OPTIONS = (*RISK_CATEGORIES.values(), "-")
 
 TABLE_COLUMNS = [
     "학생 ID",
@@ -82,7 +85,7 @@ if requested and st.session_state.get("_student_from_url") != requested:
 
 # ── 툴바 ───────────────────────────────────────────────────────────────────
 with st.container(border=True):
-    t1, t2, t3, t4 = st.columns([1.1, 1.2, 1.2, 0.8], gap="medium")
+    t1, t2, t3, t4, t5 = st.columns([1.0, 1.0, 1.0, 1.1, 0.7], gap="medium")
     with t1:
         keyword = st.text_input("학생 검색", placeholder="예: S0012",
                                 label_visibility="collapsed", key="roster_search")
@@ -101,9 +104,21 @@ with st.container(border=True):
             label_visibility="collapsed", placeholder="예측 전체",
         ) or list(TARGET_CLASSES)
     with t4:
-        focus_only = st.checkbox("집중관리만", value=False)
+        # 부서 단위로 명단을 좁히는 축. 대시보드의 '주요 위험요인 카테고리' 와 같은 값이라
+        # 차트에서 본 규모를 그대로 명단으로 열 수 있다.
+        categories = st.multiselect(
+            "주요 위험", options=CATEGORY_OPTIONS, default=[],
+            label_visibility="collapsed", placeholder="주요 위험 전체",
+        ) or list(CATEGORY_OPTIONS)
+    with t5:
+        # 시작 화면의 '집중관리 대상부터 보기' 가 이 key 를 미리 켜 둔다.
+        focus_only = st.checkbox("집중관리만", key="roster_focus_only")
 
-filtered = frame[frame["위험등급"].isin(levels) & frame["예측(원본)"].isin(classes)]
+filtered = frame[
+    frame["위험등급"].isin(levels)
+    & frame["예측(원본)"].isin(classes)
+    & frame["주요 위험"].isin(categories)
+]
 if keyword.strip():
     filtered = filtered[filtered["학생 ID"].str.contains(keyword.strip(), case=False, na=False)]
 if focus_only:

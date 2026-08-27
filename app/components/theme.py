@@ -373,7 +373,7 @@ def _css() -> str:
   /* 규칙이 "기준을 넘었다"가 아니라 **얼마나 넘었는가**를 보여준다.
      위험 구간을 띠로 칠하고 기준선과 학생 값을 각각 표시한다 —
      학생 표식이 띠 안에 들어가 있는 그림이 곧 발동 근거다. */
-  .ev {{ margin-top: {s['2']}; }}
+  .ev {{ margin-top: {s['2']}; margin-bottom: {s['3']}; }}
   .ev-top {{
     display: flex; align-items: baseline; gap: {s['2']};
     font-size: {t['label']}; line-height: 1.4;
@@ -508,7 +508,7 @@ def _css() -> str:
   .dt tbody tr:has(a.rowlink) {{ cursor: pointer; }}
   .dt tbody tr:has(a.rowlink):hover td {{ background: var(--primary-soft); }}
 
-  .dt tbody:hover tr,
+  .dt tbody:has(a.rowlink):hover tr,
   .dt tbody:has(a.rowlink:focus-visible) tr {{ opacity: .34; filter: saturate(.55); }}
   /* `:has()` 는 인자만큼 특이도를 올린다. 그래서 되살리는 쪽도 같은 형태로 써야
      흐리게 하는 규칙을 이긴다 — 안 그러면 가리킨 줄까지 같이 흐려진다 (실제로 겪었다). */

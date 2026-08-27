@@ -21,17 +21,20 @@ app/
 │  ├─ 0_home.py            # 시작 — 히어로 · 파이프라인 · 데이터 출처(지구본) · 이식성
 │  ├─ 1_dashboard.py       # 현황 — 3단 계층(규모 → 성격 → 우선 명단)
 │  ├─ 2_prediction.py      # 예측 — 입력 32개를 4탭으로 → 위험도 · 위험요인 · 지원
-│  └─ 3_students.py        # 목록 — 툴바 필터 + master-detail
+│  ├─ 3_students.py        # 목록 — 툴바 필터 + master-detail + What-if
+│  └─ 4_model.py           # 성능 — 팀 학습 결과서 + 정답 라벨 채점 + 임계값
 ├─ components/
 │  ├─ theme.py             # ★ 디자인 시스템 (색·타이포·간격·상태) — 여기만 고친다
-│  ├─ ui.py                # 공통 조각 (KPI · 배지 · 위험 미터 · 액션 카드 · 표)
+│  ├─ ui.py                # 공통 조각 (KPI · 위험/근거 미터 · 액션 카드 · 표 · 내려받기)
+│  ├─ whatif.py            # What-if 시뮬레이션 패널
 │  ├─ globe.py             # 포르투갈 지구본 (자동 회전 + 오프라인 SVG 폴백)
-│  └─ state.py             # 화면 간 상태 · 명단 캐시
+│  └─ state.py             # 화면 간 상태 · 명단 캐시 · 내보내기 캐시
 ├─ services/               # 예측 계층 (더미 ↔ 실제 모델 교체 지점)
+│                          #  + case_sheet(상담 카드) · evaluation(채점) · model_metrics
 ├─ rules/                  # 규칙 기반 지원 추천 엔진
 ├─ utils/                  # 전처리 스키마 매핑 · 실데이터 복원 · 더미 데이터
 ├─ data/dummy_students.csv # 합성 더미 80명 (실데이터가 없을 때만 쓰는 폴백)
-└─ tests/                  # unittest 75개
+└─ tests/                  # unittest 118개
 ```
 
 > 폴더 이름이 `pages/` 가 아니라 `views/` 인 이유: `pages/` 가 있으면 Streamlit 이
@@ -57,6 +60,28 @@ app/
 | 학습된 모델 | `models/best_model.joblib`<br>(`.pkl`·`model.joblib` 도 인식) | `USE_REAL_MODEL = True` 로 바꾸면 실제 예측 |
 | 전처리기 | `models/preprocessor.joblib` | 이미 있음 |
 | 스키마 | `data/processed/feature_schema.json` | 이미 있음 |
+| **학습 결과서** | `reports/model_metrics.json` | **모델 성능** 화면에 모델 비교표가 채워진다 |
+
+학습 결과서 형식은 아래와 같습니다. **`name` 만 있으면 읽습니다** — 나머지는 있는 것만
+표에 채워지므로 일부만 먼저 올려도 됩니다. 형식이 깨져도 앱은 죽지 않고 안내로 물러납니다.
+(화면에서도 `모델 성능 → 팀에 전달할 파일 형식` 으로 같은 내용을 볼 수 있습니다.)
+
+```json
+{
+  "generated_at": "2026-08-29",
+  "dataset": { "train": 3096, "valid": 443, "test": 885 },
+  "threshold": 0.5,
+  "selected": "XGBoost",
+  "models": [
+    { "name": "LogisticRegression", "type": "ML",
+      "accuracy": 0.87, "precision": 0.81, "recall": 0.75, "f1": 0.78, "roc_auc": 0.91,
+      "confusion_matrix": [[TN, FP], [FN, TP]], "notes": "baseline" }
+  ],
+  "feature_importance": [ { "feature": "sem2_approval_rate", "importance": 0.21 } ]
+}
+```
+
+> `reports/` 는 모델링 담당자의 영역입니다. **앱은 읽기만 하고 쓰지 않습니다.**
 
 지금 무엇을 쓰고 있는지는 **사이드바에 항상 표시**됩니다 (`REAL DATA` / `SYNTHETIC`,
 `Prototype` / `Live Model`). 파일이 없으면 조용히 더미로 물러나고 앱은 그대로 뜹니다.
@@ -130,14 +155,22 @@ cd app
 python -m unittest discover -s tests -t .
 ```
 
-**75개 통과** (로직 51 + 화면 24). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
+**118개 통과** (로직 79 + 화면 39). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
 학습된 모델이 없는 지금도 **팀 전처리기가 우리 입력을 그대로 받는지**는 실제로 확인할 수 있습니다.
 
 - 더미 80명 → `to_model_row()` → `preprocessor.transform()` 이 **경고 없이 (80, 81)** 을 반환
 - 범주형 8개 컬럼에 **미지 범주 0건** (라벨 문자열 대조)
 - 입력 컬럼명·순서가 `preprocessor.feature_names_in_` 과 일치
 
-브라우저(Chrome 1440×900)에서도 4개 화면 렌더링을 직접 확인했습니다.
+그 다음으로 중요한 것은 **없는 것을 주장하지 않는지** 지키는 테스트 셋입니다.
+
+- `TestModelPage.test_dummy_mode_refuses_to_score` — 더미 확률로 혼동행렬을 그리지 않는가
+- `TestModelPageWithTrainedModel` — 모델이 붙었을 때만 도는 경로를 대역으로 미리 렌더한다
+  (발표 당일에 처음 실행되는 코드를 남기지 않는다)
+- `TestRuleEvidence.test_fired_rule_evidence_is_on_the_dangerous_side` — 규칙 조건과
+  화면에 그리는 근거가 따로 놀지 않는가
+
+브라우저(Chrome 1440×900)에서도 5개 화면 렌더링을 직접 확인했습니다.
 
 ---
 
@@ -154,6 +187,56 @@ python -m unittest discover -s tests -t .
 
 서로 다른 카테고리 2개 이상 + 위험등급 HIGH/MEDIUM 이면 **집중관리 우선 대상**으로 표시합니다.
 규칙을 추가하려면 `RULES` 리스트에 `Rule` 하나를 넣습니다. 화면 코드는 건드리지 않습니다.
+
+### 추천의 근거를 어디까지 보여주는가
+
+"이래서 이런 추천을 한다" 가 이 제품이 하는 말의 전부라, 근거를 네 겹으로 겹쳐 둡니다.
+
+| 층 | 무엇 | 어디 |
+|---|---|---|
+| 문장 | "2학기 이수율이 17% 로 기준(50%) 아래입니다" | `Rule.reason_template` |
+| 수치 | 값·기준선·위험 구간을 그린 **근거 미터** | `Rule.evidence` → `ui.evidence_bar_html` |
+| 연결 | 모델 위험요인 ↔ 규칙을 같은 이름으로 잇는다 | `Rule.factor_keys` ↔ `_Term.key` |
+| 반증 | **발동하지 않은 규칙까지** 학생 값과 함께 보여준다 | `RecommendationSet.unmatched` → `ui.rule_trace` |
+
+`Rule.evidence` 는 값 비교가 있는 규칙에만 붙습니다(A1·A2·A3·A4·A5·F3·P1·P2).
+F1·F2·P3·P4 처럼 해당/미해당으로 끝나는 규칙은 `None` 이고, 화면이 그 사실을 밝힙니다.
+
+### What-if — 근거를 움직여서 증명한다
+
+학생 상세 아래에서 값 4개(2학기 이수 과목 · 2학기 평점 · 등록금 납부 · 장학금)를
+움직이면 확률·등급·발동 규칙이 다시 계산됩니다. **결론은 "빠진 추천" 목록**입니다 —
+그 값 때문에 그 추천이 나왔다는 증명이 거기서 끝납니다.
+
+새 계산을 만들지 않고 학생 사본으로 기존 `predict()` / `evaluate()` 를 다시 부릅니다.
+⚠️ **개입의 효과가 아닙니다.** 데이터가 말하는 것은 상관이지 인과가 아니며,
+그 문구를 패널 상단에 고정해 두었습니다.
+
+### 내려받기 — 담당자 손에 남는 것
+
+| 무엇 | 어디 | 형식 |
+|---|---|---|
+| 상담 카드 | 예측 화면 · 학생 상세 | `.txt` — 위험도 · 근거 · 발동/미발동 규칙 · 부서 · 할 일 |
+| 조치 목록 | 예측 화면 · 학생 상세 | `.csv` — 학생 × 지원 프로그램 한 줄씩 |
+| 명단 요약 / 조치 목록 | 학생 목록 (조회된 범위) | `.csv` — 부서로 정렬하면 그대로 배분표 |
+
+파일 안에 **면책 문구와 예측 출처를 함께 적습니다.** 화면 배너는 파일을 따라가지
+않기 때문입니다. 엑셀에서 한글이 깨지지 않게 UTF-8 BOM 으로 내고, 파일명은 ASCII 입니다.
+
+---
+
+## 6.5 모델 성능 화면 — 성능이 아니라 운영을 판다
+
+표본이 적고 클래스가 불균형한 상황에서 지표 하나를 자랑하는 대신, **놓친 학생(FN)과
+헛걸음한 상담(FP) 사이의 교환**을 임계값 슬라이더로 그 자리에서 보여줍니다.
+재현율 하한을 먼저 만족시킨 뒤 상담 규모가 가장 작은 지점을 운영 권고값으로 냅니다.
+
+채점은 명단 학생의 정답 라벨(`RealRoster.labels`)과 화면이 쓰는 확률을 맞춰
+**앱 안에서 직접** 합니다. `sklearn` 을 새로 얹지 않고 정렬·누적합으로 계산합니다
+(`services/evaluation.py`).
+
+> 🔴 **더미 예측기일 때는 채점 블록을 아예 렌더하지 않습니다.** 학습되지 않은 값으로
+> 혼동행렬을 그리면 없는 성능을 주장하는 것이기 때문입니다. 회귀 방지 테스트가 있습니다.
 
 지원 프로그램의 부서명은 **예시값**이므로 실제 운영 시 학교 조직에 맞게 바꿔야 합니다.
 

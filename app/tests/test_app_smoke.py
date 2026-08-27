@@ -425,6 +425,24 @@ class TestStudents(unittest.TestCase):
         self.assertIn("개입의 효과가 아닙니다", body)   # 인과 오해를 막는 문구
         self.assertIn("아직 바꾼 값이 없습니다", body)  # 조작 전에는 결과를 만들지 않는다
 
+    def test_category_filter_narrows_the_roster(self):
+        """부서 단위로 명단을 좁히는 축. 대시보드 차트에서 본 규모를 여기서 연다."""
+        app = run_page(PAGE_STUDENTS)
+        before = text_of(app)
+        # 0=위험등급, 1=예측, 2=주요 위험
+        app.multiselect[2].set_value(["경제"]).run()
+        assert_clean(self, app)
+        self.assertNotEqual(text_of(app), before)
+
+    def test_focus_toggle_is_addressable_from_home(self):
+        """시작 화면의 '집중관리 대상부터 보기' 가 켜 두는 상태와 같은 key 인가."""
+        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
+        app.session_state["roster_focus_only"] = True
+        app.switch_page(PAGE_STUDENTS)
+        app.run()
+        assert_clean(self, app)
+        self.assertTrue(app.checkbox[0].value)
+
     def test_keyword_filter_does_not_crash(self):
         app = run_page(PAGE_STUDENTS)
         app.text_input[0].set_value("S0001").run()

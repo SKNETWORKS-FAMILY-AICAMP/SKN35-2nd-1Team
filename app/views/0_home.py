@@ -8,7 +8,13 @@ import streamlit as st
 
 from components import ui
 from components.globe import render as render_globe
-from components.state import PAGE_DASHBOARD, PAGE_PREDICTION, roster_source, start_page
+from components.state import (
+    PAGE_DASHBOARD,
+    PAGE_PREDICTION,
+    PAGE_STUDENTS,
+    roster_source,
+    start_page,
+)
 from components.theme import CATEGORY_COLORS, COLORS, RISK_COLORS
 from services.prediction_service import get_service
 from utils.schema import dropped_columns, final_feature_count, target_definition
@@ -231,10 +237,17 @@ st.caption(
 # ---------------------------------------------------------------------------
 
 ui.section("바로 보기")
-go_dashboard, go_prediction = st.columns(2, gap="medium")
+
+# 발표 동선을 버튼 세 개로 고정한다. 세 번째는 **집중관리 대상만 켠 채로** 명단에
+# 들어가는 길이다 — 학생 ID 를 박아 두면 데이터가 바뀌는 순간 데모가 죽는다.
+go_dashboard, go_focus, go_prediction = st.columns(3, gap="medium")
 with go_dashboard:
     if st.button("전체 현황 대시보드", width="stretch", type="primary"):
         st.switch_page(PAGE_DASHBOARD)
+with go_focus:
+    if st.button("집중관리 대상부터 보기", width="stretch"):
+        st.session_state["roster_focus_only"] = True
+        st.switch_page(PAGE_STUDENTS)
 with go_prediction:
     if st.button("학생 한 명 예측해 보기", width="stretch"):
         st.switch_page(PAGE_PREDICTION)
