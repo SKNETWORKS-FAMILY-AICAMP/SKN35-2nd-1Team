@@ -369,6 +369,77 @@ def _css() -> str:
   }}
   .act-item .act-title {{ font-size: {t['secondary']}; }}
 
+  /* ── 상담 카드 ────────────────────────────────────────────────── */
+  /* 담당자가 **그대로 캡처해서 쓸 수 있는 한 장**이 목표다. 그래서 본문보다
+     강한 위계를 주고(띄 + 큰 숫자), 카드 밖으로 나가도 뜻이 통하도록
+     출처와 면책을 카드 안에 넣는다. */
+  .rc {{
+    /* 폭을 묶어야 '카드' 로 읽힌다 — 화면 폭을 다 쓰면 그냥 한 구획이 된다.
+       캡처해서 메신저에 붙이는 용도라 세로로 긴 비율이 맞다. */
+    max-width: 660px;
+    border: 1px solid var(--line); border-radius: var(--radius-lg);
+    background: var(--surface); overflow: hidden; box-shadow: var(--shadow-raise);
+  }}
+  .rc-band {{
+    display: flex; align-items: center; gap: {s['2']}; flex-wrap: wrap;
+    padding: {s['3']} {s['4']}; background: var(--accent-soft, var(--raised));
+    border-bottom: 1px solid var(--accent-line, var(--line));
+  }}
+  .rc-band .who {{
+    margin-left: auto; font-size: {t['caption']}; color: var(--muted);
+  }}
+  .rc-body {{ padding: {s['4']} {s['4']} {s['3']}; }}
+  .rc-id {{
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }}
+  .rc-sub {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
+  .rc-prob {{ display: flex; align-items: baseline; gap: {s['3']}; margin-top: {s['4']}; }}
+  .rc-prob .n {{
+    font-size: 2.8rem; font-weight: 800; line-height: 1; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }}
+  .rc-prob .n .p {{ font-size: .38em; font-weight: 700; margin-left: 2px; }}
+  .rc-prob .l {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--muted);
+  }}
+  .rc-bar {{
+    height: 6px; border-radius: 3px; background: var(--line-soft); margin-top: {s['3']};
+  }}
+  .rc-bar > span {{ display: block; height: 100%; border-radius: 3px; background: var(--accent); }}
+  .rc-stats {{
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: {s['3']};
+    margin-top: {s['4']}; padding-top: {s['4']}; border-top: 1px solid var(--line-soft);
+  }}
+  .rc-stats .k {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--muted);
+  }}
+  .rc-stats .v {{
+    font-size: 1.05rem; font-weight: 700; color: var(--ink); margin-top: 3px;
+    font-variant-numeric: tabular-nums;
+  }}
+  .rc-todo {{ margin-top: {s['4']}; padding-top: {s['4']}; border-top: 1px solid var(--line-soft); }}
+  .rc-todo .k {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--accent);
+  }}
+  .rc-step {{ display: flex; gap: {s['3']}; margin-top: {s['3']}; align-items: baseline; }}
+  .rc-step .i {{
+    flex: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-soft, var(--raised)); color: var(--accent);
+    font-size: {t['label']}; font-weight: 800; text-align: center; line-height: 20px;
+  }}
+  .rc-step .t {{ font-size: {t['secondary']}; font-weight: 600; color: var(--ink); }}
+  .rc-step .o {{ font-size: {t['caption']}; color: var(--muted); margin-left: {s['1']}; }}
+  .rc-step .d {{ display: block; font-size: {t['caption']}; color: var(--ink-soft); margin-top: 1px; }}
+  .rc-more {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['3']}; }}
+  .rc-foot {{
+    padding: {s['3']} {s['4']}; background: var(--raised); border-top: 1px solid var(--line-soft);
+    font-size: {t['label']}; color: var(--faint); line-height: 1.6;
+  }}
+
   /* ── 근거 미터 ─────────────────────────────────────────────────────── */
   /* 규칙이 "기준을 넘었다"가 아니라 **얼마나 넘었는가**를 보여준다.
      위험 구간을 띠로 칠하고 기준선과 학생 값을 각각 표시한다 —
@@ -511,8 +582,9 @@ def _css() -> str:
   .dt tbody:has(a.rowlink):hover tr,
   .dt tbody:has(a.rowlink:focus-visible) tr {{ opacity: .34; filter: saturate(.55); }}
   /* `:has()` 는 인자만큼 특이도를 올린다. 그래서 되살리는 쪽도 같은 형태로 써야
-     흐리게 하는 규칙을 이긴다 — 안 그러면 가리킨 줄까지 같이 흐려진다 (실제로 겪었다). */
-  .dt tbody tr:hover,
+     흐리게 하는 규칙을 이긴다 — 안 그러면 가리킨 줄까지 같이 흐려진다 (두 번 겪었다:
+     흐리기를 `tbody:has(a.rowlink):hover` 로 좁혔을 때 여기를 같이 안 올려서 재발했다). */
+  .dt tbody:has(a.rowlink):hover tr:hover,
   .dt tbody:has(a.rowlink:focus-visible) tr:has(a.rowlink:focus-visible)
     {{ opacity: 1; filter: none; }}
   .dt tbody tr:has(a.rowlink:focus-visible) td {{

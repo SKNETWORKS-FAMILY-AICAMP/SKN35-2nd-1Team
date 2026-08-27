@@ -508,6 +508,85 @@ def support_cards(recommendation: RecommendationSet, *,
 
 
 # ---------------------------------------------------------------------------
+# 상담 카드 — 화면에서 바로 읽고 그대로 캡처해 쓰는 한 장
+# ---------------------------------------------------------------------------
+
+#: 카드에 세우는 조치 개수. 더 넣으면 "무엇부터 하라는 것인가" 가 다시 흐려진다.
+CARD_STEPS = 3
+
+
+def report_card(
+    student: StudentInput,
+    result: PredictionResult,
+    recommendation: RecommendationSet,
+) -> None:
+    """학생 1명의 상담 카드.
+
+    상세 분석 전체를 한 장으로 줄인 것이다. 담당자가 실제로 필요한 것은
+    **누구를 · 얼마나 급하게 · 무엇부터** 세 가지뿐이고, 나머지(근거·시뮬레이션)는
+    설명을 요구받았을 때 펼치면 된다. 그래서 이 카드가 상세 화면의 첫 블록이다.
+
+    카드는 캡처되어 화면 밖으로 나간다. 그래서 출처와 면책을 카드 안에 넣는다 —
+    `case_sheet` 가 파일에 같은 것을 넣는 이유와 같다.
+    """
+    accent = RISK_COLORS[result.risk_level]
+    soft = RISK_SOFT[result.risk_level]
+
+    attendance = "주간" if student.attendance == 1 else "야간"
+    facts = (
+        ("2학기 이수율", f"{student.sem2_approval_rate:.0%}"),
+        ("평균 성적", f"{student.average_grade:.1f} / 20"),
+        ("재정위험", f"{student.financial_risk_score} / 3"),
+    )
+
+    programs = recommendation.programs        # 규칙 우선순위 순 · 중복 제거된 목록
+    steps = []
+    for index, program in enumerate(programs[:CARD_STEPS], start=1):
+        steps.append(
+            f'<div class="rc-step"><span class="i">{index}</span><div>'
+            f'<span class="t">{escape(program.name)}</span>'
+            f'<span class="o">{escape(program.owner)}</span>'
+            f'<span class="d">{escape(program.action)}</span></div></div>'
+        )
+    if not steps:
+        steps.append(
+            '<div class="rc-more">조건을 넘는 규칙이 없습니다. 정기 모니터링 대상으로 유지합니다.</div>'
+        )
+    remaining = len(programs) - CARD_STEPS
+    more = (
+        f'<div class="rc-more">외 {remaining}건은 아래 &lsquo;무엇을 할 것인가&rsquo; 에 있습니다.</div>'
+        if remaining > 0 else ""
+    )
+
+    stats = "".join(
+        f'<div><div class="k">{escape(k)}</div><div class="v">{escape(v)}</div></div>'
+        for k, v in facts
+    )
+
+    source = "프로토타입 예측" if result.is_dummy else f"{result.model_name} v{result.model_version}"
+
+    _html(
+        f'<div class="rc" style="--accent:{accent};--accent-soft:{soft};--accent-line:{accent}33">'
+        f'<div class="rc-band">{risk_pill_html(result.risk_level)}'
+        f'{focus_pill_html() if recommendation.is_priority_case else ""}'
+        f'<span class="who">발동 규칙 {len(recommendation.matched)}건 · '
+        f"연계 부서 {len({p.owner for p in programs})}곳</span></div>"
+        f'<div class="rc-body">'
+        f'<div class="rc-id">{escape(student.student_id)}</div>'
+        f'<div class="rc-sub">{escape(student.major_field)} · {attendance} · '
+        f"{escape(student.admission_pathway)}</div>"
+        f'<div class="rc-prob"><span class="n">{result.dropout_percent:.1f}'
+        f'<span class="p">%</span></span><span class="l">중도탈락 확률</span></div>'
+        f'<div class="rc-bar"><span style="width:{result.dropout_percent:.1f}%"></span></div>'
+        f'<div class="rc-stats">{stats}</div>'
+        f'<div class="rc-todo"><div class="k">지금 할 일</div>{"".join(steps)}{more}</div>'
+        f"</div>"
+        f'<div class="rc-foot">{escape(source)} · 이 카드는 위험요인에 대응하는 교내 지원을 '
+        f"연결한 것이며, 중도탈락을 단정하거나 예방을 보장하지 않습니다. 최종 판단은 담당자가 합니다.</div>"
+        f"</div>"
+    )
+
+# ---------------------------------------------------------------------------
 # 학생 요약 / 결과 패널
 # ---------------------------------------------------------------------------
 
@@ -548,8 +627,13 @@ def result_panel(
     이 순서가 이 제품이 하는 말 전부다.
     """
     if show_summary:
-        student_summary(student)
+        # 카드가 첫 블록이다 — 담당자가 실제로 쓰는 세 가지(누구·얼마나 급하게·무엇부터)를
+        # 먼저 주고, 나머지는 아래에서 펼친다.
+        report_card(student, result, recommendation)
         spacer(12)
+        with st.expander("학생 기본 정보 전체", expanded=False):
+            student_summary(student)
+        spacer(4)
 
     left, right = st.columns([1, 1.35], gap="large")
 
