@@ -1,2 +1,2 @@
-model,author,threshold,recall,f1
+model,team_member,threshold,recall,f1
 LightGBM,조현주,0.5,0.8596491228070176,0.8045977011494253
