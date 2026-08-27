@@ -32,6 +32,33 @@ def cached_roster() -> Roster:
     return build_roster(get_service())
 
 
+@st.cache_data(show_spinner=False)
+def cached_export(student_ids: tuple[str, ...]) -> tuple[bytes, bytes, int]:
+    """조회된 학생들의 (요약 CSV, 조치목록 CSV, 조치 건수).
+
+    `st.download_button` 은 데이터를 **미리** 들고 있어야 하므로, 필터를 만질 때마다
+    885명분 문자열을 다시 만들면 표가 눈에 띄게 굼떠진다. 필터 결과(=학생 ID 묶음)를
+    키로 캐시해서 같은 조합은 한 번만 만든다.
+    """
+    from services import case_sheet
+
+    roster = cached_roster()
+    by_id = {row.student.student_id: row for row in roster.rows}
+    picked = [by_id[sid] for sid in student_ids if sid in by_id]
+
+    summary = [case_sheet.summary_row(r.student, r.result, r.recommendation) for r in picked]
+    actions = [
+        action
+        for r in picked
+        for action in case_sheet.action_rows(r.student, r.result, r.recommendation)
+    ]
+    return (
+        case_sheet.to_csv(summary, case_sheet.SUMMARY_FIELDS),
+        case_sheet.to_csv(actions, case_sheet.ACTION_FIELDS),
+        len(actions),
+    )
+
+
 def roster_source() -> tuple[str, bool]:
     """사이드바가 쓰는 (출처 문구, 실데이터 여부).
 

@@ -13,9 +13,16 @@ from html import escape
 import streamlit as st
 
 from components import ui
-from components.state import PAGE_PREDICTION, cached_roster, send_to_prediction, start_page
+from components.state import (
+    PAGE_PREDICTION,
+    cached_export,
+    cached_roster,
+    send_to_prediction,
+    start_page,
+)
 from components.theme import COLORS, RISK_COLORS
 from services.predictor import RISK_LABELS_KO, RISK_LEVELS
+from services import case_sheet
 from services.prediction_service import get_service
 from utils.feature_mapping import TARGET_CLASSES, TARGET_LABELS_KO
 
@@ -142,6 +149,35 @@ event = st.dataframe(
     key="roster_table",
 )
 
+# ── 내보내기 — 지금 조회된 명단 그대로 ─────────────────────────────────────
+# 화면에서 좁힌 결과가 곧 업무 배분 단위다. 필터를 다시 걸게 하지 않는다.
+summary_csv, actions_csv, action_count = cached_export(tuple(filtered["학생 ID"]))
+ui.spacer(8)
+export_left, export_right = st.columns(2, gap="small")
+with export_left:
+    st.download_button(
+        f"조회된 명단 요약 내려받기 (.csv · {len(filtered):,}명)",
+        data=summary_csv,
+        file_name=case_sheet.filename("roster_summary"),
+        mime="text/csv",
+        width="stretch",
+        key="dl_roster_summary",
+    )
+with export_right:
+    st.download_button(
+        f"조회된 명단 조치 목록 (.csv · {action_count:,}건)",
+        data=actions_csv,
+        file_name=case_sheet.filename("roster_actions"),
+        mime="text/csv",
+        width="stretch",
+        disabled=action_count == 0,
+        key="dl_roster_actions",
+    )
+st.caption(
+    "조치 목록은 **학생 × 지원 프로그램** 한 줄씩이라 담당 부서로 정렬하면 그대로 배분표가 됩니다. "
+    "두 파일 모두 면책 문구와 예측 출처를 포함합니다."
+)
+
 selected = list(getattr(event.selection, "rows", []) or [])
 if selected:
     student_id = str(filtered.iloc[selected[0]]["학생 ID"])
@@ -163,6 +199,9 @@ if row is None:
 
 ui.section(f"{student_id} 상세 분석")
 ui.result_panel(row.student, row.result, row.recommendation)
+
+ui.spacer(10)
+ui.case_downloads(row.student, row.result, row.recommendation, key="detail")
 
 ui.spacer(10)
 if st.button("이 학생을 예측 화면으로 보내기", key=f"send_{student_id}", width="stretch"):

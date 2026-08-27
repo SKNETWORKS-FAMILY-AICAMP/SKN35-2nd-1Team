@@ -36,6 +36,40 @@ DISCLAIMER = (
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
+class Evidence:
+    """규칙이 발동한 **수치 근거** 1개.
+
+    사유 문구(`reason_template`)는 사람이 읽는 문장이고, 이쪽은 화면이 그리는 값이다.
+    같은 임계값을 문자열에 한 번, 여기에 한 번 적지 않도록 **둘 다 모듈 상수를 참조**한다.
+    담당자가 알아야 하는 것은 "기준을 넘었다"가 아니라 **"얼마나 넘었는가"** 이므로
+    값·기준선·눈금 범위를 함께 들고 다닌다.
+    """
+
+    label: str                  # "2학기 이수율"
+    value: float                # 이 학생의 값
+    threshold: float            # 규칙 기준선
+    unit: str = ""              # "%" | "점" | "/3"
+    worse: str = "below"        # "below" | "above" — 기준선의 어느 쪽이 위험한가
+    minimum: float = 0.0        # 눈금 범위 (막대를 그리려면 필요하다)
+    maximum: float = 100.0
+
+    @property
+    def value_text(self) -> str:
+        return f"{self.value:g}{self.unit}"
+
+    @property
+    def threshold_text(self) -> str:
+        return f"{self.threshold:g}{self.unit}"
+
+    def ratio(self, value: float) -> float:
+        """눈금 범위 안에서의 위치(0~1). 화면이 막대 폭으로 쓴다."""
+        span = self.maximum - self.minimum
+        if span <= 0:
+            return 0.0
+        return min(max((value - self.minimum) / span, 0.0), 1.0)
+
+
+@dataclass(frozen=True)
 class SupportProgram:
     """연결할 교내 지원 프로그램 1개."""
 
@@ -57,6 +91,14 @@ class Rule:
     feature: str = ""                                       # 근거가 되는 팀 피처 이름
     priority: int = 3                                       # 1이 가장 급함
 
+    #: 수치 근거를 만드는 함수. 값 비교가 없는 boolean 규칙(F1·F2·P3·P4)은 None 이다.
+    evidence: Callable[[StudentInput], Evidence] | None = None
+
+    #: 이 규칙이 대응하는 **모델 위험요인**의 key. `services/dummy_predictor.py` 의
+    #  `_Term.key` 와 같은 값을 쓴다 — 화면이 "왜 위험한가"와 "무엇을 할 것인가"를
+    #  같은 이름으로 이을 수 있어야 한다.
+    factor_keys: tuple[str, ...] = ()
+
     @property
     def category_label(self) -> str:
         return RISK_CATEGORIES.get(self.category, self.category)
@@ -68,6 +110,11 @@ class MatchedRule:
 
     rule: Rule
     reason: str
+    evidence: Evidence | None = None     # 규칙에 evidence 가 없으면 None 이다
+
+    @property
+    def factor_keys(self) -> tuple[str, ...]:
+        return self.rule.factor_keys
 
     @property
     def category(self) -> str:
@@ -83,6 +130,8 @@ class RecommendationSet:
     """학생 1명에 대한 추천 결과 묶음."""
 
     matched: list[MatchedRule] = field(default_factory=list)
+    #: 발동하지 **않은** 규칙. "왜 이 추천은 안 나왔나" 에 답하려면 이것도 있어야 한다.
+    unmatched: list[Rule] = field(default_factory=list)
     is_priority_case: bool = False          # 복합 위험 → 집중관리 우선 대상
     priority_reason: str = ""
     disclaimer: str = DISCLAIMER
@@ -135,6 +184,11 @@ RULES: tuple[Rule, ...] = (
         reason_template="2학기 이수율이 {sem2_rate:.0%} 로 기준({threshold:.0%}) 아래입니다.",
         condition=lambda s, r: s.sem2_enrolled > 0 and s.sem2_approval_rate < LOW_APPROVAL,
         feature="sem2_approval_rate",
+        evidence=lambda s: Evidence(
+            "2학기 이수율", round(s.sem2_approval_rate * 100, 1), LOW_APPROVAL * 100,
+            unit="%", worse="below",
+        ),
+        factor_keys=("sem2_approval",),
         programs=(
             SupportProgram("학습지원센터 1:1 상담", "교수학습개발센터",
                            "수강 과목별 학습 장애 요인 진단 상담을 예약한다."),
@@ -150,6 +204,11 @@ RULES: tuple[Rule, ...] = (
         reason_template="두 학기 평균 성적이 {avg_grade:.1f}/20 으로 기준({threshold:.1f}) 아래입니다.",
         condition=lambda s, r: (s.sem1_enrolled + s.sem2_enrolled) > 0 and s.average_grade < LOW_GRADE,
         feature="Curricular units 1st/2nd sem (grade)",
+        evidence=lambda s: Evidence(
+            "두 학기 평균 성적", round(s.average_grade, 1), LOW_GRADE,
+            unit="/20", worse="below", maximum=20.0,
+        ),
+        factor_keys=("sem2_grade", "sem1_grade"),
         programs=(
             SupportProgram("학습계획 수립 상담", "교수학습개발센터",
                            "다음 학기 수강 설계와 학습 시간표를 함께 작성한다."),
@@ -168,6 +227,12 @@ RULES: tuple[Rule, ...] = (
             and (s.sem1_approval_rate - s.sem2_approval_rate) >= APPROVAL_DROP
         ),
         feature="sem1_approval_rate → sem2_approval_rate",
+        evidence=lambda s: Evidence(
+            "이수율 하락폭",
+            round((s.sem1_approval_rate - s.sem2_approval_rate) * 100, 1),
+            APPROVAL_DROP * 100, unit="%p", worse="above",
+        ),
+        factor_keys=("sem2_approval", "sem1_approval"),
         programs=(
             SupportProgram("조기 학업점검 면담", "학생지원팀",
                            "이수율이 떨어진 시점의 사유를 확인하는 면담을 진행한다."),
@@ -181,6 +246,11 @@ RULES: tuple[Rule, ...] = (
         reason_template="2학기 수강 과목이 0과목으로 기록되어 있습니다. 학적 상태 확인이 필요합니다.",
         condition=lambda s, r: s.sem2_enrolled == 0 or s.zero_enrolled_1st_sem == 1,
         feature="zero_enrolled_1st_sem",
+        evidence=lambda s: Evidence(
+            "2학기 수강 과목", s.sem2_enrolled, 1,
+            unit="과목", worse="below", maximum=12.0,
+        ),
+        factor_keys=("sem2_approval", "sem1_approval"),
         programs=(
             SupportProgram("학적 상태 확인", "학사관리팀",
                            "휴학·미등록 여부를 학사 시스템에서 대조한다."),
@@ -196,6 +266,11 @@ RULES: tuple[Rule, ...] = (
             s.sem1_enrolled > 0 and s.sem2_enrolled > 0 and s.grade_change <= -GRADE_DROP
         ),
         feature="grade_change",
+        evidence=lambda s: Evidence(
+            "학기 평점 변화", round(s.grade_change, 1), -GRADE_DROP,
+            unit="점", worse="below", minimum=-10.0, maximum=10.0,
+        ),
+        factor_keys=("grade_change",),
         programs=(
             SupportProgram("학습 저해요인 진단", "교수학습개발센터",
                            "성적이 떨어진 학기의 수강 구성과 생활 여건을 함께 점검한다."),
@@ -210,6 +285,7 @@ RULES: tuple[Rule, ...] = (
         reason_template="등록금 납부 상태가 '미납'으로 기록되어 있습니다.",
         condition=lambda s, r: s.tuition_fees_up_to_date == 0,
         feature="Tuition fees up to date",
+        factor_keys=("tuition_unpaid",),
         programs=(
             SupportProgram("등록금 분할납부 안내", "학생지원팀",
                            "분할납부·납부기한 연장 제도를 안내한다."),
@@ -225,6 +301,7 @@ RULES: tuple[Rule, ...] = (
         reason_template="채무 보유(Debtor) 상태로 기록되어 있습니다.",
         condition=lambda s, r: s.debtor == 1,
         feature="Debtor",
+        factor_keys=("debtor",),
         programs=(
             SupportProgram("학자금 대출 상담", "장학복지팀",
                            "상환 유예·전환 대출 가능 여부를 상담한다."),
@@ -241,6 +318,11 @@ RULES: tuple[Rule, ...] = (
                         "(등록금 미납 · 채무 · 장학금 미수혜 중 {financial_risk}개 해당).",
         condition=lambda s, r: s.financial_risk_score >= HIGH_FINANCIAL_RISK,
         feature="financial_risk_score",
+        evidence=lambda s: Evidence(
+            "재정위험점수", s.financial_risk_score, HIGH_FINANCIAL_RISK,
+            unit="/3", worse="above", maximum=3.0,
+        ),
+        factor_keys=("financial_risk", "scholarship"),
         programs=(
             SupportProgram("교내 장학제도 안내", "장학복지팀",
                            "성적·소득 연계 교내 장학 신청 자격을 검토한다."),
@@ -255,6 +337,11 @@ RULES: tuple[Rule, ...] = (
         reason_template="{choice}지망으로 입학한 기록이 있습니다(원본 Application order 기준).",
         condition=lambda s, r: s.application_order >= LATE_CHOICE_ORDER,
         feature="Application order",
+        evidence=lambda s: Evidence(
+            "지망 순위", s.application_order + 1, LATE_CHOICE_ORDER + 1,
+            unit="지망", worse="above", minimum=1.0, maximum=10.0,
+        ),
+        factor_keys=("application_order",),
         programs=(
             SupportProgram("전공 적합도 상담", "학과 사무실",
                            "전공 만족도와 전과·복수전공 선택지를 함께 검토한다."),
@@ -270,6 +357,11 @@ RULES: tuple[Rule, ...] = (
         reason_template="야간 과정 재학 중이며 2학기 이수율이 {sem2_rate:.0%} 입니다.",
         condition=lambda s, r: s.attendance == 0 and s.sem2_approval_rate < LOW_APPROVAL,
         feature="Daytime/evening attendance",
+        evidence=lambda s: Evidence(
+            "2학기 이수율", round(s.sem2_approval_rate * 100, 1), LOW_APPROVAL * 100,
+            unit="%", worse="below",
+        ),
+        factor_keys=("evening", "sem2_approval"),
         programs=(
             SupportProgram("학사 유연화 상담", "학사관리팀",
                            "수강 부담 조정(감축 수강·계절학기)을 안내한다."),
@@ -283,6 +375,7 @@ RULES: tuple[Rule, ...] = (
         reason_template="타지 거주(Displaced) 상태이며 위험등급이 {risk_level} 입니다.",
         condition=lambda s, r: s.displaced == 1 and r.risk_level == "HIGH",
         feature="Displaced",
+        factor_keys=("displaced",),
         programs=(
             SupportProgram("생활·주거 지원 안내", "학생지원팀",
                            "기숙사 우선배정·생활지원 정보를 안내한다."),
@@ -296,6 +389,7 @@ RULES: tuple[Rule, ...] = (
         reason_template="교육적 특별지원(Educational special needs) 대상으로 기록되어 있습니다.",
         condition=lambda s, r: s.special_needs == 1,
         feature="Educational special needs",
+        factor_keys=(),  # 데이터에 없는 사정이라 모델 요인과 잇지 않는다
         programs=(
             SupportProgram("장애학생지원센터 연계", "학생지원팀",
                            "학습 편의 지원(보조기기·대체자료·시험 조정)을 안내한다."),
@@ -311,6 +405,10 @@ RULES: tuple[Rule, ...] = (
 
 #: 복합 위험(집중관리 우선 대상) 판정 기준
 PRIORITY_MIN_CATEGORIES = 2
+
+#: `Rule.priority` 를 담당자가 읽는 말로. 화면과 내려받는 파일이 **같은 말**을 써야
+#  하므로 규칙 모듈이 소유한다 (예전에는 ui.py 안에만 있었다).
+PRIORITY_LABELS: dict[int, str] = {1: "즉시", 2: "이번 학기", 3: "모니터링"}
 
 
 def _fill_reason(rule: Rule, student: StudentInput, result: PredictionResult) -> str:
@@ -339,6 +437,20 @@ def _fill_reason(rule: Rule, student: StudentInput, result: PredictionResult) ->
         return rule.title
 
 
+def evidence_of(rule: Rule, student: StudentInput) -> Evidence | None:
+    """규칙의 수치 근거. 근거가 없거나 계산이 실패하면 None 이다.
+
+    **발동한 규칙과 발동하지 않은 규칙이 같은 함수를 쓴다** — 판정 트레이스에서
+    "이 학생 값은 얼마였고 기준은 얼마였나" 를 미발동 규칙에도 똑같이 보여줘야 하기 때문이다.
+    """
+    if rule.evidence is None:
+        return None
+    try:
+        return rule.evidence(student)
+    except Exception:  # 근거 하나가 깨져도 추천 자체는 나와야 한다.
+        return None
+
+
 def evaluate(student: StudentInput, result: PredictionResult) -> RecommendationSet:
     """학생 + 예측결과 → 추천 묶음.
 
@@ -346,17 +458,26 @@ def evaluate(student: StudentInput, result: PredictionResult) -> RecommendationS
     판정에는 위험등급을 함께 본다.
     """
     matched: list[MatchedRule] = []
+    unmatched: list[Rule] = []
     for rule in RULES:
         try:
             fired = bool(rule.condition(student, result))
         except Exception:  # 규칙 하나가 잘못돼도 나머지는 평가되어야 한다.
             fired = False
         if fired:
-            matched.append(MatchedRule(rule=rule, reason=_fill_reason(rule, student, result)))
+            matched.append(
+                MatchedRule(
+                    rule=rule,
+                    reason=_fill_reason(rule, student, result),
+                    evidence=evidence_of(rule, student),
+                )
+            )
+        else:
+            unmatched.append(rule)
 
     matched.sort(key=lambda m: (m.rule.priority, m.rule.id))
 
-    recommendation = RecommendationSet(matched=matched)
+    recommendation = RecommendationSet(matched=matched, unmatched=unmatched)
 
     distinct = len(recommendation.categories)
     if distinct >= PRIORITY_MIN_CATEGORIES and result.risk_level in ("HIGH", "MEDIUM"):

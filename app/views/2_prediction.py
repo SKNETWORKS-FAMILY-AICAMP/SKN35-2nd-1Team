@@ -240,6 +240,9 @@ recommendation = rules.evaluate(student, result)
 ui.section("분석 결과", f"대상 · {student.student_id}")
 ui.result_panel(student, result, recommendation, show_summary=True)
 
+ui.spacer(10)
+ui.case_downloads(student, result, recommendation, key="prediction")
+
 with st.expander("이 예측에 쓰인 파생변수 5종", expanded=False):
     st.markdown(
         f"""<table class="dt"><thead><tr>

@@ -18,7 +18,14 @@ from components.theme import (
     RISK_COLORS,
     RISK_SOFT,
 )
-from rules.recommendation_rules import RecommendationSet
+from rules.recommendation_rules import (
+    PRIORITY_LABELS,
+    Evidence,
+    RecommendationSet,
+    Rule,
+    evidence_of,
+)
+from services import case_sheet
 from services.predictor import (
     EXPLANATION_DUMMY,
     RISK_LABELS_KO,
@@ -266,15 +273,37 @@ def probability_split(result: PredictionResult) -> None:
 # 위험요인
 # ---------------------------------------------------------------------------
 
-def factor_list(result: PredictionResult) -> None:
+def _rule_ids_by_factor(recommendation: RecommendationSet | None) -> dict[str, list[str]]:
+    """모델 위험요인 key → 그 요인에 대응해 **발동한** 규칙 ID 목록.
+
+    `Rule.factor_keys` 가 `dummy_predictor._Term.key` 와 같은 이름을 쓰기 때문에
+    두 블록(왜 위험한가 / 무엇을 할 것인가)을 이 사전 하나로 이을 수 있다.
+    """
+    mapping: dict[str, list[str]] = {}
+    if recommendation is None:
+        return mapping
+    for m in recommendation.matched:
+        for key in m.rule.factor_keys:
+            mapping.setdefault(key, []).append(m.rule.id)
+    return mapping
+
+
+def factor_list(result: PredictionResult,
+                recommendation: RecommendationSet | None = None) -> None:
     if not result.top_factors:
         _html('<div class="ds-sub">기준선을 넘는 위험요인이 확인되지 않았습니다.</div>')
         return
+
+    linked = _rule_ids_by_factor(recommendation)
 
     blocks = []
     for factor in result.top_factors:
         color = CATEGORY_COLORS.get(factor.category, COLORS["primary"])
         width = max(factor.contribution * 100, 3)
+        ids = linked.get(factor.key, [])
+        rule_link = (
+            f'<span class="factor-rule">→ RULE {escape(" · ".join(ids))}</span>' if ids else ""
+        )
         blocks.append(
             f"""<div class="factor">
                   <div class="factor-top">
@@ -283,7 +312,7 @@ def factor_list(result: PredictionResult) -> None:
                       {escape(factor.category_label)}</span>
                     <span class="factor-pct ds-num">{factor.contribution * 100:.0f}%</span>
                   </div>
-                  <div class="factor-detail">{escape(factor.detail)}</div>
+                  <div class="factor-detail">{escape(factor.detail)}{rule_link}</div>
                   <div class="factor-track">
                     <div class="factor-fill" style="width:{width:.1f}%;background:{color}"></div>
                   </div>
@@ -304,13 +333,102 @@ def factor_list(result: PredictionResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 근거 미터 — "기준을 넘었다" 가 아니라 "얼마나 넘었는가"
+# ---------------------------------------------------------------------------
+
+def evidence_bar_html(evidence: Evidence, accent: str) -> str:
+    """규칙 임계값 대비 학생 값의 위치. 위험 구간을 띠로 칠하고 두 표식을 세운다.
+
+    막대를 왼쪽부터 채우지 않는 이유: 규칙에 따라 **큰 쪽이 위험한 것**(하락폭·재정위험)과
+    **작은 쪽이 위험한 것**(이수율·성적)이 섞여 있어서, 채움 길이는 위험의 크기를
+    뜻하지 못한다. 위험한 쪽을 띠로 칠하면 방향과 무관하게 같은 그림으로 읽힌다.
+    """
+    thr = evidence.ratio(evidence.threshold) * 100
+    val = evidence.ratio(evidence.value) * 100
+
+    if evidence.worse == "below":
+        danger = f"left:0;width:{thr:.1f}%"
+        foot_note = f"{evidence.threshold_text} 미만이면 발동"
+    else:
+        danger = f"left:{thr:.1f}%;width:{100 - thr:.1f}%"
+        foot_note = f"{evidence.threshold_text} 이상이면 발동"
+
+    return (
+        f'<div class="ev" style="--accent:{accent}">'
+        f'<div class="ev-top"><span class="ev-lab">{escape(evidence.label)}</span>'
+        f'<span class="ev-val ds-num">{escape(evidence.value_text)}</span>'
+        f'<span class="ev-thr ds-num">기준 {escape(evidence.threshold_text)}</span></div>'
+        f'<div class="ev-track">'
+        f'<span class="ev-danger" style="{danger}"></span>'
+        f'<span class="ev-thrmark" style="left:calc({thr:.1f}% - 1px)"></span>'
+        f'<span class="ev-mark" style="left:calc({val:.1f}% - 1.5px)"></span>'
+        f"</div>"
+        f'<div class="ev-foot"><span>{evidence.minimum:g}{escape(evidence.unit)}</span>'
+        f"<span>{escape(foot_note)}</span>"
+        f'<span>{evidence.maximum:g}{escape(evidence.unit)}</span></div></div>'
+    )
+
+
+# ---------------------------------------------------------------------------
+# 규칙 판정 트레이스 — 안 나온 추천도 설명한다
+# ---------------------------------------------------------------------------
+
+def rule_trace(recommendation: RecommendationSet, student: StudentInput) -> None:
+    """규칙 12개 전부의 판정. 발동한 것과 발동하지 않은 것을 한 표에 놓는다.
+
+    **"왜 이 추천은 안 나왔나" 에 답할 수 없으면 추천의 근거도 절반만 설명한 것이다.**
+    미발동 규칙도 같은 `evidence_of()` 를 써서 학생 값과 기준을 그대로 보여준다.
+    """
+    def row(rule: Rule, evidence: Evidence | None, fired: bool) -> str:
+        color = CATEGORY_COLORS.get(rule.category, COLORS["primary"])
+        if evidence is not None:
+            value_cell = escape(evidence.value_text)
+            sign = "&lt;" if evidence.worse == "below" else "≥"
+            threshold_cell = f"{sign} {escape(evidence.threshold_text)}"
+        else:
+            value_cell = "—"
+            threshold_cell = "해당 여부"
+        mark = (
+            f'<span class="fired" style="color:{RISK_COLORS["HIGH"]}">● 발동</span>'
+            if fired else "<span>○</span>"
+        )
+        return (
+            f'<tr class="{"" if fired else "quiet"}">'
+            f'<td class="rid">{escape(rule.id)}</td>'
+            f"<td>{escape(rule.title)}</td>"
+            f'<td style="color:{color if fired else COLORS["faint"]}">'
+            f"{escape(rule.category_label)}</td>"
+            f'<td class="num">{value_cell}</td>'
+            f'<td class="num">{threshold_cell}</td>'
+            f"<td>{mark}</td></tr>"
+        )
+
+    body = [row(m.rule, m.evidence, True) for m in recommendation.matched]
+    body += [row(rule, evidence_of(rule, student), False) for rule in recommendation.unmatched]
+
+    _html(
+        '<div class="card" style="padding:16px 8px">'
+        '<table class="dt"><thead><tr>'
+        "<th>규칙</th><th>판정 내용</th><th>영역</th>"
+        "<th>이 학생 값</th><th>발동 기준</th><th>판정</th>"
+        f'</tr></thead><tbody>{"".join(body)}</tbody></table></div>'
+    )
+    st.caption(
+        f"규칙 {len(recommendation.matched) + len(recommendation.unmatched)}개 전부의 판정입니다. "
+        "발동하지 않은 규칙도 같은 기준으로 평가했으며, 어떤 규칙도 학생 데이터에 없는 "
+        "사정(가정환경·심리상태 등)을 추측하지 않습니다."
+    )
+
+
+# ---------------------------------------------------------------------------
 # 지원 추천 — 이 프로젝트의 차별점이라 카드로 세워 보여준다
 # ---------------------------------------------------------------------------
 
-_PRIORITY_LABEL = {1: "즉시", 2: "이번 학기", 3: "모니터링"}
+_PRIORITY_LABEL = PRIORITY_LABELS   # 규칙 모듈이 소유한다 (파일 출력과 같은 말을 쓰려고)
 
 
-def support_cards(recommendation: RecommendationSet, *, columns: int = 3) -> None:
+def support_cards(recommendation: RecommendationSet, *,
+                  result: PredictionResult | None = None, columns: int = 3) -> None:
     if recommendation.is_priority_case:
         banner(
             "Priority",
@@ -350,11 +468,27 @@ def support_cards(recommendation: RecommendationSet, *, columns: int = 3) -> Non
                 f'<span class="todo">{escape(p.action)}</span></div>'
                 for p in m.rule.programs
             )
+            # 사유 문장 아래에 수치 근거를 그린다. 값 비교가 없는 규칙은 그 사실을 밝힌다.
+            if m.evidence is not None:
+                evidence_html = evidence_bar_html(m.evidence, color)
+            else:
+                evidence_html = (
+                    '<div class="ev-none">해당·미해당으로 판정하는 규칙입니다 (기준값 없음).</div>'
+                )
+            # 이 규칙이 어떤 **모델 위험요인**에 대응하는지 — 두 블록을 잇는 연결선이다.
+            factor_note = ""
+            if result is not None:
+                linked = [f for f in result.top_factors if f.key in m.rule.factor_keys]
+                if linked:
+                    top = max(linked, key=lambda f: f.contribution)
+                    factor_note = (
+                        f" · 모델 요인 {escape(top.label)} {top.contribution * 100:.0f}%"
+                    )
             blocks.append(
                 f'<div class="act-item"><div class="act-title">{escape(m.rule.title)}</div>'
-                f'<div class="act-reason">{escape(m.reason)}</div>{programs}'
+                f'<div class="act-reason">{escape(m.reason)}</div>{evidence_html}{programs}'
                 f'<div class="act-feat">RULE {escape(m.rule.id)} · '
-                f"{escape(m.rule.feature)}</div></div>"
+                f"{escape(m.rule.feature)}{factor_note}</div></div>"
             )
 
         with col:
@@ -430,10 +564,17 @@ def result_panel(
             '<div class="card-title">왜 이 학생이 위험한가</div>'
             '<div class="card-sub">기여도가 큰 순서입니다.</div>'
         )
-        factor_list(result)
+        factor_list(result, recommendation)
 
     section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
-    support_cards(recommendation)
+    support_cards(recommendation, result=result)
+
+    with st.expander(
+        f"규칙 판정 전체 보기 · 발동 {len(recommendation.matched)}건 / "
+        f"미발동 {len(recommendation.unmatched)}건",
+        expanded=False,
+    ):
+        rule_trace(recommendation, student)
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +633,49 @@ def priority_table(rows: list[dict]) -> None:
         f'</tr></thead><tbody>{"".join(body)}</tbody></table>'
         '<div class="bars-hint" style="padding:0 12px">'
         "줄을 가리키면 나머지가 옅어지고, 클릭하면 그 학생의 상세 분석으로 이동합니다.</div></div>"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 내려받기 — 화면에서 본 것을 담당자 손에 남긴다
+# ---------------------------------------------------------------------------
+
+def case_downloads(
+    student: StudentInput,
+    result: PredictionResult,
+    recommendation: RecommendationSet,
+    *,
+    key: str,
+) -> None:
+    """학생 1명의 상담 카드(.txt) + 조치 목록(.csv).
+
+    파일 이름은 **ASCII 로만** 만든다. 발표 PC 브라우저가 한글 파일명을 어떻게 처리하는지에
+    데모를 걸지 않는다 — 내용은 어차피 한국어다.
+    """
+    left, right = st.columns(2, gap="small")
+    with left:
+        st.download_button(
+            "상담 카드 내려받기 (.txt)",
+            data=case_sheet.build_text(student, result, recommendation).encode("utf-8-sig"),
+            file_name=case_sheet.filename("case_sheet", student.student_id, extension="txt"),
+            mime="text/plain",
+            width="stretch",
+            key=f"dl_text_{key}",
+        )
+    with right:
+        rows = case_sheet.action_rows(student, result, recommendation)
+        st.download_button(
+            f"조치 목록 내려받기 (.csv · {len(rows)}건)",
+            data=case_sheet.to_csv(rows, case_sheet.ACTION_FIELDS),
+            file_name=case_sheet.filename("actions", student.student_id),
+            mime="text/csv",
+            width="stretch",
+            disabled=not rows,
+            key=f"dl_actions_{key}",
+        )
+    st.caption(
+        "내려받은 파일에도 면책 문구와 예측 출처가 함께 적힙니다 — "
+        "화면 배너는 파일을 따라가지 않기 때문입니다."
     )
 
 

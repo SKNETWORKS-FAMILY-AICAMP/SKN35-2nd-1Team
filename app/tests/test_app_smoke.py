@@ -15,6 +15,8 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from rules import recommendation_rules as rules
+
 APP_ROOT = Path(__file__).resolve().parent.parent
 ENTRYPOINT = str(APP_ROOT / "app.py")
 
@@ -225,6 +227,56 @@ class TestPrediction(unittest.TestCase):
         for name in ("sem1_approval_rate", "financial_risk_score", "grade_change"):
             with self.subTest(name=name):
                 self.assertIn(name, body)
+
+
+# ---------------------------------------------------------------------------
+# 추천 근거 — 이 제품이 하는 말의 핵심이라 화면에서 사라지면 안 된다
+# ---------------------------------------------------------------------------
+
+class TestRecommendationEvidence(unittest.TestCase):
+    def _analysed(self) -> AppTest:
+        app = run_page(PAGE_PREDICTION)
+        click(app, "HIGH · 복합 위험")
+        click(app, "위험도 분석")
+        return app
+
+    def test_evidence_meter_is_drawn_for_numeric_rules(self):
+        """규칙 카드에 값·기준선 미터가 함께 나오는가."""
+        body = text_of(self._analysed())
+        self.assertIn("ev-track", body)
+        self.assertIn("ev-danger", body)
+        self.assertIn("기준", body)
+
+    def test_rule_trace_covers_every_rule(self):
+        app = self._analysed()
+        labels = [e.label for e in app.expander]
+        self.assertTrue(
+            any("규칙 판정 전체 보기" in label for label in labels),
+            f"판정 트레이스 expander 가 없습니다: {labels}",
+        )
+        trace = next(label for label in labels if "규칙 판정 전체 보기" in label)
+        fired = int(trace.split("발동 ")[1].split("건")[0])
+        quiet = int(trace.split("미발동 ")[1].split("건")[0])
+        self.assertEqual(fired + quiet, len(rules.RULES))
+
+    def test_factors_link_back_to_rules(self):
+        """'왜 위험한가' 와 '무엇을 할 것인가' 가 같은 이름으로 이어지는가."""
+        body = text_of(self._analysed())
+        self.assertIn("→ RULE", body)
+        self.assertIn("모델 요인", body)
+
+    def test_downloads_are_offered(self):
+        app = self._analysed()
+        labels = [b.label for b in app.download_button]
+        self.assertTrue(any("상담 카드" in label for label in labels), labels)
+        self.assertTrue(any("조치 목록" in label for label in labels), labels)
+        assert_clean(self, app)
+
+    def test_roster_export_is_offered(self):
+        app = run_page(PAGE_STUDENTS)
+        labels = [b.label for b in app.download_button]
+        self.assertTrue(any("명단 요약" in label for label in labels), labels)
+        assert_clean(self, app)
 
 
 # ---------------------------------------------------------------------------

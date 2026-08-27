@@ -369,6 +369,61 @@ def _css() -> str:
   }}
   .act-item .act-title {{ font-size: {t['secondary']}; }}
 
+  /* ── 근거 미터 ─────────────────────────────────────────────────────── */
+  /* 규칙이 "기준을 넘었다"가 아니라 **얼마나 넘었는가**를 보여준다.
+     위험 구간을 띠로 칠하고 기준선과 학생 값을 각각 표시한다 —
+     학생 표식이 띠 안에 들어가 있는 그림이 곧 발동 근거다. */
+  .ev {{ margin-top: {s['2']}; }}
+  .ev-top {{
+    display: flex; align-items: baseline; gap: {s['2']};
+    font-size: {t['label']}; line-height: 1.4;
+  }}
+  .ev-lab {{
+    font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  }}
+  .ev-val {{
+    margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--accent, var(--primary));
+  }}
+  .ev-thr {{ color: var(--faint); font-variant-numeric: tabular-nums; }}
+  .ev-track {{
+    position: relative; height: 8px; border-radius: 4px;
+    background: var(--line-soft); margin-top: 7px;
+  }}
+  .ev-danger {{
+    position: absolute; top: 0; bottom: 0; border-radius: 4px;
+    background: var(--accent, var(--primary)); opacity: .20;
+  }}
+  .ev-thrmark {{
+    position: absolute; top: -3px; bottom: -3px; width: 2px;
+    background: var(--ink-soft); border-radius: 1px;
+  }}
+  .ev-mark {{
+    position: absolute; top: -4px; width: 3px; height: 16px; border-radius: 2px;
+    background: var(--accent, var(--primary)); box-shadow: 0 0 0 2px var(--surface);
+  }}
+  .ev-foot {{
+    display: flex; justify-content: space-between;
+    font-size: {t['label']}; color: var(--faint); margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }}
+  .ev-none {{
+    margin-top: {s['2']}; font-size: {t['label']}; color: var(--faint);
+  }}
+
+  /* ── 규칙 판정 트레이스 ────────────────────────────────────────────── */
+  .dt .fired {{ font-weight: 700; }}
+  .dt .quiet td {{ color: var(--faint); }}
+  .dt .quiet .rid {{ color: var(--faint); }}
+  .dt .rid {{
+    font-family: {MONO_STACK}; font-size: {t['label']}; font-weight: 700; color: var(--ink-soft);
+  }}
+  /* 위험요인 ↔ 규칙 연결 표시 */
+  .factor-rule {{
+    font-family: {MONO_STACK}; font-size: {t['label']}; color: var(--faint);
+    margin-left: {s['2']};
+  }}
+
   /* ── 데이터 테이블 (직접 그리는 우선순위 표) ───────────────────────── */
   .dt {{ width: 100%; border-collapse: separate; border-spacing: 0; }}
   .dt th {{

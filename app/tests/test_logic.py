@@ -12,7 +12,8 @@ from __future__ import annotations
 import unittest
 
 from rules import recommendation_rules as rules
-from services.dummy_predictor import DummyPredictor
+from services import case_sheet
+from services.dummy_predictor import DummyPredictor, _build_terms
 from services.predictor import (
     DECISION_THRESHOLD,
     RISK_THRESHOLDS,
@@ -265,7 +266,149 @@ class TestRules(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# 5.6 상담 카드 — 화면 밖으로 나가는 파일
+# ---------------------------------------------------------------------------
+
+class TestCaseSheet(unittest.TestCase):
+    """내려받은 파일만 봐도 근거와 출처를 알 수 있는가."""
+
+    def setUp(self):
+        self.student = student(
+            student_id="T-001", sem2_approved=1, sem2_grade=7.9,
+            tuition_fees_up_to_date=0, debtor=1, scholarship_holder=0,
+        )
+        self.result = PREDICTOR.predict(self.student)
+        self.recommendation = rules.evaluate(self.student, self.result)
+
+    def _text(self):
+        return case_sheet.build_text(self.student, self.result, self.recommendation)
+
+    def test_card_carries_notice_and_source(self):
+        """화면 배너는 파일을 따라가지 않는다. 파일이 스스로 밝혀야 한다."""
+        text = self._text()
+        self.assertIn(case_sheet.FILE_NOTICE, text)
+        self.assertIn(self.result.model_name, text)
+
+    def test_card_lists_every_fired_rule(self):
+        text = self._text()
+        for m in self.recommendation.matched:
+            with self.subTest(rule=m.rule.id):
+                self.assertIn(f"[{m.rule.id}]", text)
+
+    def test_card_also_lists_rules_that_did_not_fire(self):
+        """'확인했으나 해당 없음' 이 빠지면 카드가 근거의 절반만 담는다."""
+        text = self._text()
+        for rule in self.recommendation.unmatched:
+            with self.subTest(rule=rule.id):
+                self.assertIn(f"[{rule.id}]", text)
+
+    def test_action_rows_cover_every_program(self):
+        rows = case_sheet.action_rows(self.student, self.result, self.recommendation)
+        expected = sum(len(m.rule.programs) for m in self.recommendation.matched)
+        self.assertEqual(len(rows), expected)
+        self.assertTrue(all(r["담당 부서"] for r in rows))
+
+    def test_csv_is_excel_safe(self):
+        """BOM 이 없으면 엑셀에서 한글이 깨진다. 실제로 담당자가 여는 것은 엑셀이다."""
+        rows = case_sheet.action_rows(self.student, self.result, self.recommendation)
+        blob = case_sheet.to_csv(rows, case_sheet.ACTION_FIELDS)
+        self.assertTrue(blob.startswith(b"\xef\xbb\xbf"))
+        decoded = blob.decode("utf-8-sig")
+        self.assertIn("담당 부서", decoded.splitlines()[0])
+        self.assertIn(case_sheet.FILE_NOTICE, decoded)
+
+    def test_summary_row_matches_declared_fields(self):
+        row = case_sheet.summary_row(self.student, self.result, self.recommendation)
+        self.assertEqual(set(row), set(case_sheet.SUMMARY_FIELDS))
+
+    def test_filename_is_ascii(self):
+        """발표 PC 브라우저의 한글 파일명 처리에 데모를 걸지 않는다."""
+        name = case_sheet.filename("case_sheet", self.student.student_id)
+        name.encode("ascii")   # 실패하면 예외로 떨어진다
+
+
+# ---------------------------------------------------------------------------
 # 6. 더미 데이터
+# ---------------------------------------------------------------------------
+# 5.5 규칙의 수치 근거 · 판정 트레이스
+# ---------------------------------------------------------------------------
+
+class TestRuleEvidence(unittest.TestCase):
+    """추천의 근거를 화면이 그릴 수 있는 형태로 들고 있는가."""
+
+    def _evaluate(self, **overrides):
+        s = student(**overrides)
+        return s, rules.evaluate(s, PREDICTOR.predict(s))
+
+    def test_every_rule_is_accounted_for(self):
+        """발동 + 미발동 = 규칙 전체. 판정에서 빠지는 규칙이 있으면 트레이스가 거짓말을 한다."""
+        for overrides in ({}, {"sem2_approved": 1, "tuition_fees_up_to_date": 0},
+                          {"sem2_enrolled": 0}, {"scholarship_holder": 1}):
+            with self.subTest(overrides=overrides):
+                _, rec = self._evaluate(**overrides)
+                self.assertEqual(len(rec.matched) + len(rec.unmatched), len(rules.RULES))
+
+    def test_matched_and_unmatched_do_not_overlap(self):
+        _, rec = self._evaluate(sem2_approved=1, debtor=1)
+        fired = {m.rule.id for m in rec.matched}
+        quiet = {r.id for r in rec.unmatched}
+        self.assertEqual(fired & quiet, set())
+
+    def test_fired_rule_evidence_is_on_the_dangerous_side(self):
+        """발동한 규칙의 근거값은 반드시 기준선의 위험한 쪽에 있어야 한다.
+
+        조건식과 근거가 따로 놀면 화면이 '기준 안인데 발동했다'를 그리게 된다.
+        규칙을 추가할 때 가장 하기 쉬운 실수라 여러 학생으로 훑는다.
+        """
+        cases = (
+            {},
+            {"sem2_approved": 1, "sem2_grade": 7.9, "sem1_grade": 10.8},
+            {"tuition_fees_up_to_date": 0, "debtor": 1, "scholarship_holder": 0},
+            {"application_order": 5, "attendance": 0},
+            {"sem1_approved": 6, "sem2_approved": 2},
+        )
+        for overrides in cases:
+            s, rec = self._evaluate(**overrides)
+            for m in rec.matched:
+                if m.evidence is None:
+                    continue
+                with self.subTest(rule=m.rule.id, overrides=overrides):
+                    e = m.evidence
+                    if e.worse == "below":
+                        self.assertLess(e.value, e.threshold)
+                    else:
+                        self.assertGreaterEqual(e.value, e.threshold)
+
+    def test_evidence_value_stays_inside_its_own_scale(self):
+        """눈금 범위를 벗어난 값은 막대 밖에 표식을 그린다. ratio 가 잘라 주는지 본다."""
+        s, rec = self._evaluate(sem2_approved=1)
+        for m in rec.matched:
+            if m.evidence is None:
+                continue
+            with self.subTest(rule=m.rule.id):
+                self.assertGreaterEqual(m.evidence.ratio(m.evidence.value), 0.0)
+                self.assertLessEqual(m.evidence.ratio(m.evidence.value), 1.0)
+
+    def test_factor_keys_exist_in_the_predictor(self):
+        """`Rule.factor_keys` 오타를 잡는다.
+
+        오타가 나도 예외가 나지 않고 **연결선만 조용히 사라진다** — 화면에서
+        알아채기 어려운 종류의 사고라 테스트로 막는다.
+        """
+        known = {term.key for term in _build_terms(student())}
+        for rule in rules.RULES:
+            for key in rule.factor_keys:
+                with self.subTest(rule=rule.id, key=key):
+                    self.assertIn(key, known)
+
+    def test_evidence_of_never_raises(self):
+        """근거 하나가 깨져도 추천 자체는 나와야 한다."""
+        s = student(sem1_enrolled=0, sem2_enrolled=0)
+        for rule in rules.RULES:
+            with self.subTest(rule=rule.id):
+                rules.evidence_of(rule, s)   # 예외가 나면 실패다
+
+
 # ---------------------------------------------------------------------------
 
 class TestDummyData(unittest.TestCase):
