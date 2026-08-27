@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from rules import recommendation_rules as rules
 from services import case_sheet
@@ -407,6 +408,68 @@ class TestRuleEvidence(unittest.TestCase):
         for rule in rules.RULES:
             with self.subTest(rule=rule.id):
                 rules.evidence_of(rule, s)   # 예외가 나면 실패다
+
+
+# ---------------------------------------------------------------------------
+# 5.7 What-if — 시뮬레이션이 예측과 같은 방향을 보는가
+# ---------------------------------------------------------------------------
+
+class TestWhatIf(unittest.TestCase):
+    """슬라이더를 좋은 쪽으로 밀었는데 위험이 올라가면 발표가 그 자리에서 무너진다."""
+
+    BASE = dict(sem2_enrolled=6, sem2_approved=1, sem2_grade=7.9,
+                tuition_fees_up_to_date=0, scholarship_holder=0, debtor=1)
+
+    def test_controls_are_real_student_fields(self):
+        """조작 대상 이름이 틀리면 replace() 가 TypeError 로 터진다."""
+        from components import whatif
+
+        base = student()
+        for name in whatif.CONTROLS:
+            with self.subTest(field=name):
+                self.assertTrue(hasattr(base, name))
+
+    def test_raising_approval_never_raises_risk(self):
+        previous = None
+        for approved in range(0, 7):
+            s = student(**{**self.BASE, "sem2_approved": approved})
+            probability = PREDICTOR.predict(s).dropout_probability
+            if previous is not None:
+                with self.subTest(approved=approved):
+                    self.assertLessEqual(probability, previous + 1e-9)
+            previous = probability
+
+    def test_raising_grade_never_raises_risk(self):
+        previous = None
+        for grade in (0.0, 5.0, 10.0, 15.0, 20.0):
+            s = student(**{**self.BASE, "sem2_grade": grade})
+            probability = PREDICTOR.predict(s).dropout_probability
+            if previous is not None:
+                with self.subTest(grade=grade):
+                    self.assertLessEqual(probability, previous + 1e-9)
+            previous = probability
+
+    def test_improving_every_control_only_removes_rules(self):
+        """개선 방향으로 다 밀었을 때 새로 발동하는 규칙이 있으면 규칙 조건이 뒤집힌 것이다."""
+        base = student(**self.BASE)
+        better = replace(base, sem2_approved=6, sem2_grade=16.0,
+                         tuition_fees_up_to_date=1, scholarship_holder=1)
+
+        before = rules.evaluate(base, PREDICTOR.predict(base))
+        after = rules.evaluate(better, PREDICTOR.predict(better))
+
+        fired_before = {m.rule.id for m in before.matched}
+        fired_after = {m.rule.id for m in after.matched}
+        self.assertEqual(fired_after - fired_before, set())
+        self.assertLess(len(fired_after), len(fired_before))
+
+    def test_simulation_uses_the_same_predictor_as_the_screen(self):
+        """시뮬레이션이 별도 계산을 쓰면 What-if 는 아무것도 증명하지 못한다."""
+        s = student(**self.BASE)
+        self.assertEqual(
+            PREDICTOR.predict(s).dropout_probability,
+            PREDICTOR.predict(replace(s)).dropout_probability,
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -411,6 +411,43 @@ def _css() -> str:
     margin-top: {s['2']}; font-size: {t['label']}; color: var(--faint);
   }}
 
+  /* ── What-if 비교 ──────────────────────────────────────────────────── */
+  .wi {{ background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--radius-md); padding: {s['4']}; }}
+  .wi-row {{ display: flex; align-items: stretch; gap: {s['4']}; flex-wrap: wrap; }}
+  .wi-side {{ flex: 1 1 180px; min-width: 0; }}
+  .wi-side .k {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--muted);
+  }}
+  .wi-side .v {{
+    font-size: 2.1rem; font-weight: 800; line-height: 1.05; color: var(--ink);
+    margin-top: {s['2']};
+  }}
+  .wi-side .v .p {{ font-size: .44em; font-weight: 600; margin-left: 2px; }}
+  .wi-side .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['2']}; }}
+  .wi-side.after .v {{ color: var(--accent, var(--primary)); }}
+  .wi-arrow {{
+    display: flex; align-items: center; color: var(--faint); font-size: 1.5rem;
+    padding: 0 {s['2']};
+  }}
+  .wi-delta {{
+    flex: 0 0 auto; align-self: center; text-align: right;
+    font-size: {t['h2']}; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: var(--accent, var(--primary));
+  }}
+  .wi-delta .c {{
+    display: block; font-size: {t['label']}; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--muted); margin-top: 4px;
+  }}
+  .wi-rules {{
+    margin-top: {s['4']}; padding-top: {s['4']}; border-top: 1px solid var(--line-soft);
+    font-size: {t['caption']}; color: var(--ink-soft); line-height: 1.75;
+  }}
+  .wi-rules .tag {{
+    font-family: {MONO_STACK}; font-weight: 700; color: var(--ink-soft);
+  }}
+
   /* ── 규칙 판정 트레이스 ────────────────────────────────────────────── */
   .dt .fired {{ font-weight: 700; }}
   .dt .quiet td {{ color: var(--faint); }}

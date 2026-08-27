@@ -12,7 +12,7 @@ from html import escape
 
 import streamlit as st
 
-from components import ui
+from components import ui, whatif
 from components.state import (
     PAGE_PREDICTION,
     cached_export,
@@ -202,6 +202,9 @@ ui.result_panel(row.student, row.result, row.recommendation)
 
 ui.spacer(10)
 ui.case_downloads(row.student, row.result, row.recommendation, key="detail")
+
+ui.spacer(18)
+whatif.render(row.student, row.result, row.recommendation, service, key=student_id)
 
 ui.spacer(10)
 if st.button("이 학생을 예측 화면으로 보내기", key=f"send_{student_id}", width="stretch"):

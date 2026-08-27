@@ -636,6 +636,56 @@ def priority_table(rows: list[dict]) -> None:
     )
 
 
+def whatif_delta(
+    before: PredictionResult,
+    after: PredictionResult,
+    before_recommendation: RecommendationSet,
+    after_recommendation: RecommendationSet,
+) -> None:
+    """현재 → 시뮬레이션 비교. **빠진 규칙 목록이 이 블록의 결론이다.**
+
+    확률이 내려간 것만 보여주면 "숫자가 움직였다" 로 끝난다. 어떤 추천이 사라졌는지를
+    함께 적어야 "그 값 때문에 그 추천이 나왔다" 가 증명된다.
+    """
+    delta = after.dropout_percent - before.dropout_percent
+    accent = RISK_COLORS[after.risk_level]
+    sign = "+" if delta > 0 else ""
+
+    fired_before = {m.rule.id: m.rule.title for m in before_recommendation.matched}
+    fired_after = {m.rule.id: m.rule.title for m in after_recommendation.matched}
+    dropped = [(rid, title) for rid, title in fired_before.items() if rid not in fired_after]
+    added = [(rid, title) for rid, title in fired_after.items() if rid not in fired_before]
+
+    def rule_line(label: str, items: list[tuple[str, str]], color: str) -> str:
+        if not items:
+            return f'<div><span class="tag">{escape(label)}</span> 없음</div>'
+        body = " · ".join(f"{escape(rid)} {escape(title)}" for rid, title in items)
+        return (
+            f'<div><span class="tag" style="color:{color}">{escape(label)}</span> {body}</div>'
+        )
+
+    _html(
+        f'<div class="wi" style="--accent:{accent}">'
+        f'<div class="wi-row">'
+        f'<div class="wi-side"><div class="k">현재</div>'
+        f'<div class="v ds-num">{before.dropout_percent:.1f}<span class="p">%</span></div>'
+        f"{risk_pill_html(before.risk_level)}"
+        f'<div class="d">발동 규칙 {len(before_recommendation.matched)}건</div></div>'
+        f'<div class="wi-arrow">→</div>'
+        f'<div class="wi-side after"><div class="k">시뮬레이션</div>'
+        f'<div class="v ds-num">{after.dropout_percent:.1f}<span class="p">%</span></div>'
+        f"{risk_pill_html(after.risk_level)}"
+        f'<div class="d">발동 규칙 {len(after_recommendation.matched)}건</div></div>'
+        f'<div class="wi-delta">{sign}{delta:.1f}%p'
+        f'<span class="c">{escape(before.risk_level)} → {escape(after.risk_level)}</span></div>'
+        f"</div>"
+        f'<div class="wi-rules">'
+        + rule_line("빠진 추천", dropped, RISK_COLORS["LOW"])
+        + rule_line("새로 발동", added, RISK_COLORS["HIGH"])
+        + "</div></div>"
+    )
+
+
 # ---------------------------------------------------------------------------
 # 내려받기 — 화면에서 본 것을 담당자 손에 남긴다
 # ---------------------------------------------------------------------------
