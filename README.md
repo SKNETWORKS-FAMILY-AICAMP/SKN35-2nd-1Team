@@ -239,6 +239,15 @@ print(classification_report(y_test, pred))
 - `models/preprocessor.joblib`은 Streamlit 등 후속 단계에서 동일한 변환을 재현하기 위한 목적으로 Git에 커밋합니다.
 - `scikit-learn`은 **1.9.0으로 고정**합니다 (`requirements.txt` 참고). 버전이 다르면 `preprocessor.joblib` 로드 시 호환성 경고/오류가 발생하거나, 동일 코드라도 결과가 미묘하게 달라질 수 있습니다.
 - 전처리 파이프라인이나 데이터 분할 방식이 변경되면 `train.csv` / `val.csv` / `test.csv` / `preprocessor.joblib`을 함께 재생성하여 팀 전체에 공지합니다.
+  
+## 환경 설정 (공식)
+이 프로젝트는 `venv` + `requirements.txt`를 표준으로 사용합니다.
+
+python -m venv venv
+venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+
+⚠️ pyproject.toml / uv.lock 은 실험적으로 추가된 파일로, 현재 사용하지 않습니다.
 
 ---
 
