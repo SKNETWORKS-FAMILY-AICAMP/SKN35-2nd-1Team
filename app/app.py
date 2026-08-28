@@ -84,22 +84,13 @@ def _block_auto_translate() -> None:
       doc.head.appendChild(meta);
     }
     meta.content = "notranslate";
-    // 사이드바 "접힘" 기억을 지운다. 표지에서 사이드바를 만들지 않으므로 브라우저가
-    // 접힘으로 저장해 두면 **다른 화면에서도 계속 접힌 채로** 열린다.
+    // 사이드바 "접힘" 기억을 지운다. 표지에서는 사이드바를 만들지 않는데, 그걸 브라우저가
+    // "사용자가 접었다"로 저장해 두면 **다른 화면에서도 계속 접힌 채로** 열린다.
+    // 지우기만 한다 — 강제로 펼치면 사용자가 방금 접은 것까지 되돌려 버린다.
     var store = window.parent.localStorage;
     for (var i = store.length - 1; i >= 0; i--) {
       var name = store.key(i);
       if (name && name.indexOf("stSidebarCollapsed") === 0) store.removeItem(name);
-    }
-    // 기억을 지워도 **이번 로드**는 이미 접힌 채로 그려진다. 사이드바가 있는 화면인데
-    // 접혀 있으면 한 번만 펼친다 (페이지 로드당 1회 — 사용자가 접는 것은 막지 않는다).
-    if (!window.parent.__sidebarOpened) {
-      window.parent.__sidebarOpened = true;
-      setTimeout(function () {
-        var bar = doc.querySelector('[data-testid="stSidebar"]');
-        var open = doc.querySelector('[data-testid="stExpandSidebarButton"]');
-        if (bar && open && bar.getBoundingClientRect().width < 100) open.click();
-      }, 400);
     }
   } catch (e) { /* 다른 오리진이면 조용히 포기한다 */ }
 })();

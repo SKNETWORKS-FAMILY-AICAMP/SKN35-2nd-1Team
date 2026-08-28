@@ -176,12 +176,22 @@ def _css() -> str:
     padding-left: {s['12']}; padding-right: {s['12']};
   }}
 
+  /* 표지(시작화면)에는 사이드바가 없다. 다른 화면에서 돌아오면 내용 없는 껍데기가
+     남으므로, 히어로가 화면에 있을 때만 통째로 감춘다. */
+  [data-testid="stAppViewContainer"]:has(.st-key-hero) [data-testid="stSidebar"],
+  [data-testid="stAppViewContainer"]:has(.st-key-hero) [data-testid="stExpandSidebarButton"] {{
+    display: none !important;
+  }}
+
   /* Streamlit 기본 상단 장식·헤더를 걷어낸다 (발표 화면에 불필요) */
   [data-testid="stDecoration"] {{ display: none; }}
   [data-testid="stHeader"] {{ background: transparent; height: 0; }}
   /* Deploy 버튼·햄버거는 발표 화면에서 "이거 Streamlit 이네" 를 즉시 드러낸다.
-     캐시를 비울 일이 있으면 앱을 재시작한다. */
-  [data-testid="stToolbar"] {{ display: none; }}
+     다만 **툴바를 통째로 숨기면 안 된다** — 접힌 사이드바를 다시 여는 버튼이
+     그 안에 살아서, 한 번 접으면 영영 못 여는 화면이 된다. 셋만 골라 숨긴다. */
+  [data-testid="stToolbarActions"],
+  [data-testid="stAppDeployButton"],
+  [data-testid="stMainMenu"] {{ display: none !important; }}
   footer, #MainMenu {{ visibility: hidden; }}
 
   /* st.container(border=True) 를 카드로 — 위젯을 감싸야 할 때 쓰는 유일한 방법이다
@@ -755,12 +765,37 @@ def _css() -> str:
      나중에 iframe 으로 무언가를 보여줄 일이 생기면 이 규칙을 좁혀야 한다. */
   [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) {{ display: none; }}
 
-  .hero {{ color: #FFFFFF; }}
+  .hero {{ color: #FFFFFF; position: relative; }}
+
+  /* 상단 바 — 브랜드와 이동 링크 */
+  .hero-brand {{ display: flex; align-items: center; gap: {s['3']}; }}
+  .hero-brand .mark {{
+    width: 38px; height: 38px; border-radius: var(--radius-md); flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 21px;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.24);
+    color: #FFFFFF; backdrop-filter: blur(8px);
+  }}
+  .hero-brand .t {{ display: flex; flex-direction: column; line-height: 1.25; }}
+  .hero-brand .n {{ font-size: {t['h3']}; font-weight: 700; color: #FFFFFF; letter-spacing: -.01em; }}
+  .hero-brand .s {{ font-size: {t['label']}; color: #A9C0DE; }}
+
+  /* 이동 링크 — 사이드바가 없는 화면이라 여기가 유일한 메뉴다 */
+  .st-key-hero_nav a {{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: {r['pill']};
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+    color: #E4ECF8 !important; font-size: {t['caption']}; font-weight: 600;
+    backdrop-filter: blur(8px); white-space: nowrap;
+  }}
+  .st-key-hero_nav a:hover {{
+    background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.32);
+    color: #FFFFFF !important;
+  }}
+  .st-key-hero_nav a p {{ font-size: {t['caption']} !important; font-weight: 600 !important; }}
+  .st-key-hero_nav [data-testid="stElementContainer"] {{ width: auto; }}
   /* 지구본은 사진 위에 떠 있어야 한다 — 배경도 테두리도 주지 않는다 */
   .st-key-hero [data-testid="stPlotlyChart"] {{ background: transparent; }}
-  .st-key-hero [data-testid="stElementContainer"]:has([data-testid="stPlotlyChart"]) {{
-    margin: -{s['6']} -{s['6']} -{s['4']} 0;
-  }}
+
   .st-key-hero .brand {{
     font-size: {t['label']}; font-weight: 700; letter-spacing: .18em;
     text-transform: uppercase; color: #9FBFE8;
@@ -773,23 +808,29 @@ def _css() -> str:
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     font-size: {t['caption']}; font-weight: 600; color: #EAF1FB;
   }}
+  .st-key-hero .hero-pill .i {{ font-size: 15px; color: #7FE3C4; }}
   .st-key-hero .hero-pill .dot {{
     width: 7px; height: 7px; border-radius: 50%; background: #5FD3A6;
     box-shadow: 0 0 0 3px rgba(95,211,166,.22);
   }}
   .st-key-hero h1 {{
     font-size: 3.05rem; font-weight: 800; color: #FFFFFF;
-    letter-spacing: -.045em; line-height: 1.12; margin: {s['4']} 0 0 0;
-    text-shadow: 0 2px 20px rgba(3,9,20,.42);
+    letter-spacing: -.045em; line-height: 1.16; margin: {s['4']} 0 0 0;
+    max-width: 22ch; text-shadow: 0 2px 20px rgba(3,9,20,.42);
+    /* 한글은 어절 안에서 줄이 끊기면 읽기 나쁘다 ("맞춤 지원 / 을 제안합니다") */
+    word-break: keep-all;
   }}
+  /* 한 구절만 색을 준다 — 문장에서 무엇이 이 제품의 약속인지 눈이 먼저 잡는다 */
+  .st-key-hero h1 .hl {{ color: {c['accent']}; }}
   .st-key-hero .kr {{
     font-size: {t['h2']}; font-weight: 600; color: #C9DBF2;
     margin-top: {s['2']}; letter-spacing: -.01em;
   }}
   .st-key-hero .hero-lead {{
     font-size: 1rem; line-height: 1.78; color: #CBDAEE;
-    margin: {s['4']} 0 0 0; max-width: 60ch;
+    margin: {s['4']} 0 0 0; max-width: 62ch; word-break: keep-all;
   }}
+  .st-key-hero .hero-lead b {{ color: #EAF2FC; }}
   /* 히어로 버튼 — 배경이 사진이라 유리처럼 띄운다 */
   .st-key-hero_cta {{ margin-top: {s['6']}; }}
   .st-key-hero_cta .stButton > button {{
@@ -804,13 +845,63 @@ def _css() -> str:
   .st-key-hero_cta .stButton > button[kind="primary"]:hover {{
     background: rgba(28,56,98,.95); border-color: rgba(255,255,255,.34); color: #FFFFFF;
   }}
+  /* 두 번째 버튼은 위험으로 가는 길이다 — 색으로도 그렇게 말한다 */
   .st-key-hero_cta .stButton > button[kind="secondary"] {{
-    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.30);
-    color: #FFFFFF; box-shadow: 0 12px 28px rgba(3,9,20,.28);
+    background: {RISK_COLORS['HIGH']}; border: 1px solid {RISK_COLORS['HIGH']};
+    color: #23100D; font-weight: 700; box-shadow: 0 12px 28px rgba(3,9,20,.28);
   }}
   .st-key-hero_cta .stButton > button[kind="secondary"]:hover {{
-    background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.45); color: #FFFFFF;
+    background: #FF9083; border-color: #FF9083; color: #23100D;
   }}
+  /* 숫자 칩 — 표지에서 규모를 한 줄로 말한다 */
+  .hero-chips {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: {s['3']}; }}
+  .hero-chips .chip {{
+    display: flex; align-items: center; gap: {s['3']};
+    padding: {s['4']} {s['5']}; border-radius: var(--radius-lg);
+    background: rgba(13,24,42,.58); border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(14px);
+  }}
+  .hero-chips .chip .i {{
+    width: 38px; height: 38px; border-radius: var(--radius-md); flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+    background: rgba(255,255,255,.10); color: {c['accent']};
+  }}
+  .hero-chips .chip .t {{ display: flex; flex-direction: column; }}
+  .hero-chips .chip .v {{
+    font-size: {t['h2']}; font-weight: 800; color: #FFFFFF; letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums; line-height: 1.2;
+  }}
+  .hero-chips .chip .k {{ font-size: {t['caption']}; color: #A9C0DE; margin-top: 1px; }}
+
+  /* 아래 카드 — 이 제품이 답하는 것 */
+  .st-key-hero_card {{
+    padding: {s['5']} {s['6']}; border-radius: var(--radius-lg);
+    background: rgba(13,24,42,.58); border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(14px);
+  }}
+  .st-key-hero_card .hc-title {{
+    font-size: {t['h2']}; font-weight: 700; color: #FFFFFF; letter-spacing: -.015em;
+    word-break: keep-all;
+  }}
+  .st-key-hero_card .hc-title b {{ color: {c['accent']}; }}
+  .st-key-hero_card .hc-desc {{
+    font-size: {t['secondary']}; color: #B9CBE2; line-height: 1.7; margin-top: {s['2']};
+  }}
+  .st-key-hero_card .stButton > button {{
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28);
+    color: #FFFFFF; font-weight: 700; padding: 11px 18px; border-radius: var(--radius-md);
+  }}
+  .st-key-hero_card .stButton > button:hover {{
+    background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.42); color: #FFFFFF;
+  }}
+
+  /* 지구본 — 콘텐츠가 아니라 배경이다. 오른쪽에 얹고 클릭은 통과시킨다. */
+  /* Streamlit 이 컨테이너를 래퍼로 한 겹 더 감싸므로 자식 선택자(>)로는 못 잡는다 */
+  .st-key-hero .st-key-hero_globe {{
+    position: absolute; top: 0; right: 0; z-index: 0;
+    width: min(46%, 680px); pointer-events: none; opacity: .95;
+  }}
+
   /* 유리 카드 — 사진 위에 얹는 밝은 면. 숫자는 어두운 잉크로 읽는다 */
   /* 두 장의 아래 선이 맞아야 한다. Streamlit 열 안쪽에는 래퍼가 두 겹 더 있어서
      height:100% 로는 안 늘어난다 — 래퍼까지 flex 로 이어 붙여 카드가 열 높이를 채우게 한다. */

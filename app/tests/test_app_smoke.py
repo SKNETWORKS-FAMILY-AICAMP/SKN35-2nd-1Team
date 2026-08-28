@@ -102,17 +102,17 @@ class TestEveryPage(unittest.TestCase):
 
 class TestHome(unittest.TestCase):
     def test_core_numbers_and_shortcuts(self):
-        """표지 구성 — 타이틀·설명·명단 규모·고위험 수·버튼 셋."""
+        """표지 구성 — 브랜드·표제·규모 칩 셋·버튼 셋."""
         app = run_page()
         body = text_of(app)
         self.assertIn("Student Dropout", body)
-        self.assertIn("전체 학생 수", body)
-        self.assertIn("고위험", body)
+        self.assertIn("전체 재학생", body)
+        self.assertIn("고위험 HIGH", body)
 
         # 히어로 안의 행동 버튼 셋 — 대시보드 · 학생 목록 · 고위험군(집중관리).
         # 고위험군 버튼은 인원수를 라벨에 달고 나오므로 부분 일치로 본다.
         labels = " | ".join(b.label for b in app.button)
-        for wanted in ("대시보드 열기", "학생 목록 보기", "고위험군 관리"):
+        for wanted in ("대시보드 바로가기", "학생 분석 시작", "집중관리 대상 확인"):
             with self.subTest(button=wanted):
                 self.assertIn(wanted, labels)
 

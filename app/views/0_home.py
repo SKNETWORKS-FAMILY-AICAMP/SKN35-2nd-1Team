@@ -1,11 +1,14 @@
 """화면 0 — 시작화면.
 
-이 화면은 **한 장짜리 표지**다. 캠퍼스 사진 한 장 위에 제품을 말하는 한 문장,
-지금 규모를 말하는 카드 두 장, 갈 곳을 여는 버튼 셋. 그 아래로는 아무것도 두지 않는다 —
+이 화면은 **한 장짜리 표지**다. 캠퍼스 사진과 지구본 위에 제품을 말하는 한 문장,
+지금 규모를 말하는 숫자 셋, 갈 곳을 여는 버튼. 그 아래로는 아무것도 두지 않는다 —
 설명은 각 화면이 자기 자리에서 한다.
 
 사이드바는 이 화면에만 없다 — 표지에서 메뉴가 먼저 보이면 표지가 아니라 관리자
-화면이다. 사이드바를 만들지 말지는 진입점(`app.py`)이 정한다.
+화면이다. 대신 **오른쪽 위에 이동 링크**를 둔다 (사이드바를 만들지 말지는 `app.py` 가 정한다).
+
+지구본은 이제 콘텐츠 옆이 아니라 **배경**이다. 절대 위치로 오른쪽에 얹고 클릭은
+통과시킨다 — 표지에서 만지는 물건이 아니라 분위기를 만드는 물건이기 때문이다.
 """
 
 from __future__ import annotations
@@ -32,67 +35,92 @@ total = len(frame)
 high = int((frame["위험등급"] == "HIGH").sum())
 dropout = int((frame["예측(원본)"] == "Dropout").sum())
 
-with st.container(key="hero"):
-    # 왼쪽에 문장, 오른쪽에 지구본. 지구본은 "이 데이터가 어디서 왔는가"를
-    # 한 장면으로 답한다 — 사진 위에 비치는 유리구슬로 얹는다.
-    text_col, globe_col = st.columns([1.15, 0.85], gap="large")
 
-    with text_col:
+def chip(icon: str, value: str, label: str) -> str:
+    """숫자 하나짜리 칩. 아이콘 · 값 · 이름 순으로만 읽히게 한다."""
+    return (
+        f'<div class="chip"><span class="i material-symbols-rounded">{icon}</span>'
+        f'<span class="t"><span class="v">{value}</span>'
+        f'<span class="k">{label}</span></span></div>'
+    )
+
+
+with st.container(key="hero"):
+    # 지구본을 먼저 그린다 — 절대 위치라 순서가 화면에 영향을 주지 않고,
+    # 뒤에 오는 글자들이 자연스럽게 그 위에 얹힌다.
+    with st.container(key="hero_globe"):
+        render_globe(height=430)
+
+    # ── 상단 바 — 브랜드 왼쪽, 이동 오른쪽 ────────────────────────────────
+    brand_col, nav_col = st.columns([1, 1], vertical_alignment="center")
+    with brand_col:
         st.markdown(
-            f"""<div class="hero">
-      <div class="brand">Student Dropout Intelligence · SKN35 2nd Team Project</div>
-      <div class="hero-pills"><span class="hero-pill"><span class="dot"></span>
-        학생 {total:,}명 · 위험도 재계산 완료</span></div>
-      <h1>대학생 중도탈락<br>위험 예측 시스템</h1>
-      <p class="hero-lead">학업·경제·입학 배경 데이터로 중도탈락 위험을
-         <b style="color:#EAF2FC">학기 중에 조기 식별</b>하고, 그 학생의 위험요인에 대응하는
-         교내 지원 방향까지 제안합니다. 예측값 하나를 띄우고 끝내지 않고
-         <b style="color:#EAF2FC">왜 위험한가</b>와
-         <b style="color:#EAF2FC">그래서 무엇을 할 것인가</b>를 함께 답합니다.</p>
+            """<div class="hero-brand">
+      <span class="mark material-symbols-rounded">school</span>
+      <span class="t"><span class="n">Student Dropout Intelligence</span>
+        <span class="s">중도탈락 예측 · 지원</span></span>
     </div>""",
             unsafe_allow_html=True,
         )
-        with st.container(key="hero_cta", horizontal=True, gap="small"):
-            if st.button("대시보드 열기", type="primary", key="home_dashboard"):
-                st.switch_page(PAGE_DASHBOARD)
-            if st.button("학생 목록 보기", key="home_students"):
-                st.switch_page(PAGE_STUDENTS)
+    with nav_col:
+        with st.container(key="hero_nav", horizontal=True, gap="small",
+                          horizontal_alignment="right"):
+            st.page_link(PAGE_DASHBOARD, label="대시보드", icon=":material/monitoring:")
+            st.page_link(PAGE_STUDENTS, label="학생 목록", icon=":material/table_rows:")
+            st.page_link(PAGE_RISK, label="집중관리 대상", icon=":material/priority_high:")
 
-    with globe_col:
-        render_globe(height=430)
+    ui.spacer(24)
 
-    ui.spacer(22)
+    # ── 표제 ──────────────────────────────────────────────────────────────
+    st.markdown(
+        f"""<div class="hero">
+      <div class="hero-pills"><span class="hero-pill">
+        <span class="i material-symbols-rounded">insights</span>
+        학생 {total:,}명 · 위험도 재계산 완료</span></div>
+      <h1>위험을 미리 찾고, <span class="hl">맞춤 지원</span>을 제안합니다</h1>
+      <p class="hero-lead">학업·경제·입학 배경 데이터로 중도탈락 위험을
+         <b>학기 중에 조기 식별</b>하고, 그 학생의 위험요인에 대응하는
+         교내 지원 방향까지 함께 제안합니다.</p>
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
-    # 카드 두 장은 **같은 구조**로 만든다 — 설명 + 버튼 하나.
-    # 구조가 같아야 높이가 저절로 맞고, 둘 다 누르면 화면이 넘어간다.
-    card_col, alert_col = st.columns([1, 1.5], gap="medium")
-    with card_col:
-        with st.container(key="hero_stat"):
+    # ── 이동 버튼 ─────────────────────────────────────────────────────────
+    with st.container(key="hero_cta", horizontal=True, gap="small"):
+        if st.button("대시보드 바로가기", type="primary", key="home_dashboard",
+                     icon=":material/space_dashboard:"):
+            st.switch_page(PAGE_DASHBOARD)
+        if st.button(f"집중관리 대상 확인 ({high:,})", key="home_risk",
+                     icon=":material/notifications_active:"):
+            st.switch_page(PAGE_RISK)
+
+    ui.spacer(12)
+
+    # ── 숫자 셋 ───────────────────────────────────────────────────────────
+    st.markdown(
+        f"""<div class="hero-chips">
+      {chip("groups", f"{total:,}", "전체 재학생")}
+      {chip("percent", f"{dropout / total * 100:.1f}%", "예측 Dropout 비율")}
+      {chip("crisis_alert", f"{high:,}명", "고위험 HIGH")}
+    </div>""",
+        unsafe_allow_html=True,
+    )
+
+    ui.spacer(12)
+
+    # ── 이 제품이 답하는 것 ───────────────────────────────────────────────
+    with st.container(key="hero_card"):
+        text_col, button_col = st.columns([1, 0.3], vertical_alignment="center")
+        with text_col:
             st.markdown(
-                f"""<div class="g-lab">전체 학생 수</div>
-            <div class="g-val">{total:,}<span class="u">명</span></div>
-            <div class="g-cap">이번 학기 재학생 명단</div>
-            <div class="g-split">
-              <div><div class="k">고위험 HIGH</div><div class="v">{high:,}명</div></div>
-              <div><div class="k">예측 Dropout</div>
-                <div class="v">{dropout / total * 100:.1f}%</div></div>
-            </div>""",
+                """<div class="hc-title">예측값 하나에 그치지 않고,
+        <b>“왜”</b>와 <b>“그래서 무엇을”</b>을 함께 답합니다</div>
+      <div class="hc-desc">학생을 선택하면 위험 예측 분석과 그 학생의 위험요인에 대응하는
+        맞춤 조치 제안, 그리고 이수율·성적·재정 상태를 조정해보는 What-if 시뮬레이션까지
+        한 자리에서 확인할 수 있습니다.</div>""",
                 unsafe_allow_html=True,
             )
-            if st.button("학생 목록 열기", key="home_students_card"):
+        with button_col:
+            if st.button("학생 분석 시작", key="home_students",
+                         icon=":material/person_search:", width="stretch"):
                 st.switch_page(PAGE_STUDENTS)
-
-    with alert_col:
-        with st.container(key="hero_alert"):
-            st.markdown(
-                f"""<div class="g-head">
-              <div class="g-ico">!</div>
-              <div class="g-title">지금 확인이 필요한 학생</div>
-            </div>
-            <div class="g-body">중도탈락 확률 60% 이상인 <b>HIGH 등급 {high:,}명</b>이 명단에 있습니다.
-              위험도 순으로 줄을 세운 화면에서 위험요인 · 권장 조치 · 상담 진행 상태까지
-              한 자리에서 남길 수 있습니다.</div>""",
-                unsafe_allow_html=True,
-            )
-            if st.button(f"고위험군 관리 ({high:,})", key="home_risk"):
-                st.switch_page(PAGE_RISK)
