@@ -324,7 +324,13 @@ def _css() -> str:
      위젯은 HTML 안에 못 넣으므로 컨테이너째 겹쳐 놓고, 줄은 그만큼 오른쪽을
      비워 글이 버튼 밑으로 들어가지 않게 한다. */
   .st-key-dash_alert {{ position: relative; }}
-  .st-key-dash_alert .alert-bar {{ padding-right: 252px; min-height: 86px; }}
+  /* Streamlit 의 마크다운 컨테이너는 margin-bottom: -16px 를 달고 나온다. 그래서 줄을
+     감싼 상자가 줄보다 16px 짧아지고, 그 절반(8px)만큼 top:50% 가운데가 위로 빗나간다.
+     이 줄에서만 그 음수 여백을 지운다 — 상자와 줄의 높이가 같아야 가운데가 맞는다. */
+  .st-key-dash_alert [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}
+  /* 높이는 **패딩으로** 만든다. min-height 로 늘리면 줄을 감싼 컨테이너는 그대로라
+     줄이 아래로 흘러넘치고, 그 어긋난 만큼 가운데 정렬(top:50%)도 빗나간다. */
+  .st-key-dash_alert .alert-bar {{ padding: {s['6']} 252px {s['6']} {s['5']}; }}
   .st-key-dash_alert [data-testid="stElementContainer"]:has(.stButton) {{
     position: absolute; right: {s['5']}; top: 50%; transform: translateY(-50%);
     width: auto; margin: 0;
@@ -352,17 +358,12 @@ def _css() -> str:
     }}
   }}
 
-  /* 차트 카드 넷은 좌우 높이를 맞춘다 — 줄이 어긋나면 화면이 흔들려 보인다 */
-  [class*="st-key-dash_c"] {{ min-height: 470px; }}
-  /* 그래프가 앉을 바닥을 한 겹 깐다 — 카드 안에서 그림 영역이 어디까지인지
-     선 없이 보이게 하는 방법이다. 대시보드 카드 안에서만 적용한다. */
-  [class*="st-key-dash_c"] .bars,
-  [class*="st-key-dash_c"] .cols,
-  [class*="st-key-dash_c"] .dn {{
+  /* 차트 카드 넷은 좌우 높이를 맞추고, 바닥을 한 겹 밝게 띄운다 — 그래프 영역이
+     아니라 **카드(큰 네모) 전체**다. 배경은 카드 자신에게 준다: 이 버전의 Streamlit 은
+     테두리를 이 요소에 직접 그리고 BorderWrapper 를 더 이상 두지 않는다. */
+  [class*="st-key-dash_c"] {{
+    min-height: 470px;
     background: rgba(255,255,255,.1);
-    border-radius: var(--radius-md);
-    padding: {s['4']};
-    box-sizing: border-box;
   }}
 
   /* ── 명단 표 (직접 그린다) ─────────────────────────────────────────── */
