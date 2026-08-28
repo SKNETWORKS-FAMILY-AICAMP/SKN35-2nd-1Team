@@ -11,3 +11,6 @@ data/processed/*.csv
 !data/processed/test.csv
 models/*.pkl
 models/*.h5
+
+# Streamlit 앱이 기기에 남기는 운영 상태 (상담 진행 상태 등)
+app/state/
