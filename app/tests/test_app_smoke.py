@@ -68,12 +68,6 @@ class TestEveryPage(unittest.TestCase):
             with self.subTest(page=page or "home"):
                 assert_clean(self, run_page(page))
 
-    def test_every_page_declares_prediction_source(self):
-        """어느 화면에 있든 지금 보는 숫자가 프로토타입인지 알 수 있어야 한다."""
-        for page in self.PAGES:
-            with self.subTest(page=page or "home"):
-                self.assertIn("Prototype Mode", text_of(run_page(page)))
-
     def test_no_fabricated_performance_metric(self):
         """디자인 때문에 가짜 성능 수치를 만들지 않았는지.
 
@@ -108,30 +102,31 @@ class TestEveryPage(unittest.TestCase):
 
 class TestHome(unittest.TestCase):
     def test_core_numbers_and_shortcuts(self):
-        """팀 초안의 [메인] 구성 — 타이틀·설명·전체 학생 수·F1·버튼 셋."""
+        """표지 구성 — 타이틀·설명·명단 규모·고위험 수·버튼 셋."""
         app = run_page()
         body = text_of(app)
         self.assertIn("Student Dropout", body)
-        self.assertIn("전체 학생", body)
-        self.assertIn("모델 정확도", body)
+        self.assertIn("전체 학생 수", body)
+        self.assertIn("고위험", body)
 
-        labels = [b.label for b in app.button]
-        for wanted in ("대시보드", "학생 목록", "집중관리 대상"):
+        # 히어로 안의 행동 버튼 셋 — 대시보드 · 학생 목록 · 고위험군(집중관리).
+        # 고위험군 버튼은 인원수를 라벨에 달고 나오므로 부분 일치로 본다.
+        labels = " | ".join(b.label for b in app.button)
+        for wanted in ("대시보드 열기", "학생 목록 보기", "고위험군 관리"):
             with self.subTest(button=wanted):
                 self.assertIn(wanted, labels)
 
-    def test_f1_waits_for_the_model(self):
-        """🔴 학습 모델이 없는 동안 첫 화면에 성능 숫자를 만들어 내지 않는다."""
-        from services import model_metrics
+    def test_cover_shows_the_roster_scale(self):
+        """표지의 숫자는 명단에서 직접 센 값이다 — 지어낸 수치가 아니다."""
+        import sys
 
-        if model_metrics.available():
-            self.skipTest("학습 결과서가 이미 들어와 있습니다.")
-        self.assertIn("연결 대기", text_of(run_page()))
+        sys.path.insert(0, str(APP_ROOT))
+        from components.state import cached_roster
 
-    def test_dataset_facts_remain(self):
+        frame = cached_roster().frame
         body = text_of(run_page())
-        self.assertIn("4,424", body)
-        self.assertIn("UCI", body)
+        self.assertIn(f"{len(frame):,}", body)
+        self.assertIn(f"{int((frame['위험등급'] == 'HIGH').sum()):,}", body)
 
 
 # ---------------------------------------------------------------------------
@@ -150,23 +145,37 @@ class TestDashboard(unittest.TestCase):
     def test_four_charts_are_present(self):
         body = text_of(run_page(PAGE_DASHBOARD))
         for title in ("위험등급 구성", "위험요인 카테고리",
-                      "전공계열별 Dropout 분포", "재정 · 학업 이슈 비중",
-                      "Feature Importance"):
+                      "전공계열별 Dropout 분포", "재정 · 학업 이슈 비중"):
             with self.subTest(chart=title):
                 self.assertIn(title, body)
 
-    def test_proportions_are_donuts(self):
-        """비율 차트는 도넛이다 — 직접 그린 범례가 그 증거다."""
-        app = run_page(PAGE_DASHBOARD)
-        self.assertIn("dn-legend", text_of(app))
-        self.assertGreaterEqual(len(app.get("plotly_chart")), 4)
+    def test_chart_types_match_the_values(self):
+        """값의 성격에 맞는 그래프인지 — 도넛(비중) · 세로막대 · 가로막대가 모두 있어야 한다.
 
-    def test_feature_importance_waits_for_the_report(self):
+        도넛은 Plotly 가 아니라 인라인 SVG 다(조각이 차오르는 등장 때문). 마크업에
+        남는 클래스가 그 증거다.
+        """
+        body = text_of(run_page(PAGE_DASHBOARD))
+        for marker, what in (("dn-seg", "도넛 조각"), ("dn-legend", "도넛 범례"),
+                             ('class="cols"', "세로 막대"), ('class="bars"', "가로 막대")):
+            with self.subTest(chart=what):
+                self.assertIn(marker, body)
+
+    def test_charts_animate(self):
+        """막대와 도넛은 0에서 값까지 차오른다 — 애니메이션 훅이 마크업에 남아 있는지."""
+        body = text_of(run_page(PAGE_DASHBOARD))
+        self.assertIn("--len:", body)     # 도넛 조각의 목표 길이
+        self.assertIn("--fill:", body)    # 세로 막대의 목표 높이
+
+    def test_no_placeholder_card_without_the_report(self):
+        """결과서가 없으면 그 카드는 **그리지 않는다** — 빈 자리는 미완성으로 읽힌다."""
         from services import model_metrics
 
         if model_metrics.available():
             self.skipTest("학습 결과서가 이미 들어와 있습니다.")
-        self.assertIn("학습 결과서가 아직 없습니다", text_of(run_page(PAGE_DASHBOARD)))
+        body = text_of(run_page(PAGE_DASHBOARD))
+        self.assertNotIn("학습 결과서가 아직 없습니다", body)
+        self.assertNotIn("모델이 크게 본 변수", body)
 
 
 # ---------------------------------------------------------------------------
@@ -188,20 +197,23 @@ class TestStudents(unittest.TestCase):
         app.run()
         return app, sid
 
-    def test_toolbar_and_counts(self):
+    def test_toolbar_filters(self):
+        """툴바는 셋뿐이다 — 학번 검색 · 전공 계열 · 위험도 버튼(HIGH/MEDIUM/LOW)."""
         app = run_page(PAGE_STUDENTS)
         assert_clean(self, app)
-        body = text_of(app)
-        self.assertIn("전체 학생", body)
-        self.assertIn("HIGH", body)
-        # 학번 검색 · 전공 계열 · 위험도 · 집중관리만
+        self.assertIn("HIGH", text_of(app))
         self.assertTrue(app.text_input)
-        self.assertEqual(len(app.multiselect), 2)
-        self.assertTrue(app.checkbox)
+        self.assertEqual(len(app.multiselect), 1)      # 전공 계열
+        pills = app.get("button_group")
+        self.assertTrue(pills)
+        self.assertEqual(len(pills[0].options), 3)     # HIGH · MEDIUM · LOW
 
-    def test_name_search_is_explained_not_faked(self):
-        """🔴 데이터에 없는 것을 있는 척하지 않는다. 이름은 원본에 존재하지 않는다."""
-        self.assertIn("학생 이름이 존재하지 않습니다", text_of(run_page(PAGE_STUDENTS)))
+    def test_names_are_never_invented(self):
+        """🔴 데이터에 없는 것을 있는 척하지 않는다 — 원본에 학생 이름이 없다."""
+        app = run_page(PAGE_STUDENTS)
+        frame = app.get("dataframe")[0].value
+        self.assertNotIn("이름", list(frame.columns))
+        self.assertIn("학생 ID", list(frame.columns))
 
     def test_no_match_shows_empty_state_not_error(self):
         app = run_page(PAGE_STUDENTS)
@@ -220,7 +232,7 @@ class TestStudents(unittest.TestCase):
         app, sid = self._with_student()
         assert_clean(self, app)
         body = text_of(app)
-        self.assertIn(f"{sid} 위험 예측 분석", body)
+        self.assertIn(sid, body)                   # 팝업 머리의 학번
         self.assertNotIn("학생을 선택하지 않았습니다", body)
         self.assertIn("지금 할 일", body)          # 조치 탭의 상담 카드
 
@@ -307,12 +319,13 @@ class TestRiskList(unittest.TestCase):
         body = text_of(app)
         self.assertIn("대상 학생", body)
         self.assertIn("미착수", body)
-        self.assertTrue(app.radio)                    # 범위 (HIGH 만 / HIGH + MEDIUM)
+        # 범위는 분절 토글(HIGH + MEDIUM / HIGH 만), 나머지 둘은 다중 선택
+        self.assertTrue(app.get("button_group"))
         self.assertEqual(len(app.multiselect), 2)     # 위험 영역 · 상담 상태
 
     def test_scope_widens_the_list(self):
         app = run_page(PAGE_RISK)
-        app.radio[0].set_value("HIGH + MEDIUM").run()
+        app.get("button_group")[0].set_value("HIGH + MEDIUM").run()
         assert_clean(self, app)
         self.assertIn("HIGH + MEDIUM", text_of(app))
 

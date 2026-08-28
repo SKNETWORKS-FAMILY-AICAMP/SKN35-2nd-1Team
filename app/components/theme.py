@@ -5,8 +5,10 @@
 한 파일만 고치면 되도록, 그리고 화면 4개가 같은 언어를 쓰도록.
 
 방침
-    · **라이트 고정.** 발표는 빔프로젝터다. 어두운 배경은 명암비가 무너지고
-      회의실 조명에서 회색으로 뜬다. `.streamlit/config.toml` 에서도 고정한다.
+    · **다크 고정.** 시작화면의 캠퍼스 사진과 톤을 잇는다. 대신 어두운 배경에서
+      회색으로 뜨는 것을 막으려고 **본문 글자를 밝게(#C2CEDE 이상) 잡고**
+      캡션까지 명암비를 실측했다. `.streamlit/config.toml` 에서도 고정한다.
+      빔프로젝터가 밝기를 못 내는 방이면 이 파일의 색 표만 되돌리면 된다.
     · **색은 장식이 아니라 신호다.** 위험 3단계와 카테고리 3종에만 색을 쓰고
       나머지는 잉크·중성 그레이로 간다. 색이 많아지면 위험 신호가 묻힌다.
     · **상태를 색으로만 구분하지 않는다.** HIGH/MEDIUM/LOW 는 항상 글자를 함께 쓴다.
@@ -17,6 +19,9 @@
 
 from __future__ import annotations
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 # ---------------------------------------------------------------------------
@@ -24,55 +29,62 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 
 COLORS: dict[str, str] = {
-    # 잉크 (텍스트)
-    "ink": "#0B1524",          # 제목·수치
-    "ink_soft": "#3D4C61",     # 본문
-    # 명암비를 실측해서 정했다 (흰 배경 기준). 캡션·단위까지 읽혀야 하므로
-    # 예쁜 회색보다 읽히는 회색을 쓴다 — 이전 값(#95A2B5)은 2.6:1 로 기준 미달이었다.
-    "muted": "#616F87",        # 보조·캡션      5.08:1
-    "faint": "#707F95",        # 비활성·단위    4.07:1
-    # 표면
-    "canvas": "#F4F6F9",       # 페이지 바닥
-    "surface": "#FFFFFF",      # 카드
-    "raised": "#FAFBFD",       # 카드 안 한 단계 들어간 면
-    "line": "#E2E8F0",         # 경계선
-    "line_soft": "#EDF1F6",    # 옅은 구분선
-    # 강조 — 대학 행정 톤의 차분한 블루
-    "primary": "#1B4F91",
-    "primary_hover": "#173F75",
-    "primary_soft": "#EAF1FA",
-    "primary_line": "#C7DAF0",
+    # 잉크 (텍스트) — 어두운 면 위에서의 명암비를 카드 배경(#131F33) 기준으로 실측했다.
+    "ink": "#EEF3FA",          # 제목·수치      15.6:1
+    "ink_soft": "#C2CEDE",     # 본문           10.4:1
+    "muted": "#95A4BA",        # 보조·캡션       6.2:1
+    "faint": "#7F8DA5",        # 비활성·단위     4.6:1
+    # 표면 — 바닥에서 카드로 올라올수록 밝아진다
+    "canvas": "#0B1524",       # 페이지 바닥
+    "surface": "#131F33",      # 카드
+    "raised": "#18243B",       # 카드 안 한 단계 들어간 면
+    "line": "#26344B",         # 경계선
+    "line_soft": "#1D2A40",    # 옅은 구분선
+    # 강조 — 어두운 면 위에서 읽히도록 밝은 블루로 올렸다
+    "primary": "#5B9BE8",      # 글자·아이콘용   6.4:1
+    "primary_hover": "#7CB2F0",
+    "primary_soft": "#16283F", # 옅은 배경(칩·배너)
+    "primary_line": "#2C4A73",
+    # 버튼처럼 **면을 채우는** 파랑은 흰 글자가 얹히므로 한 단계 어둡게 쓴다
+    "primary_fill": "#2B5FA8",
+    "primary_fill_hover": "#356FBF",
+    # 강조 보조 — 파랑만으로는 화면이 단조롭다. 청록 하나만 더 쓴다.
+    # (색을 늘릴수록 위험 신호가 묻히므로 여기서 멈춘다.)
+    "accent": "#2CB6BD",
+    "accent_soft": "#0E2A31",
+    "accent_line": "#1E4B54",
     # 히어로
     "deep": "#0A1E3C",
     "deep_mid": "#143462",
 }
 
 #: 위험등급 — 화면 전체(배지·표·차트)에서 같은 값을 쓴다.
-#  명암비(흰 배경): HIGH 5.96:1 · MEDIUM 5.28:1 · LOW 6.17:1
-RISK_COLORS: dict[str, str] = {"HIGH": "#B3382F", "MEDIUM": "#96600A", "LOW": "#1B6E54"}
-RISK_SOFT: dict[str, str] = {"HIGH": "#FCEEEC", "MEDIUM": "#FCF4E4", "LOW": "#E9F4EF"}
-RISK_LINE: dict[str, str] = {"HIGH": "#F0CBC6", "MEDIUM": "#EFDDB4", "LOW": "#C5E3D7"}
+#  명암비(카드 #131F33 기준): HIGH 6.4:1 · MEDIUM 8.6:1 · LOW 8.9:1
+RISK_COLORS: dict[str, str] = {"HIGH": "#FF7A6B", "MEDIUM": "#E8AC3E", "LOW": "#3FCB96"}
+#: 같은 색의 **어두운 면** 버전 — 배지·경보 카드의 바탕이다.
+RISK_SOFT: dict[str, str] = {"HIGH": "#2C1A1A", "MEDIUM": "#2B2415", "LOW": "#12291F"}
+RISK_LINE: dict[str, str] = {"HIGH": "#5B322C", "MEDIUM": "#5A4620", "LOW": "#1F4C3A"}
 
 #: 위험요인 카테고리 (services.predictor.RISK_CATEGORIES 의 키와 같다)
 CATEGORY_COLORS: dict[str, str] = {
-    "academic": "#1B4F91",
-    "financial": "#96600A",
-    "adaptation": "#5B6B8C",
+    "academic": "#5B9BE8",
+    "financial": "#E8AC3E",
+    "adaptation": "#2CB6BD",
 }
 
 #: 이진 Target (팀 전처리 기준 1=Dropout / 0=Non-Dropout)
-CLASS_COLORS: dict[str, str] = {"Dropout": "#B3382F", "Non-Dropout": "#1B6E54"}
+CLASS_COLORS: dict[str, str] = {"Dropout": "#FF7A6B", "Non-Dropout": "#3FCB96"}
 
 #: 시작화면 지구본
 #  히어로(진한 남색) 위에 올라가므로 배경보다 **어두운 바다 + 밝은 육지**로 잡는다.
 #  배경과 톤이 겹치면 구가 아니라 얼룩으로 보인다.
 PORTUGAL: dict[str, str] = {
-    "ocean": "#0A2242",
-    "land": "#3D7AB8",
-    "border": "rgba(255,255,255,.28)",
-    "graticule": "rgba(255,255,255,.16)",
-    "highlight": "#FF6B5B",
-    "halo": "rgba(255,107,91,.30)",
+    "ocean": "rgba(10,34,66,.34)",
+    "land": "rgba(120,178,240,.34)",
+    "border": "rgba(255,255,255,.30)",
+    "graticule": "rgba(255,255,255,.18)",
+    "highlight": "#FF7A6B",
+    "halo": "rgba(255,122,107,.26)",
 }
 
 # ---------------------------------------------------------------------------
@@ -105,16 +117,16 @@ TYPE: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 SPACE: dict[str, str] = {
-    "1": "4px", "2": "8px", "3": "12px", "4": "16px",
+    "1": "4px", "2": "8px", "3": "12px", "4": "16px", "5": "20px",
     "6": "24px", "8": "32px", "12": "48px", "16": "64px",
 }
 
 RADIUS: dict[str, str] = {"sm": "6px", "md": "10px", "lg": "14px", "pill": "999px"}
 
 SHADOW: dict[str, str] = {
-    # 두 단계뿐이다. 카드가 떠 있을 이유가 없으면 선으로 끝낸다.
-    "raise": "0 1px 2px rgba(11,21,36,.04), 0 4px 12px rgba(11,21,36,.05)",
-    "float": "0 2px 6px rgba(11,21,36,.06), 0 12px 28px rgba(11,21,36,.09)",
+    # 두 단계뿐이다. 어두운 면에서는 그림자보다 **테두리 빛**이 계층을 만든다.
+    "raise": "0 1px 2px rgba(0,0,0,.32), 0 4px 14px rgba(0,0,0,.28)",
+    "float": "0 4px 12px rgba(0,0,0,.38), 0 18px 40px rgba(0,0,0,.42)",
 }
 
 
@@ -131,6 +143,7 @@ def _css() -> str:
     --canvas:{c['canvas']}; --surface:{c['surface']}; --raised:{c['raised']};
     --line:{c['line']}; --line-soft:{c['line_soft']};
     --primary:{c['primary']}; --primary-soft:{c['primary_soft']}; --primary-line:{c['primary_line']};
+    --accent:{c['accent']}; --accent-soft:{c['accent_soft']}; --accent-line:{c['accent_line']};
     --high:{RISK_COLORS['HIGH']}; --medium:{RISK_COLORS['MEDIUM']}; --low:{RISK_COLORS['LOW']};
     --radius-sm:{r['sm']}; --radius-md:{r['md']}; --radius-lg:{r['lg']};
     --shadow-raise:{SHADOW['raise']}; --shadow-float:{SHADOW['float']};
@@ -143,7 +156,15 @@ def _css() -> str:
   span.material-symbols-rounded, span.material-symbols-outlined, .material-icons
     {{ font-family: "Material Symbols Rounded" !important; }}
 
-  .stApp {{ background: var(--canvas); color: var(--ink-soft); }}
+  /* 평평한 회색 한 장보다, 거의 안 보이는 그라디언트가 화면을 덜 답답하게 만든다 */
+  .stApp {{
+    color: var(--ink-soft);
+    background:
+      radial-gradient(900px 420px at 12% -6%, {c['primary_soft']}, transparent 62%),
+      radial-gradient(760px 380px at 92% 4%, {c['accent_soft']}, transparent 58%),
+      var(--canvas);
+    background-attachment: fixed;
+  }}
   .block-container {{
     padding-top: {s['6']}; padding-bottom: {s['16']};
     max-width: 1380px;
@@ -214,6 +235,12 @@ def _css() -> str:
   .sec-row {{ display: flex; align-items: baseline; gap: {s['3']}; }}
   .sec-title {{
     font-size: {t['h2']}; font-weight: 700; color: var(--ink); letter-spacing: -.012em;
+    display: inline-flex; align-items: center; gap: {s['3']};
+  }}
+  /* 제목 앞 작은 색 표식 — 화면마다 같은 자리에서 리듬을 만든다 */
+  .sec-title::before {{
+    content: ""; width: 4px; height: 15px; border-radius: 2px; flex: none;
+    background: linear-gradient(180deg, var(--primary), var(--accent));
   }}
   .sec-rule {{ flex: 1; height: 1px; background: var(--line); }}
   .sec-desc {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['1']}; }}
@@ -221,7 +248,7 @@ def _css() -> str:
   /* ── 카드 ──────────────────────────────────────────────────────────── */
   .card {{
     background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius-md); padding: {s['4']} {s['6']};
+    border-radius: var(--radius-lg); padding: {s['4']} {s['6']};
   }}
   .card-lg {{ padding: {s['6']}; }}
   .card-title {{ font-size: {t['h3']}; font-weight: 700; color: var(--ink); }}
@@ -231,8 +258,13 @@ def _css() -> str:
   .kpi-row {{ display: grid; gap: {s['3']}; }}
   .kpi {{
     background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius-md); padding: {s['4']} {s['4']} {s['4']} {s['4']};
+    border-radius: var(--radius-lg); padding: {s['5']} {s['4']} {s['4']};
     position: relative; overflow: hidden;
+  }}
+  /* 카드 위 3px 색 띠 — 무엇에 대한 숫자인지 색으로 먼저 읽힌다 */
+  .kpi::before {{
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent, var(--primary)); opacity: .92;
   }}
   .kpi .lab {{
     font-size: {t['label']}; font-weight: 700; letter-spacing: .09em;
@@ -248,10 +280,11 @@ def _css() -> str:
 
   /* hero KPI — 화면에서 가장 먼저 읽혀야 하는 하나 */
   .kpi-hero {{
-    background: var(--surface); border: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--surface), var(--raised));
+    border: 1px solid var(--line);
     border-left: 3px solid var(--accent, var(--primary));
     box-shadow: var(--shadow-raise);
-    border-radius: var(--radius-md); padding: {s['6']};
+    border-radius: var(--radius-lg); padding: {s['6']};
     /* 옆 열이 두 줄이면 빈 공간이 생긴다 — 높이를 채워 카드가 떠 보이지 않게 한다 */
     height: 100%; display: flex; flex-direction: column; justify-content: center;
   }}
@@ -300,6 +333,60 @@ def _css() -> str:
     white-space: nowrap; flex: none; margin-top: 1px;
   }}
   .banner b {{ color: var(--fg, var(--primary)); }}
+
+  /* ── 도넛 (인라인 SVG) ─────────────────────────────────────────────── */
+  /* 조각이 시계방향으로 차오른다. dasharray 를 0 → 목표 길이로 애니메이션하는 것이
+     전부라 라이브러리가 필요 없다. */
+  .dn {{
+    position: relative; width: var(--size, 250px); max-width: 100%;
+    aspect-ratio: 1; margin: {s['2']} auto {s['4']};
+  }}
+  .dn svg {{ width: 100%; height: 100%; display: block; overflow: visible; }}
+  .dn .dn-seg {{
+    stroke-linecap: butt;
+    animation: dn-grow .85s cubic-bezier(.2,.75,.3,1) both var(--d, 0s);
+  }}
+  .dn .dn-seg:hover {{ filter: brightness(1.06); }}
+  .dn-center {{
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+  }}
+  .dn-center b {{
+    font-size: 1.72rem; font-weight: 800; color: var(--ink); letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+    animation: ds-rise .4s ease-out both .25s;
+  }}
+  .dn-center span {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
+
+  /* ── 세로 막대 ─────────────────────────────────────────────────────── */
+  /* 항목이 적고 라벨이 짧을 때. 막대는 바닥에서 위로 자란다. */
+  .cols {{
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    align-items: end; gap: {s['3']}; padding: {s['4']} 0 0;
+  }}
+  .cols .col {{ display: flex; flex-direction: column; align-items: center; gap: {s['2']}; }}
+  .cols .v {{
+    font-size: {t['caption']}; font-weight: 700; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+    animation: ds-rise .4s ease-out both var(--d, 0s);
+  }}
+  .cols .track {{
+    display: flex; align-items: flex-end; justify-content: center;
+    width: 100%; max-width: 76px; height: var(--h, 176px);
+    background: var(--line-soft); border-radius: var(--radius-sm);
+    overflow: hidden;
+  }}
+  .cols .bar {{
+    display: block; width: 100%; height: var(--fill, 0%);
+    background: var(--c, var(--primary));
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    animation: dn-raise .7s cubic-bezier(.2,.75,.3,1) both var(--d, 0s);
+  }}
+  .cols .lab {{
+    font-size: {t['caption']}; color: var(--muted); font-weight: 600;
+    text-align: center; line-height: 1.35;
+  }}
+  .cols .col:hover .lab {{ color: var(--ink); }}
 
   /* ── 도넛 범례 ─────────────────────────────────────────────────────── */
   /* Plotly 범례는 이 높이에서 눌려 잘린다. 직접 그리면 값·비율을 같이 적을 수 있다. */
@@ -626,23 +713,31 @@ def _css() -> str:
   .empty .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['2']}; }}
 
   /* ── 히어로 (시작화면) ─────────────────────────────────────────────── */
-  /* 지구본(Plotly 차트)을 히어로 배경 위에 얹어야 해서 markdown 한 덩어리가 아니라
-     Streamlit 컨테이너에 배경을 입힌다. `st.container(key="hero")` 가 붙여 주는
-     `.st-key-hero` 는 문서화된 훅이라 DOM 을 깊게 찌르지 않아도 된다. */
+  /* 캠퍼스 사진 위에 어두운 스크림을 깔고 그 위에 문장·버튼·유리 카드를 얹는다.
+     사진은 `--hero-photo` 로 따로 주입한다(theme.inject_hero_photo). 파일이 없으면
+     변수가 정의되지 않아 아래 그라디언트만 남는다 — 발표 PC 에서 이미지가 빠져도
+     화면이 깨지지 않는다.
+     `st.container(key="hero")` 가 붙여 주는 `.st-key-hero` 는 문서화된 훅이라
+     DOM 을 깊게 찌르지 않아도 된다. */
   .st-key-hero {{
     position: relative; overflow: hidden;
-    background:
+    background-image:
+      linear-gradient(180deg, rgba(6,15,30,.86) 0%, rgba(6,15,30,.44) 40%, rgba(6,15,30,.90) 100%),
+      var(--hero-photo, linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))),
       radial-gradient(1100px 420px at 88% -20%, rgba(78,140,214,.30), transparent 62%),
       linear-gradient(135deg, {c["deep"]} 0%, {c["deep_mid"]} 58%, #17406F 100%);
+    background-size: auto, cover, auto, auto;
+    background-position: center, center 56%, center, center;
+    background-repeat: no-repeat;
     border-radius: var(--radius-lg);
-    padding: {s['12']} {s['12']} {s['8']} {s['12']};
+    padding: {s['16']} {s['12']} {s['8']} {s['12']};
     color: #FFFFFF;
   }}
   .st-key-hero::after {{
     content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
-    background-size: 44px 44px; mask-image: linear-gradient(105deg, transparent 38%, #000 100%);
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 44px 44px; mask-image: linear-gradient(105deg, transparent 46%, #000 100%);
   }}
   .st-key-hero > div {{ position: relative; z-index: 1; }}
   /* 어두운 히어로 위에서는 캡션도 밝아야 읽힌다 */
@@ -653,37 +748,135 @@ def _css() -> str:
      이 앱은 st.iframe 을 눈에 보이는 용도로 쓰지 않으므로 컨테이너째 숨긴다.
      나중에 iframe 으로 무언가를 보여줄 일이 생기면 이 규칙을 좁혀야 한다. */
   [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) {{ display: none; }}
-  /* 지구본이 히어로 오른쪽에서 살짝 넘쳐 보이도록 — 액자 안에 갇힌 인상을 없앤다 */
-  .st-key-hero-globe {{ margin: -{s['6']} -{s['4']} -{s['8']} 0; }}
+
   .hero {{ color: #FFFFFF; }}
-  .st-key-hero .eyebrow {{
-    font-size: {t['label']}; font-weight: 700; letter-spacing: .16em;
-    text-transform: uppercase; color: #8FB4E4;
+  /* 지구본은 사진 위에 떠 있어야 한다 — 배경도 테두리도 주지 않는다 */
+  .st-key-hero [data-testid="stPlotlyChart"] {{ background: transparent; }}
+  .st-key-hero [data-testid="stElementContainer"]:has([data-testid="stPlotlyChart"]) {{
+    margin: -{s['6']} -{s['6']} -{s['4']} 0;
+  }}
+  .st-key-hero .brand {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .18em;
+    text-transform: uppercase; color: #9FBFE8;
+  }}
+  /* 상태 알약 — 지금 어떤 명단을 물고 있는지 첫 줄에서 밝힌다 */
+  .st-key-hero .hero-pills {{ display: flex; flex-wrap: wrap; gap: {s['2']}; margin-top: {s['4']}; }}
+  .st-key-hero .hero-pill {{
+    display: inline-flex; align-items: center; gap: {s['2']}; padding: 7px 14px; border-radius: {r['pill']};
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.24);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: {t['caption']}; font-weight: 600; color: #EAF1FB;
+  }}
+  .st-key-hero .hero-pill .dot {{
+    width: 7px; height: 7px; border-radius: 50%; background: #5FD3A6;
+    box-shadow: 0 0 0 3px rgba(95,211,166,.22);
   }}
   .st-key-hero h1 {{
-    font-size: {t['display']}; font-weight: 700; color: #FFFFFF;
-    letter-spacing: -.035em; line-height: 1.14; margin: {s['3']} 0 0 0;
+    font-size: 3.05rem; font-weight: 800; color: #FFFFFF;
+    letter-spacing: -.045em; line-height: 1.12; margin: {s['4']} 0 0 0;
+    text-shadow: 0 2px 20px rgba(3,9,20,.42);
   }}
   .st-key-hero .kr {{
     font-size: {t['h2']}; font-weight: 600; color: #C9DBF2;
     margin-top: {s['2']}; letter-spacing: -.01em;
   }}
-  .st-key-hero p {{
-    font-size: {t['body']}; line-height: 1.72; color: #B9CDE8;
-    margin: {s['4']} 0 0 0; max-width: 62ch;
+  .st-key-hero .hero-lead {{
+    font-size: 1rem; line-height: 1.78; color: #CBDAEE;
+    margin: {s['4']} 0 0 0; max-width: 60ch;
   }}
-  .st-key-hero .hero-meta {{
-    display: flex; flex-wrap: wrap; gap: {s['8']};
-    margin-top: {s['8']}; padding-top: {s['6']};
-    border-top: 1px solid rgba(255,255,255,.16);
+  /* 히어로 버튼 — 배경이 사진이라 유리처럼 띄운다 */
+  .st-key-hero_cta {{ margin-top: {s['6']}; }}
+  .st-key-hero_cta .stButton > button {{
+    padding: 12px 24px; border-radius: var(--radius-md);
+    font-size: {t['body']}; font-weight: 700;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }}
-  .st-key-hero .hero-meta .item .k {{
-    font-size: {t['label']}; font-weight: 700; letter-spacing: .11em;
-    text-transform: uppercase; color: #7FA5D6;
+  .st-key-hero_cta .stButton > button[kind="primary"] {{
+    background: rgba(20,40,72,.90); border: 1px solid rgba(255,255,255,.22);
+    color: #FFFFFF; box-shadow: 0 12px 28px rgba(3,9,20,.38);
   }}
-  .st-key-hero .hero-meta .item .v {{
-    font-size: {t['h2']}; font-weight: 700; color: #FFFFFF;
-    margin-top: {s['1']}; font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+  .st-key-hero_cta .stButton > button[kind="primary"]:hover {{
+    background: rgba(28,56,98,.95); border-color: rgba(255,255,255,.34); color: #FFFFFF;
+  }}
+  .st-key-hero_cta .stButton > button[kind="secondary"] {{
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.30);
+    color: #FFFFFF; box-shadow: 0 12px 28px rgba(3,9,20,.28);
+  }}
+  .st-key-hero_cta .stButton > button[kind="secondary"]:hover {{
+    background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.45); color: #FFFFFF;
+  }}
+  /* 유리 카드 — 사진 위에 얹는 밝은 면. 숫자는 어두운 잉크로 읽는다 */
+  /* 두 장의 아래 선이 맞아야 한다. Streamlit 열 안쪽에는 래퍼가 두 겹 더 있어서
+     height:100% 로는 안 늘어난다 — 래퍼까지 flex 로 이어 붙여 카드가 열 높이를 채우게 한다. */
+  .st-key-hero [data-testid="stHorizontalBlock"] {{ align-items: stretch; }}
+  .st-key-hero [data-testid="stColumn"] {{ display: flex; }}
+  .st-key-hero [data-testid="stColumn"] > div,
+  .st-key-hero [data-testid="stColumn"] > div > [data-testid="stVerticalBlock"],
+  .st-key-hero [data-testid="stColumn"] [data-testid="stLayoutWrapper"] {{
+    display: flex; flex-direction: column; flex: 1 1 auto; width: 100%;
+  }}
+  .st-key-hero .glass,
+  .st-key-hero .st-key-hero_stat,
+  .st-key-hero .st-key-hero_alert {{
+    height: 100%;
+    background: rgba(13,24,42,.62); border: 1px solid rgba(255,255,255,.16);
+    border-radius: var(--radius-lg); padding: {s['6']};
+    box-shadow: 0 20px 44px rgba(0,0,0,.42);
+    backdrop-filter: blur(16px) saturate(1.1); -webkit-backdrop-filter: blur(16px) saturate(1.1);
+    display: flex; flex-direction: column; justify-content: center;
+    /* 열(column) stretch 는 Streamlit 안쪽 래퍼에서 끊긴다 —
+       두 장이 나란히 서는 화면이라 최소 높이로 직접 맞춘다. */
+    min-height: 268px;
+  }}
+  .st-key-hero .g-lab {{
+    font-size: {t['caption']}; font-weight: 700; color: {c['muted']};
+  }}
+  .st-key-hero .g-val {{
+    font-size: 2.4rem; font-weight: 800; color: {c['ink']}; letter-spacing: -.035em;
+    margin-top: {s['2']}; font-variant-numeric: tabular-nums; line-height: 1.05;
+  }}
+  .st-key-hero .g-val .u {{
+    font-size: .38em; font-weight: 700; color: {c['faint']}; margin-left: 4px;
+  }}
+  .st-key-hero .g-cap {{
+    font-size: {t['caption']}; color: {c['muted']}; margin-top: {s['2']};
+  }}
+  .st-key-hero .g-split {{
+    display: flex; gap: {s['6']}; margin-top: {s['4']}; padding-top: {s['4']};
+    border-top: 1px solid {c['line_soft']};
+  }}
+  .st-key-hero .g-split .k {{ font-size: {t['caption']}; color: {c['muted']}; }}
+  .st-key-hero .g-split .v {{
+    font-size: {t['h3']}; font-weight: 700; color: {c['ink_soft']}; margin-top: 2px;
+  }}
+  /* 경보 카드 — 버튼이 카드 안에 들어가야 해서 컨테이너 자체를 유리로 만든다 */
+  .st-key-hero_alert .g-head {{ display: flex; align-items: center; gap: {s['3']}; }}
+  .st-key-hero_alert .g-ico {{
+    width: 40px; height: 40px; border-radius: var(--radius-md); flex: 0 0 40px;
+    background: {RISK_SOFT['HIGH']}; border: 1px solid {RISK_LINE['HIGH']}; color: {RISK_COLORS['HIGH']};
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: 700;
+  }}
+  .st-key-hero_alert .g-title {{ font-size: {t['h2']}; font-weight: 700; color: {c['ink']}; }}
+  .st-key-hero_alert .g-body {{
+    font-size: {t['secondary']}; color: {c['ink_soft']}; line-height: 1.7; margin-top: {s['3']};
+  }}
+  /* 왼쪽 카드 버튼 — 유리 위의 얇은 버튼. 카드 전체가 이동 수단임을 알린다 */
+  .st-key-hero_stat .stButton > button {{
+    margin-top: {s['4']}; padding: 10px 18px; border-radius: var(--radius-md);
+    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.24);
+    color: #FFFFFF; font-size: {t['secondary']}; font-weight: 700;
+  }}
+  .st-key-hero_stat .stButton > button:hover {{
+    background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.38); color: #FFFFFF;
+  }}
+  .st-key-hero_alert .stButton > button {{
+    margin-top: {s['2']}; padding: 11px 22px; border-radius: var(--radius-md);
+    background: {RISK_SOFT['HIGH']}; border: 1px solid {RISK_LINE['HIGH']}; color: {RISK_COLORS['HIGH']};
+    font-size: {t['secondary']}; font-weight: 700;
+  }}
+  .st-key-hero_alert .stButton > button:hover {{
+    background: #F8DCD7; border-color: {RISK_COLORS['HIGH']}; color: {RISK_COLORS['HIGH']};
   }}
 
   /* ── 파이프라인 (DATA → MODEL → RISK → ACTION) ─────────────────────── */
@@ -735,12 +928,71 @@ def _css() -> str:
     border-color: var(--primary-line); color: var(--primary); background: var(--primary-soft);
   }}
   .stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"] {{
-    background: var(--primary); border-color: var(--primary); color: #FFFFFF;
-    box-shadow: var(--shadow-raise);
+    background: linear-gradient(135deg, {c['primary_fill']} 0%, #3E7FCB 100%);
+    border-color: {c['primary_fill']}; color: #FFFFFF; box-shadow: var(--shadow-raise);
   }}
   .stButton > button[kind="primary"]:hover, .stFormSubmitButton > button[kind="primary"]:hover {{
-    background: {c['primary_hover']}; border-color: {c['primary_hover']}; color: #FFFFFF;
+    background: {c['primary_fill_hover']}; border-color: {c['primary_fill_hover']}; color: #FFFFFF;
   }}
+
+  /* 위험도 버튼(학생 목록) — 켜진 등급이 **그 등급의 색**으로 채워진다.
+     순서가 HIGH·MEDIUM·LOW 로 고정이라 nth-child 로 색을 건다. */
+  .st-key-roster_filter [data-testid="stButtonGroup"] {{
+    display: flex; flex-wrap: wrap; gap: {s['2']};
+  }}
+  .st-key-roster_filter [data-testid="stButtonGroup"] button {{
+    border-radius: {r['pill']} !important; padding: 8px 16px !important;
+    font-size: {t['caption']} !important; font-weight: 700 !important;
+    background: var(--raised) !important; border: 1px solid var(--line) !important;
+    color: var(--muted) !important;
+  }}
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:hover {{ color: var(--ink) !important; }}
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(1)[aria-pressed="true"],
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(1)[data-selected] {{
+    background: {RISK_SOFT['HIGH']} !important; border-color: {RISK_COLORS['HIGH']} !important;
+    color: {RISK_COLORS['HIGH']} !important;
+  }}
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(2)[aria-pressed="true"],
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(2)[data-selected] {{
+    background: {RISK_SOFT['MEDIUM']} !important; border-color: {RISK_COLORS['MEDIUM']} !important;
+    color: {RISK_COLORS['MEDIUM']} !important;
+  }}
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(3)[aria-pressed="true"],
+  .st-key-roster_filter [data-testid="stButtonGroup"] button:nth-child(3)[data-selected] {{
+    background: {RISK_SOFT['LOW']} !important; border-color: {RISK_COLORS['LOW']} !important;
+    color: {RISK_COLORS['LOW']} !important;
+  }}
+  /* 필터 줄의 위젯 높이를 아래로 맞춘다 */
+  .st-key-roster_filter [data-testid="stColumn"] {{ display: flex; align-items: center; }}
+  .st-key-roster_filter [data-testid="stColumn"] > div {{ width: 100%; }}
+
+  /* 분절 토글(집중관리 대상의 범위 필터) — 눌린 쪽이 채워진 알약으로 보인다 */
+  .st-key-risk_filter [data-testid="stButtonGroup"] {{
+    display: inline-flex; gap: 2px; padding: 4px;
+    background: var(--raised); border: 1px solid var(--line); border-radius: {r['pill']};
+  }}
+  .st-key-risk_filter [data-testid="stButtonGroup"] button {{
+    border: none !important; background: transparent !important;
+    border-radius: {r['pill']} !important; padding: 8px 20px !important;
+    font-size: {t['secondary']} !important; font-weight: 700 !important;
+    color: var(--muted) !important; box-shadow: none !important;
+  }}
+  .st-key-risk_filter [data-testid="stButtonGroup"] button:hover {{ color: var(--ink) !important; }}
+  .st-key-risk_filter [data-testid="stButtonGroup"] button[aria-checked="true"],
+  .st-key-risk_filter [data-testid="stButtonGroup"] button[kind$="Active"] {{
+    background: {c['primary_fill']} !important; color: #FFFFFF !important;
+    box-shadow: var(--shadow-raise) !important;
+  }}
+  /* 필터 줄은 위젯 높이가 서로 달라 아래로 맞춘다 */
+  .st-key-risk_filter [data-testid="stColumn"] {{ display: flex; align-items: flex-end; }}
+  .st-key-risk_filter [data-testid="stColumn"] > div {{ width: 100%; }}
+
+  /* 다크에서 Streamlit 기본 흰 면이 남는 자리들 */
+  [data-testid="stDialog"] [role="dialog"],
+  [data-baseweb="popover"] > div, [data-baseweb="menu"], [role="listbox"] {{
+    background: var(--surface) !important; color: var(--ink-soft) !important;
+  }}
+  [data-testid="stDataFrame"] {{ background: var(--surface); }}
 
   /* 입력 위젯 */
   [data-baseweb="select"] > div, .stTextInput input, .stNumberInput input {{
@@ -792,22 +1044,58 @@ def _css() -> str:
   }}
   .sb-brand .n {{ font-size: {t['h3']}; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }}
   .sb-brand .s {{ font-size: {t['label']}; color: var(--muted); margin-top: 2px; letter-spacing: .04em; }}
-  .sb-block {{ margin-top: {s['4']}; }}
-  .sb-block .k {{
-    font-size: {t['label']}; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--faint);
-  }}
-  .sb-block .v {{ font-size: {t['caption']}; color: var(--ink-soft); margin-top: {s['1']}; line-height: 1.55; }}
-  .sb-block .v code {{ font-family: {MONO_STACK}; font-size: .95em; color: var(--muted); }}
   .sb-foot {{
-    margin-top: {s['6']}; padding-top: {s['3']}; border-top: 1px solid var(--line);
-    font-size: {t['label']}; color: var(--faint); line-height: 1.55;
+    margin-top: {s['8']}; padding: {s['4']};
+    border: 1px solid var(--line); border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, {c['primary_soft']}, {c['accent_soft']});
+  }}
+  .sb-foot .k {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--primary);
+  }}
+  .sb-foot .v {{
+    font-size: {t['h2']}; font-weight: 800; color: var(--ink); margin-top: {s['1']};
+    letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  }}
+  .sb-foot .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
+
+  /* ── 팝업 (학생 상세) ──────────────────────────────────────────────── */
+  /* 기본 폭은 이 내용(조치 3장 + 근거 + What-if)에 좁다. 넓히고 스크롤은 안쪽에 준다. */
+  /* 패널은 <section role="dialog"> 다 — div 로 지정하면 걸리지 않는다.
+     폭은 CSS 로 늘리지 않는다: Streamlit 은 안쪽 열 너비를 **자기가 아는 폭**으로
+     계산하기 때문에, CSS 로만 넓히면 오른쪽에 빈 띠가 남는다.
+     넓게 쓰려면 `st.dialog(width=...)` 로 알려 줘야 한다. */
+  [data-testid="stDialog"] [role="dialog"] {{
+    border-radius: {r['lg']}; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+    /* 높이를 제한했으면 **넘치는 내용은 스크롤**로 보내야 한다.
+       overflow 를 안 주면 아래쪽 What-if 가 통째로 잘려 나간다. */
+    max-height: 90vh; overflow-y: auto; overscroll-behavior: contain;
+  }}
+  .dlg-head {{
+    display: flex; align-items: center; justify-content: space-between; gap: {s['4']};
+    padding-bottom: {s['4']}; margin-bottom: {s['2']}; border-bottom: 1px solid var(--line);
+  }}
+  .dlg-head .who {{ display: flex; align-items: center; gap: {s['3']}; }}
+  .dlg-head .avatar {{
+    width: 44px; height: 44px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: {t['secondary']}; color: var(--c, var(--primary));
+    background: color-mix(in srgb, var(--c, var(--primary)) 22%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--c, var(--primary)) 46%, {c['surface']});
+  }}
+  .dlg-head .nm {{ font-size: {t['h2']}; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }}
+  .dlg-head .sub {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
+  .dlg-head .lv {{
+    font-size: {t['caption']}; font-weight: 700; color: var(--c, var(--primary));
+    padding: 6px {s['3']}; border-radius: {r['pill']}; white-space: nowrap;
+    background: color-mix(in srgb, var(--c, var(--primary)) 20%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--c, var(--primary)) 44%, {c['surface']});
   }}
 
   /* 스크롤바 — 기본 굵은 회색 막대가 발표 화면에서 눈에 띈다 */
   ::-webkit-scrollbar {{ width: 10px; height: 10px; }}
-  ::-webkit-scrollbar-thumb {{ background: #D3DBE6; border-radius: 6px; border: 2px solid var(--canvas); }}
-  ::-webkit-scrollbar-thumb:hover {{ background: #BCC7D6; }}
+  ::-webkit-scrollbar-thumb {{ background: #2C3B54; border-radius: 6px; border: 2px solid var(--canvas); }}
+  ::-webkit-scrollbar-thumb:hover {{ background: #3B4D6B; }}
   ::-webkit-scrollbar-track {{ background: transparent; }}
 
   /* ── 막대 차트 (직접 그린다) ───────────────────────────────────────── */
@@ -854,6 +1142,10 @@ def _css() -> str:
                         to   {{ opacity: 1; transform: translateY(0); }} }}
   @keyframes ds-mark {{ from {{ opacity: 0; transform: translateX(-10px); }}
                         to   {{ opacity: 1; transform: translateX(0); }} }}
+  /* 도넛 조각이 그려지는 애니메이션 — 길이(dasharray)를 0에서 목표까지 민다 */
+  @keyframes dn-grow {{ from {{ stroke-dasharray: 0 var(--c); }}
+                        to   {{ stroke-dasharray: var(--len) var(--c); }} }}
+  @keyframes dn-raise {{ from {{ height: 0; }} to {{ height: var(--fill); }} }}
 
   .factor-fill, .kpi-bar > span, .riskbar .fill {{
     transform-origin: left center;
@@ -865,6 +1157,14 @@ def _css() -> str:
   .factor:nth-child(4) .factor-fill {{ animation-delay: .15s; }}
   .factor:nth-child(5) .factor-fill {{ animation-delay: .20s; }}
 
+  /* 가로 막대도 위에서부터 차례로 — 순위가 눈에 남는다 */
+  .bars .row:nth-child(2) .fill {{ animation-delay: .06s; }}
+  .bars .row:nth-child(3) .fill {{ animation-delay: .12s; }}
+  .bars .row:nth-child(4) .fill {{ animation-delay: .18s; }}
+  .bars .row:nth-child(5) .fill {{ animation-delay: .24s; }}
+  .bars .row:nth-child(6) .fill {{ animation-delay: .30s; }}
+  .bars .row:nth-child(7) .fill {{ animation-delay: .36s; }}
+
   .meter .mark {{ animation: ds-mark .45s cubic-bezier(.2,.75,.3,1) both .12s; }}
   .meter-val .n {{ animation: ds-rise .4s ease-out both; }}
   .kpi-hero .val {{ animation: ds-rise .4s ease-out both; }}
@@ -874,7 +1174,11 @@ def _css() -> str:
 
   @media (prefers-reduced-motion: reduce) {{
     .factor-fill, .kpi-bar > span, .riskbar .fill, .bars .fill,
-    .meter .mark, .meter-val .n, .kpi-hero .val {{ animation: none !important; }}
+    .meter .mark, .meter-val .n, .kpi-hero .val,
+    .dn .dn-seg, .dn-center b, .cols .bar, .cols .v {{ animation: none !important; }}
+    /* 애니메이션을 끄면 도넛 조각과 막대가 0 인 채로 남는다 — 최종값을 직접 준다 */
+    .dn .dn-seg {{ stroke-dasharray: var(--len) var(--c) !important; }}
+    .cols .bar {{ height: var(--fill) !important; }}
     * {{ transition-duration: .01ms !important; }}
   }}
 
@@ -887,6 +1191,32 @@ def _css() -> str:
   }}
 </style>
 """
+
+
+#: 히어로 배경 사진. 없으면 그라디언트만 남는다 (파일이 빠져도 화면은 멀쩡하다).
+HERO_PHOTO = Path(__file__).resolve().parent.parent / "assets" / "hero_campus.jpg"
+
+
+@st.cache_data(show_spinner=False)
+def _hero_photo_style(path: str, stamp: float) -> str:
+    """사진을 data URI 로 CSS 에 심는다.
+
+    Streamlit 의 정적 파일 서빙은 설정(enableStaticServing)에 기대야 하고 발표 PC 에서
+    꺼져 있으면 배경이 통째로 빈다. 파일을 CSS 안에 넣어 두면 앱만 뜨면 배경도 뜬다.
+    `stamp` 는 파일 수정 시각 — 사진을 바꾸면 캐시가 자동으로 무효화된다.
+    """
+    data = base64.b64encode(Path(path).read_bytes()).decode("ascii")
+    return f"<style>.st-key-hero{{--hero-photo:url('data:image/jpeg;base64,{data}');}}</style>"
+
+
+def inject_hero_photo() -> None:
+    """시작화면에서만 부른다. 다른 화면까지 사진을 실어 보낼 이유가 없다."""
+    if not HERO_PHOTO.exists():
+        return
+    st.markdown(
+        _hero_photo_style(str(HERO_PHOTO), HERO_PHOTO.stat().st_mtime),
+        unsafe_allow_html=True,
+    )
 
 
 def inject_css() -> None:

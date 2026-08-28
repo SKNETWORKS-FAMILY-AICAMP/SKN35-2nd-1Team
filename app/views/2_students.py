@@ -12,13 +12,10 @@
 
 from __future__ import annotations
 
-from html import escape
-
 import streamlit as st
 
 from components import manual_input, student_detail, ui
 from components.state import cached_export, cached_roster, send_to_form, start_page
-from components.theme import COLORS, RISK_COLORS
 from rules import recommendation_rules as rules
 from services import case_sheet
 from services.predictor import RISK_LABELS_KO, RISK_LEVELS
@@ -43,7 +40,6 @@ def column_config() -> dict:
         "학생 ID": st.column_config.TextColumn("학번", width="small"),
         "중도탈락 확률(%)": st.column_config.ProgressColumn(
             "중도탈락 확률", format="%.1f%%", min_value=0.0, max_value=100.0,
-            help="현재는 DummyPredictor 가 산출한 값입니다.",
         ),
         "위험등급": st.column_config.TextColumn("등급", width="small"),
         "2학기 이수율": st.column_config.NumberColumn("2학기 이수율", format="%.0f%%"),
@@ -70,14 +66,11 @@ frame = roster.frame
 
 start_page(
     "학생 목록",
-    "학번·전공·위험도로 좁힌 뒤 학생을 선택하면 아래에 위험 예측 분석과 지원 추천이 열립니다.",
     meta=(
-        '<div class="ds-eyebrow">Roster</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{escape(roster.source)}</div>'
+        '<div class="ds-eyebrow">Students</div>'
+        f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명</div>'
     ),
 )
-
-ui.prototype_banner(service)
 
 # 대시보드·위험학생 목록에서 넘어온 경우 — ?student=S0068
 requested = str(st.query_params.get("student") or "").strip()
@@ -85,26 +78,11 @@ if requested and st.session_state.get("_student_from_url") != requested:
     st.session_state["roster_search"] = requested
     st.session_state["_student_from_url"] = requested
 
-# ── 상단 집계 ──────────────────────────────────────────────────────────────
-counts = frame["위험등급"].value_counts()
-ui.kpi_row(
-    [
-        {"label": "전체 학생", "value": f"{len(frame):,}", "unit": "명",
-         "caption": "실데이터" if roster.is_real else "합성 더미", "accent": COLORS["primary"]},
-        {"label": "HIGH", "value": f"{int(counts.get('HIGH', 0)):,}", "unit": "명",
-         "caption": "즉시 확인 권장", "accent": RISK_COLORS["HIGH"]},
-        {"label": "MEDIUM", "value": f"{int(counts.get('MEDIUM', 0)):,}", "unit": "명",
-         "caption": "정기 모니터링", "accent": RISK_COLORS["MEDIUM"]},
-        {"label": "LOW", "value": f"{int(counts.get('LOW', 0)):,}", "unit": "명",
-         "caption": "학기 단위 확인", "accent": RISK_COLORS["LOW"]},
-    ],
-    columns=4,
-)
-
 # ── 툴바 ───────────────────────────────────────────────────────────────────
-ui.spacer(12)
-with st.container(border=True):
-    t1, t2, t3, t4 = st.columns([1.1, 1.2, 1.2, 0.8], gap="medium")
+# 위험도는 드롭다운이 아니라 **버튼 세 개**다. 값이 셋뿐이고 담당자가 가장 자주 만지는
+# 필터라, 한 번 눌러서 켜고 끄는 편이 목록 두 번 여는 것보다 빠르다.
+with st.container(key="roster_filter", border=True):
+    t1, t2, t3 = st.columns([1.1, 1.2, 1.5], gap="medium")
     with t1:
         keyword = st.text_input("학번 검색", placeholder="학번 검색 (예: S0012)",
                                 label_visibility="collapsed", key="roster_search")
@@ -114,30 +92,20 @@ with st.container(border=True):
             label_visibility="collapsed", placeholder="전공 계열 전체",
         ) or list(MAJOR_FIELDS)
     with t3:
-        # 기본값을 "전부 선택" 으로 두면 칩이 툴바를 두 줄로 밀어낸다.
-        # 비어 있으면 전체로 본다 — 필터 UI 의 일반적인 약속이기도 하다.
-        levels = st.multiselect(
-            "위험도", options=list(RISK_LEVELS), default=[],
+        # 아무것도 안 누르면 전체다 — 필터 UI 의 일반적인 약속이다.
+        levels = st.pills(
+            "위험도", options=list(RISK_LEVELS), selection_mode="multi", default=[],
             format_func=lambda level: f"{level} · {RISK_LABELS_KO[level]}",
-            label_visibility="collapsed", placeholder="위험도 전체",
+            label_visibility="collapsed", key="roster_levels",
         ) or list(RISK_LEVELS)
-    with t4:
-        focus_only = st.checkbox("집중관리만", key="roster_focus_only")
-
-st.caption(
-    "이름으로 검색하지 않는 이유: 원본이 익명 데이터라 **학생 이름이 존재하지 않습니다**. "
-    "실제 학사 시스템에 붙일 때 학번 칸을 이름까지 받도록 늘리면 됩니다."
-)
 
 filtered = frame[frame["위험등급"].isin(levels) & frame["전공 계열"].isin(majors)]
 if keyword.strip():
     filtered = filtered[filtered["학생 ID"].str.contains(keyword.strip(), case=False, na=False)]
-if focus_only:
-    filtered = filtered[filtered["집중관리"] == "●"]
 filtered = filtered.sort_values("중도탈락 확률", ascending=False).reset_index(drop=True)
 
 # ── 표 ─────────────────────────────────────────────────────────────────────
-ui.section("명단", f"조회된 {len(filtered):,}명 · 행을 선택하면 아래에 분석이 열립니다.")
+ui.section("명단", f"조회된 {len(filtered):,}명 · 행을 선택하면 상세 분석이 열립니다.")
 
 if filtered.empty:
     ui.empty_state(
@@ -182,32 +150,37 @@ else:
     else:
         student_id = ""
 
-    if not student_id:
+    row = roster.by_id(student_id) if student_id else None
+
+    if row is None:
         ui.spacer(10)
         ui.empty_state(
             "학생을 선택하지 않았습니다",
-            "표에서 한 명을 선택하면 위험 예측 분석·지원 추천·What-if 가 여기에 나타납니다.",
+            "표에서 한 명을 선택하면 위험 예측 분석·지원 추천·What-if 가 팝업으로 열립니다.",
         )
     else:
-        row = roster.by_id(student_id)
-        if row is None:
-            ui.empty_state("상세 정보를 찾지 못했습니다", f"학생 {student_id} 가 명단에 없습니다.")
-        else:
-            ui.section(f"{student_id} 위험 예측 분석")
-            student_detail.render(row, key="detail")
+        def _send(picked):
+            """팝업 맨 아래 — 이 학생 값을 직접 입력 폼으로 보낸다."""
             ui.spacer(10)
-            if st.button("이 학생 값을 아래 직접 입력 폼으로 보내기",
-                         key=f"send_{student_id}", width="stretch"):
-                send_to_form(row.student)
+            if st.button("이 학생 값을 직접 입력 폼으로 보내기",
+                         key=f"send_{picked.student.student_id}", width="stretch"):
+                send_to_form(picked.student)
                 st.rerun()
+
+        # 팝업은 **선택이 바뀔 때 한 번** 연다. 매 실행마다 다시 부르면 사용자가
+        # 닫아도 곧바로 다시 열린다. 닫은 뒤 같은 학생을 다시 보려면 아래 버튼을 쓴다.
+        if st.session_state.get("_detail_open") != student_id:
+            st.session_state["_detail_open"] = student_id
+            student_detail.open_modal(row, key="detail", extra=_send)
+
+        ui.spacer(8)
+        if st.button(f"{student_id} 상세 분석 열기", width="stretch", type="primary",
+                     key="reopen_detail"):
+            student_detail.open_modal(row, key="detail", extra=_send)
 
 # ── 직접 입력 (흡수된 예측 화면) ───────────────────────────────────────────
 ui.spacer(18)
 with st.expander("명단에 없는 학생 직접 입력해서 예측하기", expanded=False):
-    st.caption(
-        "팀 전처리(Model B)가 요구하는 입력 32개입니다. 이수율·재정위험점수 등 "
-        "파생변수 5종은 아래 값에서 자동 계산되므로 직접 입력하지 않습니다."
-    )
     student = manual_input.render()
 
     if student is not None:

@@ -9,17 +9,14 @@ from __future__ import annotations
 
 from html import escape
 
-import plotly.graph_objects as go
 import streamlit as st
 
 from components.theme import (
     CATEGORY_COLORS,
     CLASS_COLORS,
     COLORS,
-    PLOTLY_CONFIG,
     RISK_COLORS,
     RISK_SOFT,
-    style_figure,
 )
 from rules.recommendation_rules import (
     PRIORITY_LABELS,
@@ -30,12 +27,10 @@ from rules.recommendation_rules import (
 )
 from services import case_sheet
 from services.predictor import (
-    EXPLANATION_DUMMY,
     RISK_LABELS_KO,
     RISK_THRESHOLDS,
     PredictionResult,
 )
-from services.prediction_service import PredictionService
 from utils.feature_mapping import TARGET_CLASSES, TARGET_LABELS_KO, StudentInput
 
 
@@ -99,29 +94,6 @@ def banner(
         f'<div class="banner" style="--fg:{foreground};--bg:{background};--bd:{border}">'
         f'<span class="mark">{escape(mark)}</span><div>{body_html}</div></div>'
     )
-
-
-def prototype_banner(service: PredictionService, *, source_note: str = "") -> None:
-    """이 화면의 숫자가 어디서 나왔는지 항상 밝힌다. 발표에서 오해를 막는 장치다."""
-    extra = f" {escape(source_note)}" if source_note else ""
-    if service.is_dummy:
-        banner(
-            "Prototype Mode",
-            "학습된 모델이 아직 연결되지 않았습니다. 화면의 확률과 위험요인은 규칙 기반 "
-            "<b>DummyPredictor</b> 가 만든 값이며 <b>성능 수치를 주장하지 않습니다</b>. "
-            f"팀 최종 모델이 <code>models/</code> 에 들어오면 화면 수정 없이 대체됩니다.{extra}",
-            foreground=COLORS["primary"],
-            background=COLORS["primary_soft"],
-            border=COLORS["primary_line"],
-        )
-    else:
-        banner(
-            "Live Model",
-            f"<b>{escape(service.model_label)}</b> 이 연결되어 실제 예측을 표시하고 있습니다.{extra}",
-            foreground=RISK_COLORS["LOW"],
-            background=RISK_SOFT["LOW"],
-            border="#C5E3D7",
-        )
 
 
 def empty_state(title: str, desc: str = "") -> None:
@@ -276,21 +248,27 @@ def probability_split(result: PredictionResult) -> None:
 # 도넛 — 전체 중 비중을 보여줄 때만 쓴다
 # ---------------------------------------------------------------------------
 
+#: 도넛 원의 반지름과 굵기 (viewBox 120×120 기준). 둘레가 애니메이션의 단위다.
+_DONUT_R = 46.0
+_DONUT_C = 2 * 3.141592653589793 * _DONUT_R
+
+
 def donut(
     rows: list[dict],
     *,
     center_value: str,
     center_label: str,
-    key: str,
     height: int = 250,
 ) -> None:
     """`{label, value, color, display?}` 를 도넛 하나 + 아래 범례로 그린다.
 
     **비율(부분의 합이 전체)일 때만 쓴다.** 순위나 비율(rate)을 도넛에 넣으면
-    조각 크기가 아무 뜻도 없게 된다 — 그런 값은 `bar_chart()` 가 맞다.
+    조각 크기가 아무 뜻도 없게 된다 — 그런 값은 `bar_chart()`·`column_chart()` 가 맞다.
 
-    범례를 직접 그리는 이유: Plotly 범례는 이 높이에서 눌려 잘린다(우선순위 표에서
-    이미 겪었다). 직접 그리면 값·비율을 같이 적을 수 있어 읽기도 낫다.
+    Plotly 가 아니라 인라인 SVG 인 이유
+        조각이 **시계방향으로 차오르는** 등장이 필요한데 Plotly 파이에는 그 애니메이션이
+        없다. `stroke-dasharray` 를 0에서 목표 길이로 애니메이션하면 CSS 몇 줄로 끝나고,
+        차트 라이브러리 렌더 비용도 사라진다. 값은 hover 툴팁(<title>)과 범례에 남는다.
     """
     rows = [r for r in rows if r.get("value", 0) > 0]
     if not rows:
@@ -298,29 +276,30 @@ def donut(
         return
 
     total = sum(r["value"] for r in rows)
-    figure = go.Figure(
-        go.Pie(
-            labels=[str(r["label"]) for r in rows],
-            values=[r["value"] for r in rows],
-            hole=0.68,
-            sort=False,
-            direction="clockwise",
-            textinfo="none",
-            marker=dict(
-                colors=[r.get("color", COLORS["primary"]) for r in rows],
-                line=dict(color=COLORS["surface"], width=2),
-            ),
-            hovertemplate="%{label}<br>%{value:,}명 · %{percent}<extra></extra>",
+    segments, cursor = [], 0.0
+    for index, r in enumerate(rows):
+        length = r["value"] / total * _DONUT_C
+        # 조각 사이를 1.5 만큼 띄워 경계가 보이게 한다. 아주 얇은 조각은 띄우지 않는다.
+        drawn = max(length - 1.5, 0.6) if length > 3 else length
+        color = r.get("color", COLORS["primary"])
+        share = r["value"] / total * 100
+        segments.append(
+            f'<circle class="dn-seg" cx="60" cy="60" r="{_DONUT_R}" fill="none" '
+            f'stroke="{color}" stroke-width="16" stroke-dasharray="0 {_DONUT_C:.2f}" '
+            f'stroke-dashoffset="{-cursor:.2f}" '
+            f'style="--len:{drawn:.2f};--c:{_DONUT_C:.2f};--d:{index * 0.09:.2f}s">'
+            f'<title>{escape(str(r["label"]))} · {r["value"]:,} · {share:.0f}%</title></circle>'
         )
-    )
-    figure.add_annotation(
-        text=(f"<b style='font-size:1.6rem'>{escape(center_value)}</b><br>"
-              f"<span style='font-size:.72rem'>{escape(center_label)}</span>"),
-        showarrow=False, font=dict(color=COLORS["ink"]),
-    )
-    st.plotly_chart(
-        style_figure(figure, height=height, show_legend=False, grid="none"),
-        width="stretch", config=PLOTLY_CONFIG, key=key,
+        cursor += length
+
+    _html(
+        f'<div class="dn" style="--size:{height}px">'
+        f'<svg viewBox="0 0 120 120" role="img" aria-label="{escape(center_label)} 구성">'
+        f'<g transform="rotate(-90 60 60)">'
+        f'<circle cx="60" cy="60" r="{_DONUT_R}" fill="none" stroke="{COLORS["line_soft"]}" '
+        f'stroke-width="16"></circle>{"".join(segments)}</g></svg>'
+        f'<div class="dn-center"><b>{escape(center_value)}</b>'
+        f'<span>{escape(center_label)}</span></div></div>'
     )
 
     items = "".join(
@@ -331,6 +310,32 @@ def donut(
         for r in rows
     )
     _html(f'<div class="dn-legend">{items}</div>')
+
+
+def column_chart(rows: list[dict], *, height: int = 176, unit: str = "명") -> None:
+    """세로 막대. `{label, value, color, display?}` 를 넣은 순서대로 세운다.
+
+    가로 막대(`bar_chart`)와 쓰임이 다르다 — **항목이 적고(3~6개) 라벨이 짧을 때**
+    세로가 낫다. 값의 크기를 위아래로 비교하게 되고 화면 폭도 덜 먹는다.
+    라벨이 길거나 항목이 많으면 가로 막대를 쓴다.
+    """
+    rows = [r for r in rows if r.get("value", 0) >= 0]
+    if not rows:
+        empty_state("표시할 값이 없습니다.")
+        return
+
+    top = max((r["value"] for r in rows), default=0) or 1
+    body = []
+    for index, r in enumerate(rows):
+        fill = max(r["value"] / top * 100, 1.5)
+        body.append(
+            f'<div class="col" style="--c:{r.get("color", COLORS["primary"])};'
+            f'--fill:{fill:.1f}%;--d:{index * 0.07:.2f}s">'
+            f'<span class="v">{escape(str(r.get("display", f"{r["value"]:,}{unit}")))}</span>'
+            f'<span class="track"><span class="bar"></span></span>'
+            f'<span class="lab">{escape(str(r["label"]))}</span></div>'
+        )
+    _html(f'<div class="cols" style="--h:{height}px">{"".join(body)}</div>')
 
 
 # ---------------------------------------------------------------------------
@@ -407,16 +412,8 @@ def factor_list(result: PredictionResult,
         )
     _html("".join(blocks))
 
-    if result.explanation_source == EXPLANATION_DUMMY:
-        st.caption(
-            "SHAP 분석 결과가 아니라 DummyPredictor 의 가중치를 그대로 풀어 쓴 프로토타입 설명입니다. "
-            "백분율은 요인 간 상대 비중이며 모델 기여도가 아닙니다."
-        )
-    else:
-        st.caption(
-            f"확률은 실제 모델 값이고 설명의 출처는 {escape(result.explanation_source)} 입니다. "
-            "SHAP explainer 가 연결되면 이 자리는 실제 기여도로 바뀝니다."
-        )
+    # 백분율은 요인 간 상대 비중이다. 그 한 줄만 남기고 출처 설명은 화면에서 뺐다.
+    st.caption("백분율은 위험요인 사이의 상대 비중입니다.")
 
 
 # ---------------------------------------------------------------------------
@@ -650,8 +647,6 @@ def report_card(
         for k, v in facts
     )
 
-    source = "프로토타입 예측" if result.is_dummy else f"{result.model_name} v{result.model_version}"
-
     _html(
         f'<div class="rc" style="--accent:{accent};--accent-soft:{soft};--accent-line:{accent}33">'
         f'<div class="rc-band">{risk_pill_html(result.risk_level)}'
@@ -668,8 +663,8 @@ def report_card(
         f'<div class="rc-stats">{stats}</div>'
         f'<div class="rc-todo"><div class="k">지금 할 일</div>{"".join(steps)}{more}</div>'
         f"</div>"
-        f'<div class="rc-foot">{escape(source)} · 이 카드는 위험요인에 대응하는 교내 지원을 '
-        f"연결한 것이며, 중도탈락을 단정하거나 예방을 보장하지 않습니다. 최종 판단은 담당자가 합니다.</div>"
+        f'<div class="rc-foot">위험요인에 대응하는 교내 지원을 연결한 결과이며, '
+        f"최종 판단은 담당자가 합니다.</div>"
         f"</div>"
     )
 
@@ -747,10 +742,14 @@ def action_panel(
     운영 화면에서는 이 탭이 기본값이다. 담당자에게 필요한 건 누구를 · 얼마나 급하게 ·
     무엇부터이고, 근거는 설명을 요구받았을 때 옆 탭에서 펼치면 된다.
     """
-    report_card(student, result, recommendation)
-    spacer(16)
-    section("무엇을 할 것인가", "규칙 엔진(rules/recommendation_rules.py)이 판정한 지원 연결입니다.")
-    support_cards(recommendation, result=result)
+    # 카드와 조치 목록을 나란히 둔다. 팝업처럼 넓은 자리에서 세로로 쌓으면
+    # 카드(최대 660px) 옆이 통째로 비어 화면이 반쪽으로 보인다.
+    card_col, action_col = st.columns([1, 1.25], gap="large")
+    with card_col:
+        report_card(student, result, recommendation)
+    with action_col:
+        section("무엇을 할 것인가", "위험요인에 대응하는 지원 연결입니다.")
+        support_cards(recommendation, result=result)
 
 
 def evidence_panel(
@@ -904,19 +903,9 @@ def whatif_delta(
     )
 
     # 확률이 표시상 그대로인데 규칙만 바뀌면 화면이 고장난 것처럼 읽힌다.
-    # 왜 안 움직였는지를 밝힌다 — 예측기가 더미냐 아니냐에 따라 이유가 다르다.
     if abs(delta) < 0.05 and (dropped or added):
-        if after.is_dummy:
-            st.caption(
-                "확률 표시는 반올림해서 그대로입니다 — 프로토타입 예측기가 양 끝의 과장된 확신을 "
-                "눌러 두기 때문에 높은 구간에서는 확률이 잘 움직이지 않습니다. "
-                "**이 시뮬레이션의 결과는 발동 규칙의 변화입니다.**"
-            )
-        else:
-            st.caption(
-                "확률은 거의 움직이지 않았지만 발동 규칙이 바뀌었습니다 — 이 값은 모델의 판단보다 "
-                "규칙의 기준선에 더 가까이 있었다는 뜻입니다."
-            )
+        st.caption("확률은 거의 그대로지만 **발동한 규칙이 바뀌었습니다** — "
+                   "이 시뮬레이션의 결과는 그 변화입니다.")
 
 
 # ---------------------------------------------------------------------------
@@ -956,10 +945,6 @@ def case_downloads(
             disabled=not rows,
             key=f"dl_actions_{key}",
         )
-    st.caption(
-        "내려받은 파일에도 면책 문구와 예측 출처가 함께 적힙니다 — "
-        "화면 배너는 파일을 따라가지 않기 때문입니다."
-    )
 
 
 _KEEP = TARGET_CLASSES  # 화면이 클래스 순서를 이 모듈 경유로도 얻을 수 있게 남긴다.

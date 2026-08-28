@@ -24,10 +24,10 @@ from typing import Callable
 from services.predictor import RISK_CATEGORIES, PredictionResult
 from utils.feature_mapping import StudentInput
 
+#: 화면에 붙는 한 줄. 길게 쓰면 아무도 안 읽고 화면만 무거워진다 —
+#: 파일에 적히는 정식 문구는 `services/case_sheet.py` 가 따로 갖는다.
 DISCLAIMER = (
-    "이 추천은 모델이 탐지한 위험요인에 대응하는 교내 지원 프로그램을 연결한 것입니다. "
-    "예측 결과는 학생의 중도탈락을 단정하지 않으며, 지원 프로그램 참여가 중도탈락을 "
-    "방지한다는 인과관계를 의미하지도 않습니다. 최종 판단은 담당자가 합니다."
+    "지원 프로그램 참여가 중도탈락을 막는다는 인과관계를 뜻하지 않습니다."
 )
 
 

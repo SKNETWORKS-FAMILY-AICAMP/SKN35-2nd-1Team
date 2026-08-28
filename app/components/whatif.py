@@ -30,11 +30,10 @@ from services.predictor import PredictionResult
 from services.prediction_service import PredictionService
 from utils.feature_mapping import StudentInput
 
+#: 이 한 줄은 남긴다 — 시뮬레이션 결과를 "지원하면 이만큼 내려간다"로 읽는 순간
+#  발표에서 가장 위험한 주장이 된다.
 WHATIF_NOTE = (
-    "<b>개입의 효과가 아닙니다.</b> 입력값이 달랐다면 모델이 어떤 확률을 냈을지, "
-    "그리고 어떤 규칙이 발동했을지를 보여줍니다. 데이터가 말하는 것은 "
-    "<b>상관</b>이지 인과가 아니므로, 지원 프로그램을 제공하면 이만큼 위험이 "
-    "내려간다는 뜻으로 읽으면 안 됩니다."
+    "<b>개입의 효과가 아닙니다.</b> 입력값이 달랐다면 어떤 확률과 어떤 규칙이 나왔을지를 봅니다."
 )
 
 #: 조작 대상 셋. **화면 입력으로 바꿀 수 있고 지원 프로그램과 직접 이어지는 값**만 고른다.

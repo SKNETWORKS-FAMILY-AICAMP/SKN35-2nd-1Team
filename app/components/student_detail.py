@@ -14,6 +14,8 @@ from __future__ import annotations
 import streamlit as st
 
 from components import ui, whatif
+from components.theme import RISK_COLORS
+from services.predictor import RISK_LABELS_KO
 from services.prediction_service import get_service
 
 
@@ -33,3 +35,40 @@ def render(row, *, key: str) -> None:
     with tabs[2]:
         whatif.render(row.student, row.result, row.recommendation, get_service(),
                       key=suffix, show_heading=False)
+
+
+# ---------------------------------------------------------------------------
+# 팝업 — 명단을 떠나지 않고 한 명을 들여다본다
+# ---------------------------------------------------------------------------
+#
+# 왜 아래로 펼치지 않고 팝업인가
+#     명단이 400px 짜리 표라, 학생을 고르면 상세는 **화면 밖 아래**에 열린다.
+#     담당자는 스크롤을 내려 읽고 다시 올려 다음 학생을 고른다. 한 명 볼 때마다
+#     그 왕복이 생긴다. 팝업은 표를 그대로 둔 채 위에 얹히므로 왕복이 없다.
+
+
+@st.dialog("학생 상세 분석", width="large")
+def _modal(row, key: str, extra=None) -> None:
+    student, result = row.student, row.result
+    level = result.risk_level
+    st.markdown(
+        f"""<div class="dlg-head">
+      <div class="who">
+        <div class="avatar" style="--c:{RISK_COLORS[level]}">{student.student_id[-2:]}</div>
+        <div>
+          <div class="nm">{student.student_id}</div>
+          <div class="sub">{student.major_field} · {result.dropout_percent:.1f}% 중도탈락 확률</div>
+        </div>
+      </div>
+      <div class="lv" style="--c:{RISK_COLORS[level]}">{level} · {RISK_LABELS_KO[level]}</div>
+    </div>""",
+        unsafe_allow_html=True,
+    )
+    render(row, key=key)
+    if extra is not None:
+        extra(row)
+
+
+def open_modal(row, *, key: str, extra=None) -> None:
+    """상세를 팝업으로 연다. `extra(row)` 는 팝업 맨 아래에 덧붙일 것이 있을 때."""
+    _modal(row, key, extra)

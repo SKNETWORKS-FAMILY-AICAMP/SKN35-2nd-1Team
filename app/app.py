@@ -27,8 +27,6 @@ services/prediction_service.py 의 USE_REAL_MODEL 스위치 두 곳뿐이다.
 
 from __future__ import annotations
 
-from html import escape
-
 import streamlit as st
 
 from components.state import (
@@ -36,11 +34,9 @@ from components.state import (
     PAGE_HOME,
     PAGE_RISK,
     PAGE_STUDENTS,
-    roster_source,
+    roster_size,
 )
 from components.theme import inject_css
-from services.prediction_service import get_service
-from utils.schema import final_feature_count, schema_available
 
 st.set_page_config(
     page_title="Student Dropout Intelligence",
@@ -88,6 +84,23 @@ def _block_auto_translate() -> None:
       doc.head.appendChild(meta);
     }
     meta.content = "notranslate";
+    // 사이드바 "접힘" 기억을 지운다. 표지에서 사이드바를 만들지 않으므로 브라우저가
+    // 접힘으로 저장해 두면 **다른 화면에서도 계속 접힌 채로** 열린다.
+    var store = window.parent.localStorage;
+    for (var i = store.length - 1; i >= 0; i--) {
+      var name = store.key(i);
+      if (name && name.indexOf("stSidebarCollapsed") === 0) store.removeItem(name);
+    }
+    // 기억을 지워도 **이번 로드**는 이미 접힌 채로 그려진다. 사이드바가 있는 화면인데
+    // 접혀 있으면 한 번만 펼친다 (페이지 로드당 1회 — 사용자가 접는 것은 막지 않는다).
+    if (!window.parent.__sidebarOpened) {
+      window.parent.__sidebarOpened = true;
+      setTimeout(function () {
+        var bar = doc.querySelector('[data-testid="stSidebar"]');
+        var open = doc.querySelector('[data-testid="stExpandSidebarButton"]');
+        if (bar && open && bar.getBoundingClientRect().width < 100) open.click();
+      }, 400);
+    }
   } catch (e) { /* 다른 오리진이면 조용히 포기한다 */ }
 })();
 </script>
@@ -97,67 +110,42 @@ def _block_auto_translate() -> None:
 
 
 def _sidebar() -> None:
-    """화면 이동 위젯 아래에 붙는 공통 정보.
+    """브랜드 · 화면 이동 · 명단 규모 한 줄.
 
-    **숫자의 출처를 항상 사이드바에 남긴다.** 어느 화면에 있든 지금 보고 있는 것이
-    실제 모델인지 프로토타입인지, 실데이터인지 더미인지 한눈에 보여야 한다.
+    모드/전처리/출처 같은 개발 메모는 두지 않는다 — 쓰는 사람이 알아야 하는 것은
+    지금 몇 명을 보고 있는가와 어디로 가는가뿐이다.
     """
-    service = get_service()
-    source, is_real = roster_source()
-
-    mode = "Live Model" if not service.is_dummy else "Prototype"
-    mode_color = "#1B6E54" if not service.is_dummy else "#1B4F91"
-    data_color = "#1B6E54" if is_real else "#96600A"
-
-    schema_line = (
-        "팀 전처리 스키마 연결됨<br><code>data/processed/feature_schema.json</code>"
-        f"<br>인코딩 후 {final_feature_count() or 81} 피처"
-        if schema_available()
-        else "<b style='color:#B3382F'>스키마 파일 없음</b><br>"
-        "<code>data/processed/feature_schema.json</code> 을 확인하세요"
-    )
-
     with st.sidebar:
         st.markdown(
-            f"""
-            <div class="sb-brand">
-              <div class="n">Student Dropout Intelligence</div>
-              <div class="s">SKN35 · 2ND TEAM PROJECT</div>
-            </div>
-            <div class="sb-block">
-              <div class="k">Mode</div>
-              <div class="v">
-                <span class="pill" style="color:{mode_color};background:#F4F6F9;
-                      border-color:{mode_color}33">{mode}</span><br>
-                <span style="display:inline-block;margin-top:6px">
-                  {escape(service.model_label)}</span>
-              </div>
-            </div>
-            <div class="sb-block">
-              <div class="k">Roster</div>
-              <div class="v">
-                <span class="pill" style="color:{data_color};background:#F4F6F9;
-                      border-color:{data_color}33">{'REAL DATA' if is_real else 'SYNTHETIC'}</span><br>
-                <span style="display:inline-block;margin-top:6px">{escape(source)}</span>
-              </div>
-            </div>
-            <div class="sb-block">
-              <div class="k">Preprocessing</div>
-              <div class="v">{schema_line}</div>
-            </div>
-            <div class="sb-foot">
-              이 시스템은 위험요인에 대응하는 지원 프로그램을 연결할 뿐,
-              중도탈락을 단정하거나 예방을 보장하지 않습니다.
-            </div>
-            """,
+            '<div class="sb-brand">'
+            '<div class="n">Student Dropout Intelligence</div>'
+            '<div class="s">SKN35 · 2ND TEAM PROJECT</div></div>',
+            unsafe_allow_html=True,
+        )
+        for page in PAGES:
+            st.page_link(page, label=page.title, icon=page.icon)
+
+        size = roster_size()
+        st.markdown(
+            f'<div class="sb-foot"><div class="k">Students</div>'
+            f'<div class="v">{size:,}명</div>'
+            f'<div class="d">위험도 재계산 완료</div></div>',
             unsafe_allow_html=True,
         )
 
 
 # st.navigation 을 진입점의 첫 출력으로 둔다 — 라우팅을 먼저 확정한 뒤 스타일을 넣는다.
 # (화면 폴더 이름이 pages/ 가 아니라 views/ 인 이유는 README 1장 참고)
-navigation = st.navigation(PAGES, position="sidebar")
+#
+# position="hidden" 으로 두고 사이드바를 **직접** 그린다.
+#     시작화면은 표지라서 사이드바가 없어야 하는데, `position` 은 어느 화면인지 알기
+#     전에 정해야 하는 값이다. 네비게이션을 우리가 그리면 `navigation` 이 정해진 뒤에
+#     "표지면 사이드바를 아예 만들지 않는다" 를 확정할 수 있다.
+#     CSS 로 감추는 방법은 쓰지 않는다 — 감춘 사이드바를 Streamlit 이 접힘 상태로
+#     기억해서 **다음 화면에서도 펼쳐지지 않는다.**
+navigation = st.navigation(PAGES, position="hidden")
 inject_css()
 _block_auto_translate()
-_sidebar()
+if navigation.title != "시작":
+    _sidebar()
 navigation.run()

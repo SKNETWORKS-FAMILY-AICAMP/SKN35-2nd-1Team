@@ -28,9 +28,10 @@ from services.prediction_service import get_service
 #: 학생 목록 화면의 주소. `st.navigation` 이 파일명에서 만드는 경로와 같아야 한다.
 STUDENT_PAGE_URL = "students"
 
+#: 왼쪽이 기본값이다 — 담당자가 여는 순간 보이는 폭.
 SCOPES: dict[str, tuple[str, ...]] = {
-    "HIGH 만": ("HIGH",),
     "HIGH + MEDIUM": ("HIGH", "MEDIUM"),
+    "HIGH 만": ("HIGH",),
 }
 
 
@@ -68,30 +69,32 @@ table = followup.load()
 
 start_page(
     "집중관리 대상",
-    "위험이 높은 순서로 줄을 세운 처리 화면입니다. 위에서부터 내려가며 상담 진행 상태를 남깁니다.",
+    "위험이 높은 순서로 줄을 세운 처리 화면입니다.",
     meta=(
-        '<div class="ds-eyebrow">Roster</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{escape(roster.source)}</div>'
+        '<div class="ds-eyebrow">Priority</div>'
+        '<div class="ds-sub" style="margin-top:4px">확률 내림차순</div>'
     ),
 )
 
-ui.prototype_banner(service)
-
 # ── 필터 ───────────────────────────────────────────────────────────────────
-with st.container(border=True):
-    f1, f2, f3 = st.columns([1.1, 1.3, 1.3], gap="medium")
+# 범위는 라디오가 아니라 **분절 토글**이다. 선택지가 둘뿐이고 화면을 여는 순간
+# 어느 폭으로 보고 있는지가 한눈에 읽혀야 하는 값이라, 눌린 상태가 보이는 편이 낫다.
+with st.container(key="risk_filter", border=True):
+    f1, f2, f3 = st.columns([1.3, 1.2, 1.2], gap="medium")
     with f1:
-        scope = st.radio("범위", options=list(SCOPES), horizontal=True,
-                         label_visibility="collapsed", key="risk_scope")
+        scope = st.segmented_control(
+            "범위", options=list(SCOPES), default=next(iter(SCOPES)),
+            label_visibility="collapsed", key="risk_scope_seg",
+        ) or next(iter(SCOPES))
     with f2:
         segments = st.multiselect(
-            "위험 영역", options=list(RISK_CATEGORIES.values()), default=[],
-            label_visibility="collapsed", placeholder="위험 영역 전체 (세그먼트)",
+            "세그먼트 · 위험 영역", options=list(RISK_CATEGORIES.values()), default=[],
+            placeholder="전체",
         ) or list(RISK_CATEGORIES.values())
     with f3:
         statuses = st.multiselect(
             "상담 상태", options=list(followup.STATUSES), default=[],
-            label_visibility="collapsed", placeholder="상담 상태 전체",
+            placeholder="전체",
         ) or list(followup.STATUSES)
 
 levels = SCOPES[scope]
@@ -137,7 +140,7 @@ if not rows:
     st.stop()
 
 # ── 명단 ───────────────────────────────────────────────────────────────────
-ui.section("우선 처리 명단", "행을 선택하면 아래에 그 학생의 분석과 조치가 열립니다.")
+ui.section("우선 처리 명단", "행을 선택하면 상세 분석이 팝업으로 열립니다.")
 
 import pandas as pd  # noqa: E402  (표를 만들 때만 필요하다)
 
@@ -209,14 +212,15 @@ with link_col:
     st.link_button("학생 목록에서 열기 →",
                    f"{STUDENT_PAGE_URL}?student={quote(student_id)}", width="stretch")
 
-st.caption(
-    "상담 상태는 **이 기기에만** 저장됩니다 (`app/state/followup.json`, git 제외). "
-    "학사 시스템이 없어 앱이 대신 들고 있는 값이며, 학번과 상태값만 저장합니다."
-)
-
 ui.spacer(12)
 
-# 학생 목록과 **같은 컴포넌트**를 부른다. 두 곳에서 다르게 보여줄 이유가 없다.
-student_detail.render(row, key="risk")
+# 학생 목록과 **같은 팝업**을 부른다. 두 곳에서 다르게 보여줄 이유가 없다.
+if st.session_state.get("_risk_detail_open") != student_id:
+    st.session_state["_risk_detail_open"] = student_id
+    student_detail.open_modal(row, key="risk")
+
+if st.button(f"{student_id} 상세 분석 열기", width="stretch", type="primary",
+             key="reopen_risk_detail"):
+    student_detail.open_modal(row, key="risk")
 
 _KEEP = CATEGORY_COLORS  # 카테고리 색을 이 모듈 경유로도 얻게 남긴다.

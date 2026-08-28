@@ -6,15 +6,22 @@
     Level 1  지금 조치가 필요한 규모 — 크게, 먼저 · 옆에 바로가기
     Level 2  그 위험이 어떤 성격인가 — 도넛 셋 + 순위 하나
 
-차트를 도넛으로 그리는 기준
-    **부분의 합이 전체일 때만** 도넛이다. 조각 크기가 곧 비중이라 한눈에 읽힌다.
-    피처 중요도처럼 **순위**인 값은 막대로 둔다 — 도넛에 넣으면 조각 크기가
-    아무 뜻도 없어지고 이름도 못 읽는다.
+어떤 그래프를 쓰는가 — 값의 성격이 정한다
+    도넛      부분의 합이 전체일 때만. 조각 크기가 곧 비중이다.
+              (위험등급 구성 · 부서별 업무량)
+    세로 막대  항목이 적고(3~5개) 라벨이 짧을 때. 크기를 위아래로 바로 비교한다.
+              (위험요인 카테고리)
+    가로 막대  항목이 많거나 라벨이 길 때. 이름이 잘리지 않는다.
+              (전공 계열 · 피처 중요도)
+
+    피처 중요도처럼 **순위**인 값은 도넛에 넣지 않는다 — 조각 크기가 아무 뜻도
+    없어지고 이름도 못 읽는다.
+
+    막대와 도넛은 모두 0에서 실제 값까지 **차오르며** 등장한다. 값이 얼마나
+    찼는지가 눈에 남게 하려는 것이고, 접근성 설정(모션 축소)에서는 꺼진다.
 """
 
 from __future__ import annotations
-
-from html import escape
 
 import streamlit as st
 
@@ -114,23 +121,18 @@ frame = roster.frame
 
 start_page(
     "위험 현황",
-    "오늘 먼저 확인해야 할 학생을 찾는 화면입니다. 위험이 어디에 몰려 있고 "
-    "어느 부서에 일이 쌓이는지를 봅니다.",
+    "오늘 먼저 확인해야 할 학생을 찾는 화면입니다.",
     meta=(
-        '<div class="ds-eyebrow">Roster</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{escape(roster.source)}</div>'
+        '<div class="ds-eyebrow">Students</div>'
+        f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명 · 위험도 재계산 완료</div>'
     ),
 )
-
-ui.prototype_banner(service)
 
 total = len(frame)
 counts = frame["위험등급"].value_counts()
 high = int(counts.get("HIGH", 0))
 medium = int(counts.get("MEDIUM", 0))
-low = int(counts.get("LOW", 0))
 predicted_dropout = int((frame["예측(원본)"] == "Dropout").sum())
-focus = int((frame["집중관리"] == "●").sum())
 
 # ── Level 1 — 지금 조치가 필요한 규모 ──────────────────────────────────────
 ui.section("지금 조치가 필요한 규모", "이 화면에서 가장 먼저 읽어야 할 숫자입니다.")
@@ -153,7 +155,7 @@ with side_col:
     ui.kpi_row(
         [
             {"label": "전체 학생", "value": f"{total:,}", "unit": "명",
-             "caption": "실데이터" if roster.is_real else "합성 더미",
+             "caption": "명단 전체",
              "accent": COLORS["primary"]},
             {"label": "MEDIUM", "value": f"{medium:,}", "unit": "명",
              "caption": "정기 모니터링", "accent": RISK_COLORS["MEDIUM"],
@@ -164,17 +166,6 @@ with side_col:
              "share": predicted_dropout / total if total else 0},
         ],
         columns=3,
-    )
-    ui.spacer(6)
-    ui.kpi_row(
-        [
-            {"label": "집중관리 대상", "value": f"{focus:,}", "unit": "명",
-             "caption": "서로 다른 영역의 위험이 겹친 학생",
-             "accent": RISK_COLORS["HIGH"], "share": focus / total if total else 0},
-            {"label": "LOW", "value": f"{low:,}", "unit": "명",
-             "caption": "학기 단위 확인", "accent": RISK_COLORS["LOW"]},
-        ],
-        columns=2,
     )
 
 # ── Level 2 — 그 위험이 어떤 성격인가 ──────────────────────────────────────
@@ -188,18 +179,16 @@ with c1, st.container(border=True):
         '<div class="card-sub">전체 명단이 어떤 비율로 나뉘는지.</div>',
         unsafe_allow_html=True,
     )
-    ui.donut(risk_rows(frame), center_value=f"{total:,}", center_label="전체 학생",
-             key="d_risk")
+    ui.donut(risk_rows(frame), center_value=f"{total:,}", center_label="전체 학생")
 
 with c2, st.container(border=True):
     st.markdown(
         '<div class="card-title">위험요인 카테고리</div>'
-        '<div class="card-sub">학생마다 우선순위가 가장 높은 위험 1개로 집계했습니다. '
-        "이 학생을 어느 부서로 보낼지의 기준입니다.</div>",
+        '<div class="card-sub">학생마다 1순위 위험 하나로 집계 — 어느 부서로 보낼지의 기준.</div>',
         unsafe_allow_html=True,
     )
-    ui.donut(category_rows(frame), center_value=f"{total:,}", center_label="학생",
-             key="d_category")
+    # 왼쪽 도넛 카드와 높이를 맞춘다 — 나란히 놓인 카드가 서로 다른 키면 줄이 흔들린다.
+    ui.column_chart(category_rows(frame), height=252)
 
 ui.spacer(6)
 c3, c4 = st.columns(2, gap="large")
@@ -207,51 +196,38 @@ c3, c4 = st.columns(2, gap="large")
 with c3, st.container(border=True):
     st.markdown(
         '<div class="card-title">전공계열별 Dropout 분포</div>'
-        '<div class="card-sub">예측 Dropout 학생이 어느 계열에 몰려 있는지. '
-        "범례의 <b>율</b>은 그 계열 안에서의 비율입니다.</div>",
+        '<div class="card-sub">막대 옆의 <b>율</b>은 그 계열 안에서의 비율.</div>',
         unsafe_allow_html=True,
     )
-    ui.donut(major_rows(frame), center_value=f"{predicted_dropout:,}",
-             center_label="예측 Dropout", key="d_major")
+    ui.bar_chart(major_rows(frame), label_width=132,
+                 hint="막대를 가리키면 나머지는 옅어집니다.")
 
 with c4, st.container(border=True):
     st.markdown(
         '<div class="card-title">재정 · 학업 이슈 비중</div>'
-        '<div class="card-sub">발동한 규칙 <b>건수</b> 기준입니다. '
-        "한 학생이 여러 영역에 걸리면 양쪽에 각각 셉니다 — 부서별 업무량에 가깝습니다.</div>",
+        '<div class="card-sub">발동한 규칙 <b>건수</b> 기준 — 부서별 업무량.</div>',
         unsafe_allow_html=True,
     )
     workload = workload_rows(roster)
     ui.donut(workload, center_value=f"{sum(r['value'] for r in workload):,}",
-             center_label="지원 연결 건", key="d_workload")
+             center_label="지원 연결 건")
 
 # ── 피처 중요도 — 순위라 막대로 둔다 ───────────────────────────────────────
-ui.spacer(6)
-with st.container(border=True):
-    st.markdown(
-        '<div class="card-title">모델이 크게 본 변수 (Feature Importance)</div>'
-        '<div class="card-sub">팀 학습 결과서(reports/model_metrics.json)에서 읽습니다. '
-        "<b>순위</b>라서 도넛이 아니라 막대로 그립니다 — 도넛에 넣으면 조각 크기가 "
-        "아무 뜻도 없어집니다.</div>",
-        unsafe_allow_html=True,
-    )
-    report = model_metrics.load()
-    if report is not None and report.feature_importance:
+# 결과서가 없으면 카드 자체를 그리지 않는다. 빈 자리를 남겨 두면 미완성으로 읽힌다.
+report = model_metrics.load()
+if report is not None and report.feature_importance:
+    ui.spacer(6)
+    with st.container(border=True):
+        st.markdown(
+            '<div class="card-title">모델이 크게 본 변수</div>'
+            '<div class="card-sub">순위라서 도넛이 아니라 막대로 그립니다.</div>',
+            unsafe_allow_html=True,
+        )
         ui.bar_chart(
             [{"label": name, "value": value, "color": COLORS["primary"],
               "display": f"{value:.3f}"}
              for name, value in report.feature_importance[:10]],
             label_width=190,
-        )
-    else:
-        ui.empty_state(
-            "학습 결과서가 아직 없습니다",
-            "reports/model_metrics.json 에 feature_importance 가 들어오면 "
-            "코드 수정 없이 이 자리에 나타납니다.",
-        )
-        st.caption(
-            "형식은 app/README.md 1.5 절에 있습니다. "
-            "지금 화면의 확률은 학습되지 않은 값이라 중요도를 만들어 내지 않습니다."
         )
 
 ui.spacer(12)
