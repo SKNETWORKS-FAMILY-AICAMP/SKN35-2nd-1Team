@@ -1,7 +1,7 @@
 # LightGBM 모델링 결과 리포트
 
 - 작성자: 조현주
-- 작성일: 2026-08-28 (2026-08-29 정정: 하이퍼파라미터 기록 오류 수정 + test 성능 추가)
+- 작성일: 2026-08-28
 - 노트북: `notebooks/modeling_lightgbm.ipynb`
 - 관련 파일: `models/lightgbm.joblib`, `models/best_model.joblib`, `reports/lightgbm_importance.csv`, `reports/3) model_results.csv`
 
