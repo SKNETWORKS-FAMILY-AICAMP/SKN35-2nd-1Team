@@ -932,19 +932,41 @@ def _css() -> str:
 
   /* 지구본 — 콘텐츠가 아니라 배경이다. 오른쪽에 얹고 클릭은 통과시킨다. */
   /* Streamlit 이 컨테이너를 래퍼로 한 겹 더 감싸므로 자식 선택자(>)로는 못 잡는다 */
-  /* 지구본 자리 — 히어로의 **위쪽 가운데-오른쪽**. 표제 블록의 오른편을 채우되
-     아래 칩·띠와는 겹치지 않는 높이까지만 내려온다.
-     화면이 낮으면(노트북·빔프로젝터) 통째로 줄여 아래 요소를 밀지 않는다. */
+  /* 포르투갈 표시의 맥박 — 지구본 위에 얹은 점 하나가 파문처럼 퍼진다.
+     Plotly 가 그린 마커에 직접 걸지 않는 이유는 globe.py 주석에 적어 뒀다. */
+  #sdi-geo-ping {{
+    position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+    border-radius: 50%; background: {RISK_COLORS['HIGH']}; pointer-events: none;
+    box-shadow: 0 0 10px 2px {RISK_COLORS['HIGH']}80;
+  }}
+  #sdi-geo-ping::before, #sdi-geo-ping::after {{
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    border: 2px solid {RISK_COLORS['HIGH']};
+    animation: geo-ping 2.4s cubic-bezier(.15,.6,.3,1) infinite;
+  }}
+  #sdi-geo-ping::after {{ animation-delay: 1.2s; }}
+  @keyframes geo-ping {{
+    0%   {{ opacity: .75; transform: scale(.6); }}
+    70%  {{ opacity: 0;   transform: scale(4.2); }}
+    100% {{ opacity: 0;   transform: scale(4.2); }}
+  }}
+  @media (prefers-reduced-motion: reduce) {{
+    #sdi-geo-ping::before, #sdi-geo-ping::after {{ animation: none; opacity: .35; }}
+  }}
+
+  /* 지구본 자리 — 오른쪽에 크게 앉히고 **화면 밖으로 흘려보낸다.**
+     구를 액자에 맞춰 줄이면 지구본이 아니라 아이콘처럼 보인다. 잘리는 편이 낫다.
+     글자·카드는 모두 이 위(z-index 1)에 얹히므로 읽는 데는 영향이 없다. */
   .st-key-hero > div:has(> .st-key-hero_globe) {{
-    position: absolute; top: 0; left: 33%; z-index: 0;
-    width: clamp(380px, 46%, 820px); pointer-events: none;
-    transform-origin: 50% 20%;
+    position: absolute; top: 50%; right: -14%; transform: translateY(-50%);
+    z-index: 0; width: clamp(560px, 74%, 1240px); pointer-events: none;
+    transform-origin: 80% 50%;
   }}
   @media (max-height: 900px) {{
-    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: scale(.88); }}
+    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: translateY(-50%) scale(.9); }}
   }}
   @media (max-height: 800px) {{
-    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: scale(.76); }}
+    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: translateY(-50%) scale(.78); }}
   }}
   .st-key-hero .st-key-hero_globe {{ position: static; width: 100%; opacity: .96; }}
   /* 구 뒤에 옅은 빛을 깔면 평면 그림이 아니라 떠 있는 물체로 읽힌다.

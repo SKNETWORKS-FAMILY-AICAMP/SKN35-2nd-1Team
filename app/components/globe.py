@@ -252,10 +252,22 @@ AUTOROTATE = True
 ROTATION_PERIOD = 42.0
 
 #: 회전 갱신 주기(ms). 짧을수록 부드럽지만 CPU 를 더 쓴다.
-ROTATION_INTERVAL_MS = 70
+#  지구본을 크게 키운 뒤로 한 틱의 비용이 올라가 100ms 로 늦췄다 (눈에는 차이가 없다).
+ROTATION_INTERVAL_MS = 100
 
 #: 사용자가 직접 돌린 뒤 자동 회전을 다시 시작하기까지의 대기(ms).
 RESUME_AFTER_MS = 4000
+
+#: 포르투갈 표시의 맥박.
+#
+#  세 가지를 시도해 보고 마지막 것만 남았다.
+#    1) Plotly 속성(marker.size)을 매 틱 바꾸기 → 큰 지구본에서 다시 그리는 비용이
+#       두 배가 되어 브라우저가 멎었다.
+#    2) Plotly 가 그린 마커에 CSS 애니메이션 걸기 → 회전이 100ms 마다 SVG 노드를
+#       새로 만들어서 애니메이션이 매번 0% 로 되감겼다(멈춘 것처럼 보인다).
+#    3) **우리가 만든 div 하나**를 마커 위에 얹고 CSS 로 뛰게 한다. 이 노드는 우리가
+#       만들었으니 다시 그려도 살아남는다. 매 틱 하는 일은 좌표를 옮기는 것뿐이라 싸다.
+PING_ID = "sdi-geo-ping"
 
 
 def _autorotate_script() -> str:
@@ -293,6 +305,26 @@ def _autorotate_script() -> str:
     return null;
   }}
 
+  // 포르투갈 마커 위에 얹는 맥박. 한 번 만들고 계속 재사용한다.
+  function ping(gd) {{
+    var host = doc.querySelector('.st-key-hero_globe');
+    if (!host) return;
+    var dot = doc.getElementById('{PING_ID}');
+    if (!dot) {{
+      dot = doc.createElement('div');
+      dot.id = '{PING_ID}';
+      host.appendChild(dot);
+    }}
+    // 마지막 trace 가 실제 마커다(그 앞은 광륜). 뒤쪽으로 돌아가면 그려지지 않는다.
+    var pt = host.querySelector('.scatterlayer .trace:last-of-type path.point');
+    var box = pt && pt.getBoundingClientRect();
+    if (!box || !box.width) {{ dot.style.display = 'none'; return; }}
+    var base = host.getBoundingClientRect();
+    dot.style.display = 'block';
+    dot.style.left = (box.left + box.width / 2 - base.left) + 'px';
+    dot.style.top = (box.top + box.height / 2 - base.top) + 'px';
+  }}
+
   function bindPause(gd) {{
     if (bound === gd) return;
     bound = gd;
@@ -308,11 +340,12 @@ def _autorotate_script() -> str:
     var gd = findGlobe();
     if (!Plotly || !gd || !gd._fullLayout.geo) return;   // 아직 안 그려졌으면 다음 틱에
     bindPause(gd);
+    ping(gd);                                   // 멈춰 있어도 위치는 맞춰 둔다
     if (Date.now() < pausedUntil) return;
     // 안 보이는 탭은 브라우저가 알아서 타이머를 늦추므로 따로 막지 않는다.
     var lon = gd._fullLayout.geo.projection.rotation.lon - STEP;
     if (lon < -180) lon += 360;
-    Plotly.relayout(gd, {{'geo.projection.rotation.lon': lon}});
+    Plotly.relayout(gd, {{'geo.projection.rotation.lon': lon}}).then(function () {{ ping(gd); }});
   }}, {ROTATION_INTERVAL_MS});
 }})();
 </script>

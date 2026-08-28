@@ -62,8 +62,9 @@ def chip(icon: str, value: str, label: str) -> str:
 with st.container(key="hero"):
     # 지구본을 먼저 그린다 — 절대 위치라 순서가 화면에 영향을 주지 않고,
     # 뒤에 오는 글자들이 자연스럽게 그 위에 얹힌다.
+    # 일부러 크게 잡는다. 오른쪽 끝에서 잘리는 편이 액자에 맞춰 줄인 것보다 낫다.
     with st.container(key="hero_globe"):
-        render_globe(height=520)
+        render_globe(height=860)
 
     # ── 상단 바 — 브랜드 왼쪽, 이동 오른쪽 ────────────────────────────────
     brand_col, nav_col = st.columns([1, 1], vertical_alignment="center")
