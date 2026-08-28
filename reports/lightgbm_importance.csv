@@ -1,0 +1,82 @@
+feature,importance
+num__sem2_approval_rate,449
+num__Age at enrollment,330
+remainder__Tuition fees up to date,280
+num__sem1_approval_rate,248
+remainder__financial_risk_score,241
+num__Curricular units 2nd sem (grade),230
+num__Admission grade,189
+num__Previous qualification (grade),182
+num__Curricular units 2nd sem (approved),152
+num__grade_change,139
+num__Curricular units 1st sem (enrolled),127
+cat__Father_education_level_중등교육 이하,125
+num__Curricular units 2nd sem (evaluations),118
+num__Curricular units 1st sem (grade),112
+remainder__Gender,100
+cat__Major_field_사회,98
+cat__Major_field_예술·디자인,98
+num__Curricular units 1st sem (approved),89
+cat__Major_field_교육,86
+cat__Major_field_보건,74
+num__Curricular units 1st sem (credited),69
+cat__Major_field_인문·사회,68
+cat__Mother_occupation_group_무직·기타,62
+num__Curricular units 1st sem (evaluations),59
+cat__Father_occupation_group_농림,55
+cat__Mother_occupation_group_전문·관리직,52
+num__Application order,36
+num__Curricular units 2nd sem (enrolled),35
+cat__Mother_education_level_미상·기타,34
+cat__Major_field_경영,24
+cat__Previous_education_level_Bachelor,24
+remainder__Debtor,21
+cat__Mother_education_level_대학,16
+cat__Father_occupation_group_무직·기타,16
+remainder__Displaced,16
+remainder__Daytime/evening attendance,15
+num__Curricular units 2nd sem (credited),15
+cat__Father_education_level_고등학교,12
+cat__Admission_pathway_직업·기술교육 연계전형,12
+cat__Mother_occupation_group_기술·생산,9
+cat__Father_education_level_대학,9
+remainder__Scholarship holder,8
+cat__Mother_education_level_고등학교,7
+cat__Admission_pathway_일반전형,7
+cat__Major_field_공학·IT,7
+cat__Father_occupation_group_전문·관리직,7
+cat__Mother_occupation_group_사무·서비스,6
+num__Curricular units 1st sem (without evaluations),5
+cat__Major_field_자연·농생명,5
+cat__Mother_education_level_중등교육 이하,5
+cat__Father_occupation_group_사무·서비스,3
+remainder__zero_enrolled_1st_sem,3
+cat__Admission_pathway_고등교육 이수자 전형,3
+cat__Major_field_경영·서비스,2
+cat__Father_education_level_미상·기타,2
+num__Curricular units 2nd sem (without evaluations),1
+cat__Admission_pathway_편입·전과,1
+cat__Previous_education_level_Vocational,1
+cat__Previous_education_level_Secondary,1
+cat__Marital status_6,0
+cat__Marital status_5,0
+cat__Admission_pathway_기타·특수전형,0
+cat__Admission_pathway_특별전형,0
+cat__Marital status_4,0
+cat__Marital status_3,0
+cat__Previous_education_level_Graduate,0
+cat__Previous_education_level_Higher education experience,0
+cat__Previous_education_level_Below secondary,0
+cat__Major_field_공학·자연,0
+cat__Admission_pathway_외국인·국제학생 전형,0
+cat__Admission_pathway_성인학습자 전형,0
+cat__Marital status_1,0
+cat__Marital status_2,0
+cat__Mother_occupation_group_농림,0
+cat__Father_education_level_전문·직업교육,0
+cat__Father_education_level_대학원,0
+cat__Mother_education_level_전문·직업교육,0
+cat__Mother_education_level_대학원,0
+cat__Father_occupation_group_기술·생산,0
+remainder__Educational special needs,0
+remainder__International,0
