@@ -143,13 +143,6 @@ ColumnTransformer가 붙인 접두사이며, 아래 표에서는 가독성을 �
 3. **인구통계/배경 (2위)** — 입학 나이가 상위 10위 안에서 유일한 개인 배경 요인으로,
    그만큼 영향력이 두드러짐
 
-**STEP 8 관련 참고사항**: 세희님의 기존 규칙(A1~A5: 학업, F1~F3: 재정)이 top10 중
-sem2_approval_rate·sem1_approval_rate·Tuition fees·financial_risk_score·grade_change를
-이미 커버하고 있음. Admission grade(7위)·Previous qualification(8위)는 여전히 별도 규칙이
-없으므로, 신규 규칙(A6) 제안 여부는 팀 논의로 결정할 것.
-
-![상위 10개 피처 중요도](lightgbm_importance_top10.png)
-
 ## 5. 저장 산출물
 
 | 파일 | 내용 |
