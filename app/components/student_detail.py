@@ -47,7 +47,8 @@ def render(row, *, key: str) -> None:
 #     그 왕복이 생긴다. 팝업은 표를 그대로 둔 채 위에 얹히므로 왕복이 없다.
 
 
-@st.dialog("학생 상세 분석", width="large")
+# 팝업 안에서 상담 상태를 바꾸므로, 닫을 때 화면을 새로 그려 목록·집계에 반영한다.
+@st.dialog("학생 상세 분석", width="large", on_dismiss="rerun")
 def _modal(row, key: str, extra=None) -> None:
     student, result = row.student, row.result
     level = result.risk_level

@@ -329,16 +329,20 @@ class TestRiskList(unittest.TestCase):
         assert_clean(self, app)
         self.assertIn("HIGH + MEDIUM", text_of(app))
 
-    def test_columns_the_team_asked_for(self):
-        """확률 / 핵심 요인 / 권장 조치 / 상담 진행 상태."""
-        frame = run_page(PAGE_RISK).get("dataframe")[0].value
-        for column in ("중도탈락 확률(%)", "핵심 요인", "권장 조치", "상담 상태"):
-            with self.subTest(column=column):
-                self.assertIn(column, list(frame.columns))
+    def test_cards_carry_what_the_team_asked_for(self):
+        """표가 아니라 카드다 — 확률 링 · 등급 · 핵심 요인 · 상담 상태가 한 줄에 있다."""
+        body = text_of(run_page(PAGE_RISK))
+        for marker in ("rl-ring", "핵심 요인", "rl-status", "미착수"):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, body)
 
     def test_list_is_sorted_by_probability(self):
-        frame = run_page(PAGE_RISK).get("dataframe")[0].value
-        values = list(frame["중도탈락 확률(%)"])
+        """카드에 찍힌 확률이 내림차순인지 — 마크업에서 링의 값을 읽어 확인한다."""
+        import re
+
+        body = text_of(run_page(PAGE_RISK))
+        values = [int(v) for v in re.findall(r"--p:(\d+);", body)]
+        self.assertTrue(values, "확률 링을 찾지 못했습니다")
         self.assertEqual(values, sorted(values, reverse=True))
 
     def test_status_is_stored_and_read_back(self):

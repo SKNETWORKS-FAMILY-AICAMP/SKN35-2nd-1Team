@@ -420,6 +420,96 @@ def _css() -> str:
     width: 40px; text-align: right; color: var(--muted); font-weight: 700;
   }}
 
+  /* ── 집중관리 명단 카드 ────────────────────────────────────────────── */
+  /* 표 대신 카드다. 한 줄에서 알아야 하는 넷 — 확률 · 등급 · 무엇이 위험한가 ·
+     지금 어디까지 갔는가 — 을 격자 없이 읽히게 놓는다. */
+  [class*="st-key-rl_row_"] {{ position: relative; margin-bottom: {s['2']}; }}
+  .rl-card {{
+    display: grid; grid-template-columns: 78px minmax(190px, 1fr) 3fr auto;
+    align-items: center; gap: {s['4']};
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); padding: {s['4']} {s['5']};
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+  }}
+  [class*="st-key-rl_row_"]:hover .rl-card {{
+    border-color: var(--primary-line); background: var(--raised);
+  }}
+  /* 확률 링 — conic-gradient 로 그린다 (SVG 는 Streamlit 이 걸러낸다) */
+  .rl-ring {{
+    position: relative; width: 60px; height: 60px; border-radius: 50%;
+    background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--line-soft) 0);
+    display: flex; align-items: center; justify-content: center;
+  }}
+  .rl-ring::after {{
+    content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--surface);
+  }}
+  [class*="st-key-rl_row_"]:hover .rl-ring::after {{ background: var(--raised); }}
+  .rl-ring span {{
+    position: relative; z-index: 1; font-size: {t['caption']}; font-weight: 800;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }}
+  .rl-who .n {{
+    display: flex; align-items: center; gap: {s['2']};
+    font-size: {t['h3']}; font-weight: 700; color: var(--ink);
+  }}
+  .rl-who .lv {{
+    font-size: {t['label']}; font-weight: 800; letter-spacing: .06em;
+    color: var(--c); background: color-mix(in srgb, var(--c) 18%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--c) 40%, {c['surface']});
+    border-radius: {r['pill']}; padding: 2px {s['2']};
+  }}
+  .rl-who .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: 3px; }}
+  .rl-tags .k {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint);
+  }}
+  .rl-tags .t {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }}
+  .rl-tags .tag {{
+    font-size: {t['caption']}; font-weight: 600; padding: 3px {s['2']};
+    border-radius: var(--radius-sm); white-space: nowrap;
+  }}
+  /* 위험요인은 경고색, 권장 조치는 중립색 — 문제와 처방을 색으로 가른다 */
+  .rl-tags .tag.f {{
+    color: {RISK_COLORS['MEDIUM']}; background: {RISK_SOFT['MEDIUM']};
+    border: 1px solid {RISK_LINE['MEDIUM']};
+  }}
+  /* 조치는 처방이다 — 문제(경고색)와 다른 색으로 둔다 */
+  .rl-tags .tag.a {{
+    color: {c['accent']}; background: {c['accent_soft']}; border: 1px solid {c['accent_line']};
+  }}
+  .rl-status {{ justify-self: end; }}
+
+  /* 카드 전체가 버튼이다 — 투명하게 덮어 어디를 눌러도 팝업이 열린다.
+     Streamlit 이 위젯마다 씌우는 stElementContainer 가 position:relative 라,
+     그 안에서 inset:0 을 잡으면 **버튼 한 줄 높이**밖에 못 덮는다. 컨테이너째 덮는다. */
+  [class*="st-key-rl_row_"] [data-testid="stElementContainer"]:has(.stButton) {{
+    position: absolute !important; inset: 0 !important; height: auto !important;
+    margin: 0 !important; z-index: 2;
+  }}
+  [class*="st-key-rl_row_"] .stButton {{
+    position: static !important; width: 100%; height: 100%; margin: 0;
+  }}
+  [class*="st-key-rl_row_"] .stButton > button {{
+    width: 100%; height: 100%; opacity: 0; padding: 0; border: none;
+    background: transparent; cursor: pointer;
+  }}
+  /* 키보드로 왔을 때는 보이게 — 안 보이는 버튼에 초점이 가면 길을 잃는다 */
+  [class*="st-key-rl_row_"] .stButton > button:focus-visible {{
+    opacity: 1; background: rgba(91,155,232,.12); border: 2px solid var(--primary);
+    border-radius: var(--radius-lg); color: var(--ink);
+  }}
+
+  .rl-page {{
+    font-size: {t['secondary']}; font-weight: 700; color: var(--ink-soft);
+    padding: 8px {s['3']}; font-variant-numeric: tabular-nums;
+  }}
+
+  /* 팝업 안 상담 상태 */
+  .dlg-status {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); margin-top: {s['4']};
+  }}
+
   /* ── 위험 미터 — 속도계 대신 구간이 보이는 가로 미터 ───────────────── */
   .meter-val {{ display: flex; align-items: baseline; gap: {s['3']}; }}
   .meter-val .n {{

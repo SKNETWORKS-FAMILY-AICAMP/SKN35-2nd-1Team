@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import math
 from html import escape
 from urllib.parse import quote
 
@@ -19,10 +20,8 @@ import streamlit as st
 from components import student_detail, ui
 from components.state import cached_roster, start_page
 from components.theme import CATEGORY_COLORS, COLORS, RISK_COLORS
-from rules.recommendation_rules import PRIORITY_LABELS
 from services import followup
 from services.predictor import RISK_CATEGORIES
-from services.prediction_service import get_service
 
 #: 필터 프리셋. 담당자가 실제로 쓰는 두 가지 폭이다.
 #: 학생 목록 화면의 주소. `st.navigation` 이 파일명에서 만드는 경로와 같아야 한다.
@@ -35,35 +34,10 @@ SCOPES: dict[str, tuple[str, ...]] = {
 }
 
 
-def core_factor(row) -> str:
-    """모델이 본 1순위 위험요인. 없으면 규칙 쪽 사유로 대신한다."""
-    if row.result.top_factors:
-        return row.result.top_factors[0].label
-    if row.recommendation.matched:
-        return row.recommendation.matched[0].rule.title
-    return "—"
-
-
-def action_tag(row) -> str:
-    """권장 조치 태그 — `언제 · 어느 영역` 한 줄.
-
-    조치 내용을 다 적으면 표가 읽히지 않는다. 담당자가 줄을 훑을 때 필요한 건
-    **얼마나 급한가**와 **누구 일인가** 둘뿐이고, 나머지는 상세에서 본다.
-    """
-    if not row.recommendation.matched:
-        return "모니터링"
-    top = min(m.rule.priority for m in row.recommendation.matched)
-    labels = row.recommendation.category_labels
-    head = " · ".join(labels[:2])
-    more = f" +{len(labels) - 2}" if len(labels) > 2 else ""
-    return f"{PRIORITY_LABELS.get(top, '검토')} · {head}{more}"
-
-
 # ---------------------------------------------------------------------------
 # 화면
 # ---------------------------------------------------------------------------
 
-service = get_service()
 roster = cached_roster()
 table = followup.load()
 
@@ -140,87 +114,100 @@ if not rows:
     st.stop()
 
 # ── 명단 ───────────────────────────────────────────────────────────────────
-ui.section("우선 처리 명단", "행을 선택하면 상세 분석이 팝업으로 열립니다.")
+# 표(dataframe) 대신 **카드**다. 담당자가 한 줄에서 알아야 하는 것은
+# 확률 · 등급 · 무엇이 위험한가 · 지금 어디까지 갔는가 넷이고,
+# 표의 격자보다 카드가 그 넷을 훨씬 빨리 읽힌다.
 
-import pandas as pd  # noqa: E402  (표를 만들 때만 필요하다)
+#: 한 페이지에 세우는 학생 수. 더 늘리면 스크롤로 카드를 "찾게" 된다.
+PER_PAGE = 8
 
-listing = pd.DataFrame.from_records([
-    {
-        "학번": row.student.student_id,
-        "중도탈락 확률(%)": row.result.dropout_percent,
-        "등급": row.result.risk_level,
-        "핵심 요인": core_factor(row),
-        "권장 조치": action_tag(row),
-        "상담 상태": (f"{followup.MARKS[followup.status_of(table, row.student.student_id)]} "
-                  f"{followup.status_of(table, row.student.student_id)}"),
-        "전공 계열": row.student.major_field,
-    }
-    for row in rows
-])
+pages = max(1, math.ceil(len(rows) / PER_PAGE))
+page = min(int(st.session_state.get("risk_page", 0)), pages - 1)
+st.session_state["risk_page"] = page
+window = rows[page * PER_PAGE:(page + 1) * PER_PAGE]
 
-event = st.dataframe(
-    listing,
-    hide_index=True,
-    width="stretch",
-    height=430,
-    on_select="rerun",
-    selection_mode="single-row",
-    key="risk_table",
-    column_config={
-        "학번": st.column_config.TextColumn("학번", width="small"),
-        "중도탈락 확률(%)": st.column_config.ProgressColumn(
-            "확률", format="%.1f%%", min_value=0.0, max_value=100.0),
-        "등급": st.column_config.TextColumn("등급", width="small"),
-        "권장 조치": st.column_config.TextColumn(
-            "권장 조치", help="언제 · 어느 영역. 구체적인 프로그램은 아래 상세에 있습니다."),
-        "상담 상태": st.column_config.TextColumn(
-            "상담 상태", help="학생을 선택하면 아래에서 바꿀 수 있습니다."),
-    },
-)
+ui.section("우선 처리 명단", f"카드를 누르면 상세 분석이 팝업으로 열립니다 · 전체 {len(rows):,}명")
 
-selected = list(getattr(event.selection, "rows", []) or [])
-if not selected:
+
+def status_control(picked) -> None:
+    """팝업 맨 아래 — 상담 진행 상태. 화면 밖으로 뺐던 것을 여기로 들였다.
+
+    명단 화면에 따로 두면 "학생을 고르고 → 아래로 내려가 상태를 바꾸는" 왕복이 생긴다.
+    상세를 보는 자리에서 바로 남기는 것이 실제 상담 흐름과 같다.
+    """
+    sid = picked.student.student_id
     ui.spacer(10)
-    ui.empty_state(
-        "학생을 선택하지 않았습니다",
-        "위 표에서 한 명을 선택하면 조치·분석·What-if 와 상담 상태 기록이 열립니다.",
-    )
-    st.stop()
+    st.markdown('<div class="dlg-status">상담 진행 상태</div>', unsafe_allow_html=True)
+    with st.container(key="dlg_status"):
+        chosen = st.segmented_control(
+            "상담 진행 상태",
+            options=list(followup.STATUSES),
+            default=followup.status_of(table, sid),
+            format_func=lambda s: f"{followup.MARKS[s]} {s}",
+            label_visibility="collapsed",
+            key=f"dlg_status_{sid}",
+        )
+    # 팝업 안에서 st.rerun() 을 부르면 팝업이 닫힌다. 기록만 하고 닫을 때 새로 그린다
+    # (`st.dialog(on_dismiss="rerun")`).
+    if chosen and chosen != followup.status_of(table, sid):
+        followup.set_status(table, sid, chosen)
+    st.caption(f"학생 목록에서 열기 → {STUDENT_PAGE_URL}?student={quote(sid)}")
 
-row = rows[selected[0]]
-student_id = row.student.student_id
 
-# ── 상담 진행 상태 — 이 앱이 유일하게 쓰는 데이터 ──────────────────────────
-ui.section(f"{student_id} 처리", "상태를 바꾸면 이 기기에 바로 기록됩니다.")
+for row in window:
+    student = row.student
+    sid = student.student_id
+    level = row.result.risk_level
+    percent = row.result.dropout_percent
+    status = followup.status_of(table, sid)
 
-current = followup.status_of(table, student_id)
-status_col, link_col = st.columns([2.2, 1], gap="large")
-with status_col:
-    chosen = st.radio(
-        "상담 진행 상태",
-        options=list(followup.STATUSES),
-        index=list(followup.STATUSES).index(current),
-        horizontal=True,
-        format_func=lambda s: f"{followup.MARKS[s]} {s}",
-        key=f"status_{student_id}",
-    )
-    if chosen != current:
-        followup.set_status(table, student_id, chosen)
-        st.rerun()
-with link_col:
-    ui.spacer(24)
-    st.link_button("학생 목록에서 열기 →",
-                   f"{STUDENT_PAGE_URL}?student={quote(student_id)}", width="stretch")
+    # 요인과 조치가 같은 말을 반복하면 카드가 시끄러워진다 — 겹치는 것은 한 번만.
+    factors = [f.label for f in row.result.top_factors[:3]]
+    if not factors:
+        factors = [m.rule.title for m in row.recommendation.matched[:3]]
+    seen = set(factors)
+    actions = [m.rule.title for m in row.recommendation.matched
+               if m.rule.title not in seen][:2]
 
-ui.spacer(12)
+    with st.container(key=f"rl_row_{sid}"):
+        st.markdown(
+            f"""<div class="rl-card">
+      <div class="rl-ring" style="--p:{percent:.0f};--c:{RISK_COLORS[level]}">
+        <span>{percent:.0f}%</span></div>
+      <div class="rl-who">
+        <div class="n">{escape(sid)}
+          <span class="lv" style="--c:{RISK_COLORS[level]}">{level}</span></div>
+        <div class="d">{escape(student.major_field)} ·
+          {'주간' if student.attendance == 1 else '야간'}</div>
+      </div>
+      <div class="rl-tags">
+        <div class="k">핵심 요인</div>
+        <div class="t">{"".join(f'<span class="tag f">{escape(x)}</span>' for x in factors)}
+          {"".join(f'<span class="tag a">{escape(x)}</span>' for x in actions)}</div>
+      </div>
+      <div class="rl-status">{ui.followup_pill_html(status)}</div>
+    </div>""",
+            unsafe_allow_html=True,
+        )
+        # 카드 전체를 덮는 투명 버튼. 카드가 곧 버튼이라 따로 "열기" 를 두지 않는다.
+        if st.button("상세 열기", key=f"rl_open_{sid}", width="stretch"):
+            student_detail.open_modal(row, key="risk", extra=status_control)
 
-# 학생 목록과 **같은 팝업**을 부른다. 두 곳에서 다르게 보여줄 이유가 없다.
-if st.session_state.get("_risk_detail_open") != student_id:
-    st.session_state["_risk_detail_open"] = student_id
-    student_detail.open_modal(row, key="risk")
+# ── 페이지 이동 ────────────────────────────────────────────────────────────
+if pages > 1:
+    ui.spacer(6)
+    with st.container(key="rl_pager", horizontal=True, gap="small",
+                      horizontal_alignment="center"):
+        if st.button("← 이전", key="rl_prev", disabled=page == 0):
+            st.session_state["risk_page"] = page - 1
+            st.rerun()
+        st.markdown(f'<div class="rl-page">{page + 1} / {pages}</div>',
+                    unsafe_allow_html=True)
+        if st.button("다음 →", key="rl_next", disabled=page >= pages - 1):
+            st.session_state["risk_page"] = page + 1
+            st.rerun()
 
-if st.button(f"{student_id} 상세 분석 열기", width="stretch", type="primary",
-             key="reopen_risk_detail"):
-    student_detail.open_modal(row, key="risk")
+st.caption("학생을 선택하면 예측 분석·맞춤 조치를 팝업으로 확인할 수 있습니다. "
+           "상담 진행 상태도 팝업 안에서 바로 남깁니다.")
 
 _KEEP = CATEGORY_COLORS  # 카테고리 색을 이 모듈 경유로도 얻게 남긴다.
