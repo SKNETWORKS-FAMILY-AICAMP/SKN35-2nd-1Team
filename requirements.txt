@@ -1,14 +1,10 @@
 pandas>=2.2.3
 numpy>=2.1.0
-scikit-learn>=1.6.1
+scikit-learn==1.9.0
 matplotlib>=3.9.2
 seaborn>=0.13.2
 xgboost>=2.1.0
 lightgbm>=4.5.0
 imbalanced-learn>=0.13.0
 jupyter>=1.0.0
-
-# --- Streamlit 서비스(app/) 전용 ---------------------------------------
-streamlit>=1.49          # st.navigation 멀티페이지 · width="stretch" API
-plotly>=5.22             # 게이지 · 분포 차트 · 시작화면 지구본
-joblib>=1.4              # models/preprocessor.joblib 및 최종 모델 로드
+tensorflow>=2.16
