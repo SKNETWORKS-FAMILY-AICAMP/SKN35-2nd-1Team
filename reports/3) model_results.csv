@@ -1,6 +1,6 @@
 model,team_member,threshold,recall,f1,test_recall,test_f1
-LightGBM,조현주,0.5,0.8596,0.8046,0.8345,0.8215
-MLP,조현주,0.4,0.8421,0.8040,,
+LightGBM,조현주,0.5,0.8596,0.8046,0.838,0.8165
+MLP,조현주,0.4,0.8421,0.804,,
 Logistic Regression,고은하,0.4,0.8134,0.8091,,
 Random Forest,고은하,0.55,0.8099,0.8273,,
 Random Forest (threshold=0.5 재검증),고은하,0.5,0.8386,0.8115,,
