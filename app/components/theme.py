@@ -165,9 +165,15 @@ def _css() -> str:
       var(--canvas);
     background-attachment: fixed;
   }}
+  /* 폭을 가두지 않는다. 발표 화면이 넓을수록 표와 차트가 넓어지는 편이 낫고,
+     읽는 폭이 중요한 문장(히어로 설명·페이지 부제)은 각자 max-width 를 갖고 있다. */
   .block-container {{
-    padding-top: {s['6']}; padding-bottom: {s['16']};
-    max-width: 1380px;
+    padding: {s['6']} {s['8']} {s['16']} {s['8']};
+    max-width: 100%;
+  }}
+  /* 사이드바가 없는 표지에서는 좌우 여백을 조금 더 준다 — 사진이 끝까지 붙으면 답답하다 */
+  [data-testid="stAppViewContainer"]:not(:has([data-testid="stSidebar"])) .block-container {{
+    padding-left: {s['12']}; padding-right: {s['12']};
   }}
 
   /* Streamlit 기본 상단 장식·헤더를 걷어낸다 (발표 화면에 불필요) */
