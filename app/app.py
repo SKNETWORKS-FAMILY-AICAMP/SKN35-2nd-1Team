@@ -5,12 +5,10 @@
 
 이 파일은 **전역 설정과 라우팅만** 한다. 화면 하나하나는 views/ 아래 독립된 파일이다.
 
-    views/0_home.py        시작화면 (서비스 소개 · 데이터 출처 · 확장 가능성)
-    views/1_dashboard.py   전체 현황 대시보드
-    views/2_prediction.py  학생 1명 위험 예측 — 안 A (한 화면)
-    views/5_prediction_steps.py  학생 1명 위험 예측 — 안 B (단계형)
-    views/3_students.py    학생 목록 · 상세
-    views/4_model.py       모델 성능 (학습 결과서 + 정답 라벨 채점)
+    views/0_home.py        메인 (소개 · 핵심 수치 · 바로가기)
+    views/1_dashboard.py   대시보드 (규모 → 성격, 도넛 넷)
+    views/2_students.py    학생 목록 (좁히기 → 상세 → 직접 입력)
+    views/3_risk_list.py   집중관리 대상 (우선 처리 명단 · 상담 진행 상태)
 
     components/  디자인 시스템(theme) · 공통 UI · 지구본 · 상태
     services/    예측 계층 (더미 ↔ 실제 모델 교체 지점)
@@ -36,9 +34,7 @@ import streamlit as st
 from components.state import (
     PAGE_DASHBOARD,
     PAGE_HOME,
-    PAGE_MODEL,
-    PAGE_PREDICTION,
-    PAGE_PREDICTION_STEPS,
+    PAGE_RISK,
     PAGE_STUDENTS,
     roster_source,
 )
@@ -56,13 +52,8 @@ st.set_page_config(
 PAGES = [
     st.Page(PAGE_HOME, title="시작", icon=":material/home:", default=True),
     st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/monitoring:"),
-    # 예측 화면은 지금 **두 안이 나란히** 있다 (팀원 비교용). 정해지면 한쪽을 지운다.
-    st.Page(PAGE_PREDICTION, title="학생 위험 예측 (A · 한 화면)",
-            icon=":material/person_search:"),
-    st.Page(PAGE_PREDICTION_STEPS, title="학생 위험 예측 (B · 단계형)",
-            icon=":material/conversion_path:"),
     st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/table_rows:"),
-    st.Page(PAGE_MODEL, title="모델 성능", icon=":material/analytics:"),
+    st.Page(PAGE_RISK, title="집중관리 대상", icon=":material/priority_high:"),
 ]
 
 

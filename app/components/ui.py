@@ -9,14 +9,17 @@ from __future__ import annotations
 
 from html import escape
 
+import plotly.graph_objects as go
 import streamlit as st
 
 from components.theme import (
     CATEGORY_COLORS,
     CLASS_COLORS,
     COLORS,
+    PLOTLY_CONFIG,
     RISK_COLORS,
     RISK_SOFT,
+    style_figure,
 )
 from rules.recommendation_rules import (
     PRIORITY_LABELS,
@@ -268,6 +271,90 @@ def probability_split(result: PredictionResult) -> None:
         </div>"""
     )
 
+
+# ---------------------------------------------------------------------------
+# 도넛 — 전체 중 비중을 보여줄 때만 쓴다
+# ---------------------------------------------------------------------------
+
+def donut(
+    rows: list[dict],
+    *,
+    center_value: str,
+    center_label: str,
+    key: str,
+    height: int = 250,
+) -> None:
+    """`{label, value, color, display?}` 를 도넛 하나 + 아래 범례로 그린다.
+
+    **비율(부분의 합이 전체)일 때만 쓴다.** 순위나 비율(rate)을 도넛에 넣으면
+    조각 크기가 아무 뜻도 없게 된다 — 그런 값은 `bar_chart()` 가 맞다.
+
+    범례를 직접 그리는 이유: Plotly 범례는 이 높이에서 눌려 잘린다(우선순위 표에서
+    이미 겪었다). 직접 그리면 값·비율을 같이 적을 수 있어 읽기도 낫다.
+    """
+    rows = [r for r in rows if r.get("value", 0) > 0]
+    if not rows:
+        empty_state("표시할 값이 없습니다.")
+        return
+
+    total = sum(r["value"] for r in rows)
+    figure = go.Figure(
+        go.Pie(
+            labels=[str(r["label"]) for r in rows],
+            values=[r["value"] for r in rows],
+            hole=0.68,
+            sort=False,
+            direction="clockwise",
+            textinfo="none",
+            marker=dict(
+                colors=[r.get("color", COLORS["primary"]) for r in rows],
+                line=dict(color=COLORS["surface"], width=2),
+            ),
+            hovertemplate="%{label}<br>%{value:,}명 · %{percent}<extra></extra>",
+        )
+    )
+    figure.add_annotation(
+        text=(f"<b style='font-size:1.6rem'>{escape(center_value)}</b><br>"
+              f"<span style='font-size:.72rem'>{escape(center_label)}</span>"),
+        showarrow=False, font=dict(color=COLORS["ink"]),
+    )
+    st.plotly_chart(
+        style_figure(figure, height=height, show_legend=False, grid="none"),
+        width="stretch", config=PLOTLY_CONFIG, key=key,
+    )
+
+    items = "".join(
+        f'<div class="dn-item"><span class="sw" style="background:{r.get("color", COLORS["primary"])}"></span>'
+        f'<span class="lb">{escape(str(r["label"]))}</span>'
+        f'<span class="vl ds-num">{escape(str(r.get("display", f"{r["value"]:,}명")))}</span>'
+        f'<span class="pc ds-num">{r["value"] / total * 100:.0f}%</span></div>'
+        for r in rows
+    )
+    _html(f'<div class="dn-legend">{items}</div>')
+
+
+# ---------------------------------------------------------------------------
+# 상담 진행 상태
+# ---------------------------------------------------------------------------
+
+#: 단계별 색. 진행될수록 진해진다 — 색만으로 구분하지 않게 기호를 항상 함께 쓴다.
+FOLLOWUP_COLORS: dict[str, str] = {
+    "미착수": COLORS["faint"],
+    "연락함": COLORS["medium"] if "medium" in COLORS else RISK_COLORS["MEDIUM"],
+    "상담완료": COLORS["primary"],
+    "종결": RISK_COLORS["LOW"],
+}
+
+
+def followup_pill_html(status: str) -> str:
+    from services import followup
+
+    color = FOLLOWUP_COLORS.get(status, COLORS["faint"])
+    mark = followup.MARKS.get(status, "○")
+    return (
+        f'<span class="pill pill-neutral" style="color:{color};border-color:{color}33">'
+        f"{escape(mark)} {escape(status)}</span>"
+    )
 
 # ---------------------------------------------------------------------------
 # 위험요인

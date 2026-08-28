@@ -10,11 +10,13 @@ from components import ui
 from components.globe import render as render_globe
 from components.state import (
     PAGE_DASHBOARD,
-    PAGE_PREDICTION,
+    PAGE_RISK,
     PAGE_STUDENTS,
+    roster_size,
     roster_source,
     start_page,
 )
+from services import model_metrics
 from components.theme import CATEGORY_COLORS, COLORS, RISK_COLORS
 from services.prediction_service import get_service
 from utils.schema import dropped_columns, final_feature_count, target_definition
@@ -61,6 +63,47 @@ ui.prototype_banner(
         if is_real else ""
     ),
 )
+
+# ---------------------------------------------------------------------------
+# 1.5 핵심 수치 + 바로가기 — 첫 화면에서 바로 움직일 수 있게
+# ---------------------------------------------------------------------------
+
+ui.spacer(16)
+
+report = model_metrics.load()
+best = report.best if report is not None else None
+f1 = best.value("f1") if best is not None else None
+size = roster_size()
+
+ui.kpi_row(
+    [
+        {"label": "전체 학생", "value": f"{size:,}" if size else "—", "unit": "명",
+         "caption": "명단에 올라온 인원", "accent": COLORS["primary"]},
+        # 학습 모델이 없는 동안에는 **숫자를 만들어 내지 않는다.** 없는 성능을 첫 화면에
+        # 띄우는 것이 이 발표에서 가장 위험하다.
+        {"label": "모델 정확도 · F1",
+         "value": f"{f1:.3f}" if f1 is not None else "연결 대기",
+         "caption": (best.name if f1 is not None else "학습 결과서가 들어오면 표시됩니다"),
+         "accent": COLORS["ink"] if f1 is not None else COLORS["faint"]},
+        {"label": "원본 데이터", "value": "4,424", "unit": "명",
+         "caption": "UCI · 포르투갈 고등교육기관", "accent": CATEGORY_COLORS["adaptation"]},
+    ],
+    columns=3,
+)
+
+ui.spacer(14)
+ui.section("바로 가기")
+go_dashboard, go_students, go_risk = st.columns(3, gap="medium")
+with go_dashboard:
+    if st.button("대시보드", width="stretch", type="primary", key="home_dashboard"):
+        st.switch_page(PAGE_DASHBOARD)
+with go_students:
+    if st.button("학생 목록", width="stretch", key="home_students"):
+        st.switch_page(PAGE_STUDENTS)
+with go_risk:
+    if st.button("집중관리 대상", width="stretch", key="home_risk"):
+        st.switch_page(PAGE_RISK)
+
 
 # ---------------------------------------------------------------------------
 # 2. 파이프라인 — 이 제품이 무엇을 하는지 한 줄로
@@ -236,18 +279,4 @@ st.caption(
 # 5. 이동
 # ---------------------------------------------------------------------------
 
-ui.section("바로 보기")
-
-# 발표 동선을 버튼 세 개로 고정한다. 세 번째는 **집중관리 대상만 켠 채로** 명단에
-# 들어가는 길이다 — 학생 ID 를 박아 두면 데이터가 바뀌는 순간 데모가 죽는다.
-go_dashboard, go_focus, go_prediction = st.columns(3, gap="medium")
-with go_dashboard:
-    if st.button("전체 현황 대시보드", width="stretch", type="primary"):
-        st.switch_page(PAGE_DASHBOARD)
-with go_focus:
-    if st.button("집중관리 대상부터 보기", width="stretch"):
-        st.session_state["roster_focus_only"] = True
-        st.switch_page(PAGE_STUDENTS)
-with go_prediction:
-    if st.button("학생 한 명 예측해 보기", width="stretch"):
-        st.switch_page(PAGE_PREDICTION)
+# 바로가기는 화면 위쪽(1.5 절)에 있다. 아래까지 읽은 사람을 위해 한 번 더 놓는다.

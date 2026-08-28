@@ -17,11 +17,8 @@ from utils.feature_mapping import StudentInput
 #: 화면 파일 경로 — st.switch_page 가 이 값을 쓴다. 파일을 옮기면 여기만 고친다.
 PAGE_HOME = "views/0_home.py"
 PAGE_DASHBOARD = "views/1_dashboard.py"
-PAGE_PREDICTION = "views/2_prediction.py"
-PAGE_STUDENTS = "views/3_students.py"
-PAGE_MODEL = "views/4_model.py"
-#: 예측 화면 B안 — A/B 비교가 끝나면 한쪽과 함께 이 상수도 지운다.
-PAGE_PREDICTION_STEPS = "views/5_prediction_steps.py"
+PAGE_STUDENTS = "views/2_students.py"
+PAGE_RISK = "views/3_risk_list.py"
 
 
 @st.cache_resource(show_spinner="학생 명단을 예측하는 중입니다…")
@@ -62,17 +59,23 @@ def cached_export(student_ids: tuple[str, ...]) -> tuple[bytes, bytes, int]:
     )
 
 
-def cached_evaluation() -> tuple[list[int], list[float]]:
-    """채점용 (정답 라벨, 예측 확률). 순서는 명단과 같다.
+@st.cache_data(show_spinner=False)
+def roster_size() -> int:
+    """명단 인원. **예측하지 않고 줄 수만 센다.**
 
-    명단은 이미 예측을 끝냈으므로 **다시 예측하지 않는다.** 여기서 새로 predict 하면
-    화면이 보는 확률과 채점하는 확률이 갈라질 수 있고, 그러면 성능 화면이 다른 모델을
-    채점하는 셈이 된다.
+    시작 화면이 이 숫자 하나 때문에 885명 예측을 시작하면 첫 화면이 느려진다.
+    (그 이유로 `roster_source()` 도 파일 존재만 본다.)
     """
-    roster = cached_roster()
-    if not roster.has_labels:
-        return [], []
-    return list(roster.labels), [row.result.dropout_probability for row in roster.rows]
+    from utils.real_data import available_file
+
+    path = available_file()
+    if path is None:
+        return 0
+    try:
+        with path.open("rb") as f:
+            return max(sum(1 for _ in f) - 1, 0)   # 헤더 한 줄을 뺀다
+    except OSError:
+        return 0
 
 
 def roster_source() -> tuple[str, bool]:
@@ -98,10 +101,11 @@ def start_page(title: str, subtitle: str = "", meta: str = "") -> None:
         ui.page_header(title, subtitle, meta)
 
 
-def send_to_prediction(student: StudentInput) -> None:
-    """'학생 목록'에서 고른 학생을 예측 화면으로 넘긴다.
+def send_to_form(student: StudentInput) -> None:
+    """고른 학생을 '직접 입력' 폼에 채워 넣도록 요청만 남긴다.
 
-    위젯 값을 직접 바꾸지 않고 요청만 남긴다 — 예측 화면이 자기 위젯을 만들기 전에
-    이 값을 읽어서 반영한다. (위젯 생성 후 key 를 바꾸면 Streamlit 이 예외를 던진다.)
+    위젯 값을 그 자리에서 바꾸지 않는 이유: **위젯이 만들어진 뒤 session_state 를
+    건드리면 Streamlit 이 예외를 던진다.** 폼은 자기 위젯을 만들기 전에 이 요청을
+    읽어서 반영한다.
     """
     st.session_state["prefill_student"] = student

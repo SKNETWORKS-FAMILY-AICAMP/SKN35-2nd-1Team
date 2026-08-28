@@ -37,9 +37,10 @@ WHATIF_NOTE = (
     "내려간다는 뜻으로 읽으면 안 됩니다."
 )
 
-#: 조작 대상. **화면 입력으로 바꿀 수 있고 지원 프로그램과 직접 이어지는 값**만 고른다.
-#  나이·전형처럼 되돌릴 수 없는 값을 슬라이더로 만들면 시뮬레이션이 공상이 된다.
-CONTROLS = ("sem2_approved", "sem2_grade", "tuition_fees_up_to_date", "scholarship_holder")
+#: 조작 대상 셋. **화면 입력으로 바꿀 수 있고 지원 프로그램과 직접 이어지는 값**만 고른다.
+#  나이·전형처럼 되돌릴 수 없는 값을 슬라이더로 만들면 시뮬레이션이 공상이 되고,
+#  손잡이가 많아지면 무엇 때문에 바뀌었는지가 흐려진다.
+CONTROLS = ("sem2_approved", "sem2_grade", "tuition_fees_up_to_date")
 
 
 def _reset(prefix: str) -> None:
@@ -106,18 +107,12 @@ def render(
                 value=student.tuition_fees_up_to_date == 1,
                 key=prefix + "tuition_fees_up_to_date",
             )
-            scholarship = st.toggle(
-                "장학금 수혜",
-                value=student.scholarship_holder == 1,
-                key=prefix + "scholarship_holder",
-            )
 
     simulated = replace(
         student,
         sem2_approved=int(approved),
         sem2_grade=float(grade),
         tuition_fees_up_to_date=int(tuition),
-        scholarship_holder=int(scholarship),
     )
 
     if simulated == student:

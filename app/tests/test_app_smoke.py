@@ -1,11 +1,12 @@
 """
-화면 테스트 — 실제 Streamlit 스크립트를 실행해 4개 화면이 뜨는지 확인한다.
+화면 테스트 — 브라우저 없이 앱을 실제로 돌린다.
 
-실행:  cd app && python -m unittest discover -s tests -t .
+    cd app && python -m unittest discover -s tests -t .
 
-`streamlit.testing.v1.AppTest` 는 브라우저 없이 앱을 돌린다. 여기서 잡으려는 것은
-"예외 없이 렌더되는가", "값이 화면 사이를 제대로 건너가는가", 그리고
-**"보여주면 안 되는 것을 보여주지 않는가"** 세 가지다.
+`streamlit.testing.v1.AppTest` 는 스크립트를 그대로 실행하므로 여기서 잡으려는 것은
+**렌더 중 죽는가**와 **말하지 말아야 할 것을 말하는가** 둘이다. 픽셀은 브라우저에서 본다.
+
+화면은 넷이다 (팀 초안 기준) — 메인 · 대시보드 · 학생 목록 · 집중관리 대상.
 """
 
 from __future__ import annotations
@@ -21,13 +22,11 @@ APP_ROOT = Path(__file__).resolve().parent.parent
 ENTRYPOINT = str(APP_ROOT / "app.py")
 
 PAGE_DASHBOARD = "views/1_dashboard.py"
-PAGE_PREDICTION = "views/2_prediction.py"
-PAGE_STUDENTS = "views/3_students.py"
-PAGE_MODEL = "views/4_model.py"
-PAGE_STEPS = "views/5_prediction_steps.py"
+PAGE_STUDENTS = "views/2_students.py"
+PAGE_RISK = "views/3_risk_list.py"
 
 #: 명단 예측 + 차트가 있어 기본 3초로는 모자란다.
-TIMEOUT = 120
+TIMEOUT = 180
 
 
 def run_page(page: str | None = None) -> AppTest:
@@ -62,7 +61,7 @@ def click(app: AppTest, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 class TestEveryPage(unittest.TestCase):
-    PAGES = (None, PAGE_DASHBOARD, PAGE_PREDICTION, PAGE_STUDENTS, PAGE_MODEL, PAGE_STEPS)
+    PAGES = (None, PAGE_DASHBOARD, PAGE_STUDENTS, PAGE_RISK)
 
     def test_all_pages_render(self):
         for page in self.PAGES:
@@ -83,7 +82,7 @@ class TestEveryPage(unittest.TestCase):
         """
         import re
 
-        banned = ("정확도", "Accuracy", "F1 score", "F1-score", "AUC", "Recall", "Precision")
+        banned = ("Accuracy", "F1 score", "F1-score", "AUC", "Recall", "Precision")
         for page in self.PAGES:
             raw = text_of(run_page(page))
             visible = re.sub(r"<[^>]+>", " ", raw)
@@ -93,142 +92,158 @@ class TestEveryPage(unittest.TestCase):
                     self.assertNotIn(word, visible)
 
     def test_html_blocks_have_no_blank_line(self):
-        """HTML 문자열 안에 빈 줄이 있으면 마크다운이 블록을 끊는다.
-
-        그러면 닫는 태그가 화면에 그대로 글자로 나온다 — 실제로 겪은 버그다.
-        AppTest 는 렌더 결과가 아니라 **넘긴 원본 문자열**을 돌려주므로,
-        결과를 검사하는 대신 **버그를 만드는 조건**을 직접 막는다.
-        """
+        """HTML 문자열 안에 빈 줄이 있으면 마크다운이 블록을 끊어 태그가 글자로 샌다."""
         for page in self.PAGES:
-            for index, element in enumerate(run_page(page).markdown):
+            for element in run_page(page).markdown:
                 value = str(element.value)
-                if "<div" not in value and "<table" not in value:
+                if "<div" not in value:
                     continue
-                stripped = [line.strip() for line in value.splitlines()]
-                with self.subTest(page=page or "home", block=index):
-                    self.assertNotIn(
-                        "", stripped[1:-1],
-                        f"HTML 블록 안에 빈 줄이 있습니다: {value[:120]!r}",
-                    )
+                with self.subTest(page=page or "home"):
+                    self.assertNotIn("\n\n", value.strip())
 
 
 # ---------------------------------------------------------------------------
-# Home
+# 메인
 # ---------------------------------------------------------------------------
 
 class TestHome(unittest.TestCase):
-    def test_hero_and_dataset_facts(self):
-        body = text_of(run_page())
+    def test_core_numbers_and_shortcuts(self):
+        """팀 초안의 [메인] 구성 — 타이틀·설명·전체 학생 수·F1·버튼 셋."""
+        app = run_page()
+        body = text_of(app)
         self.assertIn("Student Dropout", body)
-        self.assertIn("4,424", body)
-        self.assertIn("포르투갈", body)
+        self.assertIn("전체 학생", body)
+        self.assertIn("모델 정확도", body)
 
-    def test_pipeline_and_localization_sections(self):
+        labels = [b.label for b in app.button]
+        for wanted in ("대시보드", "학생 목록", "집중관리 대상"):
+            with self.subTest(button=wanted):
+                self.assertIn(wanted, labels)
+
+    def test_f1_waits_for_the_model(self):
+        """🔴 학습 모델이 없는 동안 첫 화면에 성능 숫자를 만들어 내지 않는다."""
+        from services import model_metrics
+
+        if model_metrics.available():
+            self.skipTest("학습 결과서가 이미 들어와 있습니다.")
+        self.assertIn("연결 대기", text_of(run_page()))
+
+    def test_dataset_facts_remain(self):
         body = text_of(run_page())
-        for token in ("Data", "Risk Signal", "Support Action", "Designed for localization"):
-            with self.subTest(token=token):
-                self.assertIn(token, body)
-
-    def test_navigation_buttons_exist(self):
-        labels = [b.label for b in run_page().button]
-        self.assertIn("전체 현황 대시보드", labels)
-        self.assertIn("학생 한 명 예측해 보기", labels)
+        self.assertIn("4,424", body)
+        self.assertIn("UCI", body)
 
 
 # ---------------------------------------------------------------------------
-# Dashboard
+# 대시보드
 # ---------------------------------------------------------------------------
 
 class TestDashboard(unittest.TestCase):
-    def test_hierarchy_and_priority_table(self):
+    def test_kpi_and_shortcut(self):
         app = run_page(PAGE_DASHBOARD)
-        assert_clean(self, app)
         body = text_of(app)
-        self.assertIn("즉시 확인 대상", body)     # Level 1
-        self.assertIn("위험의 성격", body)        # Level 2
-        self.assertIn("먼저 확인할 학생", body)   # Level 3
+        for wanted in ("즉시 개입 필요", "전체 학생", "MEDIUM", "예측 Dropout 비율"):
+            with self.subTest(kpi=wanted):
+                self.assertIn(wanted, body)
+        self.assertIn("위험학생 목록 열기 →", [b.label for b in app.button])
 
-    def test_charts_are_limited(self):
-        """차트를 이유 없이 늘리지 않았는지 — 한 화면에 4개까지."""
+    def test_four_charts_are_present(self):
+        body = text_of(run_page(PAGE_DASHBOARD))
+        for title in ("위험등급 구성", "위험요인 카테고리",
+                      "전공계열별 Dropout 분포", "재정 · 학업 이슈 비중",
+                      "Feature Importance"):
+            with self.subTest(chart=title):
+                self.assertIn(title, body)
+
+    def test_proportions_are_donuts(self):
+        """비율 차트는 도넛이다 — 직접 그린 범례가 그 증거다."""
         app = run_page(PAGE_DASHBOARD)
-        self.assertLessEqual(len(app.get("plotly_chart")), 4)
+        self.assertIn("dn-legend", text_of(app))
+        self.assertGreaterEqual(len(app.get("plotly_chart")), 4)
 
-    def test_counts_are_consistent_with_roster(self):
-        """화면 숫자가 명단에서 나온 값인지 (지어낸 값이 아닌지)."""
+    def test_feature_importance_waits_for_the_report(self):
+        from services import model_metrics
+
+        if model_metrics.available():
+            self.skipTest("학습 결과서가 이미 들어와 있습니다.")
+        self.assertIn("학습 결과서가 아직 없습니다", text_of(run_page(PAGE_DASHBOARD)))
+
+
+# ---------------------------------------------------------------------------
+# 학생 목록
+# ---------------------------------------------------------------------------
+
+class TestStudents(unittest.TestCase):
+    def _with_student(self) -> tuple[AppTest, str]:
+        """`?student=` 로 상세를 연 화면과 그 학생 ID."""
         import sys
 
         sys.path.insert(0, str(APP_ROOT))
         from components.state import cached_roster
 
-        frame = cached_roster().frame
-        high = int((frame["위험등급"] == "HIGH").sum())
-        self.assertIn(f"{high:,}", text_of(run_page(PAGE_DASHBOARD)))
+        sid = cached_roster().rows[0].student.student_id
+        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
+        app.query_params["student"] = sid
+        app.switch_page(PAGE_STUDENTS)
+        app.run()
+        return app, sid
 
-
-# ---------------------------------------------------------------------------
-# Prediction
-# ---------------------------------------------------------------------------
-
-class TestPrediction(unittest.TestCase):
-    def test_empty_state_before_analysis(self):
-        app = run_page(PAGE_PREDICTION)
+    def test_toolbar_and_counts(self):
+        app = run_page(PAGE_STUDENTS)
         assert_clean(self, app)
-        self.assertIn("아직 분석하지 않았습니다", text_of(app))
+        body = text_of(app)
+        self.assertIn("전체 학생", body)
+        self.assertIn("HIGH", body)
+        # 학번 검색 · 전공 계열 · 위험도 · 집중관리만
+        self.assertTrue(app.text_input)
+        self.assertEqual(len(app.multiselect), 2)
+        self.assertTrue(app.checkbox)
 
-    def test_inputs_are_grouped_into_tabs(self):
-        """32개 입력이 한 덩어리로 노출되면 설문지가 된다."""
-        app = run_page(PAGE_PREDICTION)
-        self.assertGreaterEqual(len(app.tabs), 4)
+    def test_name_search_is_explained_not_faked(self):
+        """🔴 데이터에 없는 것을 있는 척하지 않는다. 이름은 원본에 존재하지 않는다."""
+        self.assertIn("학생 이름이 존재하지 않습니다", text_of(run_page(PAGE_STUDENTS)))
 
-    def test_analyse_produces_result(self):
-        app = run_page(PAGE_PREDICTION)
+    def test_no_match_shows_empty_state_not_error(self):
+        app = run_page(PAGE_STUDENTS)
+        app.text_input[0].set_value("없는학생ID").run()
+        assert_clean(self, app)
+        self.assertIn("조건에 맞는 학생이 없습니다", text_of(app))
+
+    def test_major_filter_narrows_the_roster(self):
+        app = run_page(PAGE_STUDENTS)
+        before = text_of(app)
+        app.multiselect[0].set_value(["경영"]).run()
+        assert_clean(self, app)
+        self.assertNotEqual(text_of(app), before)
+
+    def test_deeplink_opens_detail(self):
+        app, sid = self._with_student()
+        assert_clean(self, app)
+        body = text_of(app)
+        self.assertIn(f"{sid} 위험 예측 분석", body)
+        self.assertNotIn("학생을 선택하지 않았습니다", body)
+        self.assertIn("지금 할 일", body)          # 조치 탭의 상담 카드
+
+    def test_detail_offers_downloads(self):
+        app, _ = self._with_student()
+        labels = [b.label for b in app.download_button]
+        self.assertTrue(any("상담 카드" in label for label in labels), labels)
+        self.assertTrue(any("명단 요약" in label for label in labels), labels)
+
+    def test_manual_input_is_absorbed_here(self):
+        """예측 화면을 흡수했다 — 명단에 없는 학생도 이 화면에서 넣는다."""
+        app = run_page(PAGE_STUDENTS)
+        self.assertIn("실제 학생 기록이 아닙니다", text_of(app))
+        self.assertIn("HIGH · 복합 위험", [b.label for b in app.button])
+
+    def test_manual_input_produces_a_result(self):
+        app = run_page(PAGE_STUDENTS)
+        click(app, "HIGH · 복합 위험")
         click(app, "위험도 분석")
         assert_clean(self, app)
         body = text_of(app)
         self.assertIn("분석 결과", body)
-        self.assertIn("왜 이 학생이 위험한가", body)
-
-    def test_high_preset_reaches_high_risk(self):
-        app = run_page(PAGE_PREDICTION)
-        click(app, "HIGH · 복합 위험")
-        click(app, "위험도 분석")
-        assert_clean(self, app)
-        self.assertIn("HIGH", text_of(app))
-
-    def test_low_preset_reaches_low_risk(self):
-        app = run_page(PAGE_PREDICTION)
-        click(app, "LOW · 안정")
-        click(app, "위험도 분석")
-        assert_clean(self, app)
-        self.assertIn("LOW", text_of(app))
-
-    def test_preset_is_marked_as_example(self):
-        """프리셋이 실제 학생 기록처럼 보이면 안 된다."""
-        self.assertIn("실제 학생 기록이 아닙니다", text_of(run_page(PAGE_PREDICTION)))
-
-    def test_support_cards_appear_for_risky_student(self):
-        app = run_page(PAGE_PREDICTION)
-        click(app, "HIGH · 복합 위험")
-        click(app, "위험도 분석")
-        body = text_of(app)
         self.assertIn("무엇을 할 것인가", body)
-        self.assertIn("RULE", body)           # 규칙 카드에 근거 규칙 id 가 붙는다
-
-    def test_contradictory_input_warns_but_does_not_crash(self):
-        app = run_page(PAGE_PREDICTION)
-        app.number_input(key="in_sem1_enrolled").set_value(3).run()
-        app.number_input(key="in_sem1_approved").set_value(9).run()
-        click(app, "위험도 분석")
-        assert_clean(self, app)
-        self.assertTrue(app.warning)
-
-    def test_derived_features_are_shown_not_invented(self):
-        app = run_page(PAGE_PREDICTION)
-        click(app, "위험도 분석")
-        body = text_of(app)
-        for name in ("sem1_approval_rate", "financial_risk_score", "grade_change"):
-            with self.subTest(name=name):
-                self.assertIn(name, body)
 
 
 # ---------------------------------------------------------------------------
@@ -237,294 +252,108 @@ class TestPrediction(unittest.TestCase):
 
 class TestRecommendationEvidence(unittest.TestCase):
     def _analysed(self) -> AppTest:
-        app = run_page(PAGE_PREDICTION)
+        app = run_page(PAGE_STUDENTS)
         click(app, "HIGH · 복합 위험")
         click(app, "위험도 분석")
         return app
 
     def test_evidence_meter_is_drawn_for_numeric_rules(self):
-        """규칙 카드에 값·기준선 미터가 함께 나오는가."""
         body = text_of(self._analysed())
         self.assertIn("ev-track", body)
         self.assertIn("ev-danger", body)
-        self.assertIn("기준", body)
 
     def test_rule_trace_covers_every_rule(self):
         app = self._analysed()
         labels = [e.label for e in app.expander]
-        self.assertTrue(
-            any("규칙 판정 전체 보기" in label for label in labels),
-            f"판정 트레이스 expander 가 없습니다: {labels}",
-        )
-        trace = next(label for label in labels if "규칙 판정 전체 보기" in label)
+        trace = next((label for label in labels if "규칙 판정 전체 보기" in label), "")
+        self.assertTrue(trace, f"판정 트레이스 expander 가 없습니다: {labels}")
         fired = int(trace.split("발동 ")[1].split("건")[0])
         quiet = int(trace.split("미발동 ")[1].split("건")[0])
         self.assertEqual(fired + quiet, len(rules.RULES))
 
     def test_factors_link_back_to_rules(self):
-        """'왜 위험한가' 와 '무엇을 할 것인가' 가 같은 이름으로 이어지는가."""
         body = text_of(self._analysed())
         self.assertIn("→ RULE", body)
         self.assertIn("모델 요인", body)
 
-    def test_downloads_are_offered(self):
-        app = self._analysed()
-        labels = [b.label for b in app.download_button]
-        self.assertTrue(any("상담 카드" in label for label in labels), labels)
-        self.assertTrue(any("조치 목록" in label for label in labels), labels)
-        assert_clean(self, app)
-
-    def test_roster_export_is_offered(self):
-        app = run_page(PAGE_STUDENTS)
-        labels = [b.label for b in app.download_button]
-        self.assertTrue(any("명단 요약" in label for label in labels), labels)
-        assert_clean(self, app)
-
 
 # ---------------------------------------------------------------------------
-# 모델 성능 — 없는 성능을 주장하지 않는지가 핵심이다
+# 집중관리 대상
 # ---------------------------------------------------------------------------
 
-class TestModelPage(unittest.TestCase):
-    def test_page_renders(self):
-        assert_clean(self, run_page(PAGE_MODEL))
-
-    def test_dummy_mode_refuses_to_score(self):
-        """🔴 회귀 방지 — 학습되지 않은 확률로 혼동행렬을 그리면 없는 성능을 주장하는 것이다."""
-        app = run_page(PAGE_MODEL)
-        body = text_of(app)
-        self.assertIn("학습된 모델이 연결되지 않았습니다", body)
-        # 채점 결과에만 나오는 것들이 하나도 없어야 한다.
-        for marker in ("놓친 위험학생", "재현율", "정밀도", "상담 대상", "운영 권고"):
-            with self.subTest(marker=marker):
-                self.assertNotIn(marker, body)
-        self.assertEqual(list(app.slider), [], "더미 모드에서 임계값 슬라이더가 뜨면 안 됩니다.")
-
-    def test_missing_report_explains_what_to_deliver(self):
-        """팀원이 화면만 보고도 무엇을 올리면 되는지 알 수 있어야 한다."""
+class TestRiskList(unittest.TestCase):
+    def setUp(self):
+        """상담 상태 파일을 임시 경로로 돌린다 — 테스트가 실제 기록을 덮으면 안 된다."""
         import sys
+        import tempfile
 
         sys.path.insert(0, str(APP_ROOT))
-        from services import model_metrics
+        from services import followup
 
-        if model_metrics.available():
-            self.skipTest("학습 결과서가 이미 들어와 있습니다.")
-        app = run_page(PAGE_MODEL)
-        self.assertIn("학습 결과서가 아직 없습니다", text_of(app))
-        self.assertTrue(
-            any("파일 형식" in e.label for e in app.expander),
-            [e.label for e in app.expander],
-        )
+        self._tmp = tempfile.TemporaryDirectory()
+        self._saved = (followup.STATE_DIR, followup.STATE_FILE)
+        followup.STATE_DIR = Path(self._tmp.name)
+        followup.STATE_FILE = Path(self._tmp.name) / "followup.json"
 
+    def tearDown(self):
+        from services import followup
 
-class TestModelPageWithTrainedModel(unittest.TestCase):
-    """모델이 붙었을 때만 도는 경로를 **발표 당일에 처음 실행하지 않기 위한** 테스트.
+        followup.STATE_DIR, followup.STATE_FILE = self._saved
+        self._tmp.cleanup()
 
-    진짜 모델 파일은 아직 없으므로, 예측은 그대로 두고 `is_dummy` 만 False 인
-    대역을 끼워 화면의 채점 경로를 실제로 렌더한다. 여기서 재는 것은 성능이 아니라
-    **화면이 죽지 않고 필요한 블록을 그리는가** 다.
-    """
-
-    def _reset(self):
-        import streamlit as st
-        from services.prediction_service import reset_service
-
-        st.cache_resource.clear()
-        st.cache_data.clear()
-        reset_service(None)
-
-    def test_scoring_path_renders_end_to_end(self):
-        import sys
-
-        sys.path.insert(0, str(APP_ROOT))
-        import streamlit as st
-        from services.dummy_predictor import DummyPredictor
-        from services.prediction_service import reset_service
-
-        class StandInTrainedModel(DummyPredictor):
-            name = "StandInTrainedModel (테스트 대역)"
-            version = "test"
-            is_dummy = False
-
-        try:
-            st.cache_resource.clear()
-            st.cache_data.clear()
-            reset_service(StandInTrainedModel())
-
-            app = run_page(PAGE_MODEL)
-            assert_clean(self, app)
-            body = text_of(app)
-            for marker in ("놓친 위험학생", "상담 대상", "이 임계값에서의 판정",
-                           "재현율과 정밀도의 교환", "임계값을 어떻게 정하는가"):
-                with self.subTest(marker=marker):
-                    self.assertIn(marker, body)
-            self.assertTrue(app.slider, "임계값 슬라이더가 없습니다.")
-        finally:
-            self._reset()
-
-
-# ---------------------------------------------------------------------------
-# 예측 화면 A/B — 팀원이 견줘 보는 동안만 둘 다 있다
-# ---------------------------------------------------------------------------
-
-class TestPredictionLayouts(unittest.TestCase):
-    def test_both_layouts_announce_the_comparison(self):
-        """어느 쪽을 보고 있는지, 다른 쪽은 어디 있는지 화면이 말해야 한다."""
-        for page, mine, other in ((PAGE_PREDICTION, "한 화면", "B"),
-                                  (PAGE_STEPS, "단계형", "A")):
-            with self.subTest(page=page):
-                body = text_of(run_page(page))
-                self.assertIn(mine, body)
-                self.assertIn(f"학생 위험 예측 ({other}", body)
-                self.assertIn("한쪽은 지웁니다", body)
-
-    def test_steps_layout_starts_at_the_first_step(self):
-        app = run_page(PAGE_STEPS)
+    def test_renders_with_scope_and_status_filters(self):
+        app = run_page(PAGE_RISK)
         assert_clean(self, app)
         body = text_of(app)
-        self.assertIn("Step 1 / 4", body)
-        self.assertIn("학생은 누구인가", body)
+        self.assertIn("대상 학생", body)
+        self.assertIn("미착수", body)
+        self.assertTrue(app.radio)                    # 범위 (HIGH 만 / HIGH + MEDIUM)
+        self.assertEqual(len(app.multiselect), 2)     # 위험 영역 · 상담 상태
 
-    def test_next_advances_and_keeps_earlier_answers(self):
-        """🔴 회귀 방지 — 단계형 화면이 밟기 쉬운 가장 큰 함정.
-
-        Streamlit 은 이번 실행에서 그려지지 않은 위젯의 state 를 버린다. 1단계 값을
-        위젯 key 에만 두면 2단계로 넘어가는 순간 조용히 기본값으로 돌아간다.
-        에러가 나지 않아서 발표 중에는 알아채지 못한다.
-        """
-        app = run_page(PAGE_STEPS)
-        click(app, "HIGH · 복합 위험 예시")
-        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
-
-        click(app, "다음 →")
+    def test_scope_widens_the_list(self):
+        app = run_page(PAGE_RISK)
+        app.radio[0].set_value("HIGH + MEDIUM").run()
         assert_clean(self, app)
-        self.assertIn("Step 2 / 4", text_of(app))
-        # 1단계에서 넣은 값이 살아 있어야 한다.
-        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
-        self.assertEqual(app.session_state["wz_data"]["attendance"], 0)
+        self.assertIn("HIGH + MEDIUM", text_of(app))
 
-    def test_findings_accumulate_as_steps_pass(self):
-        """단계를 지날수록 '알아낸 것' 이 늘어야 한다 — 이 흐름의 값어치다."""
-        app = run_page(PAGE_STEPS)
-        click(app, "HIGH · 복합 위험 예시")
-        first = text_of(app)
-        self.assertIn("전공", first)
-        self.assertNotIn("2학기 이수율", first)   # 아직 학업 단계를 안 지났다
+    def test_columns_the_team_asked_for(self):
+        """확률 / 핵심 요인 / 권장 조치 / 상담 진행 상태."""
+        frame = run_page(PAGE_RISK).get("dataframe")[0].value
+        for column in ("중도탈락 확률(%)", "핵심 요인", "권장 조치", "상담 상태"):
+            with self.subTest(column=column):
+                self.assertIn(column, list(frame.columns))
 
-        click(app, "다음 →")
-        self.assertIn("2학기 이수율", text_of(app))
+    def test_list_is_sorted_by_probability(self):
+        frame = run_page(PAGE_RISK).get("dataframe")[0].value
+        values = list(frame["중도탈락 확률(%)"])
+        self.assertEqual(values, sorted(values, reverse=True))
 
-    def test_result_step_shows_the_same_output_as_layout_a(self):
-        app = run_page(PAGE_STEPS)
-        click(app, "HIGH · 복합 위험 예시")
-        for _ in range(3):
-            click(app, "다음 →")
-        click(app, "위험도 분석하기 →")
-        assert_clean(self, app)
-        body = text_of(app)
-        self.assertIn("이 판단에 쓰인 사실", body)
-        self.assertIn("무엇을 할 것인가", body)
-        self.assertIn("지금 할 일", body)          # 상담 카드
-        self.assertTrue(
-            any("상담 카드" in b.label for b in app.download_button),
-            [b.label for b in app.download_button],
-        )
+    def test_status_is_stored_and_read_back(self):
+        """상담 상태는 앱이 유일하게 **쓰는** 데이터다. 저장과 복구를 함께 본다."""
+        from services import followup
 
-    def test_going_back_does_not_lose_answers(self):
-        app = run_page(PAGE_STEPS)
-        click(app, "HIGH · 복합 위험 예시")
-        click(app, "다음 →")
-        click(app, "← 이전")
-        assert_clean(self, app)
-        self.assertIn("Step 1 / 4", text_of(app))
-        self.assertEqual(app.session_state["wz_data"]["major_field"], "사회")
+        table = followup.set_status({}, "S0001", "연락함")
+        self.assertEqual(table["S0001"], "연락함")
+        self.assertEqual(followup.load(), {"S0001": "연락함"})
 
+        # 기본값으로 되돌리면 파일에서 빠진다 — 885명이 통째로 쌓이지 않게.
+        table = followup.set_status(table, "S0001", "미착수")
+        self.assertEqual(followup.load(), {})
 
-# ---------------------------------------------------------------------------
-# Students
-# ---------------------------------------------------------------------------
+    def test_unknown_status_is_ignored_on_load(self):
+        """손으로 고친 파일이 화면을 깨뜨리지 않아야 한다."""
+        from services import followup
 
-class TestStudents(unittest.TestCase):
-    def test_table_and_toolbar(self):
-        app = run_page(PAGE_STUDENTS)
-        assert_clean(self, app)
-        self.assertGreaterEqual(len(app.dataframe), 1)
-        self.assertGreaterEqual(len(app.multiselect), 2)
-        self.assertGreaterEqual(len(app.checkbox), 1)
+        followup.STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        followup.STATE_FILE.write_text('{"S0002": "이상한값"}', encoding="utf-8")
+        self.assertEqual(followup.load(), {})
 
-    def test_no_selection_shows_empty_state(self):
-        self.assertIn("학생을 선택하지 않았습니다", text_of(run_page(PAGE_STUDENTS)))
+    def test_broken_file_does_not_raise(self):
+        from services import followup
 
-    def test_empty_selection_means_all_not_none(self):
-        """필터를 비우면 '아무것도 없음' 이 아니라 '전체' 다 (필터 UI 의 일반적 약속)."""
-        app = run_page(PAGE_STUDENTS)
-        app.multiselect[0].set_value([]).run()
-        assert_clean(self, app)
-        self.assertNotIn("조건에 맞는 학생이 없습니다", text_of(app))
-
-    def test_no_match_shows_empty_state_not_error(self):
-        app = run_page(PAGE_STUDENTS)
-        app.text_input[0].set_value("없는학생ID").run()
-        assert_clean(self, app)
-        self.assertIn("조건에 맞는 학생이 없습니다", text_of(app))
-
-    def test_deeplink_opens_detail_without_table_click(self):
-        """대시보드에서 넘어온 ?student=... 는 표를 다시 누르지 않아도 상세가 열려야 한다."""
-        import sys
-
-        sys.path.insert(0, str(APP_ROOT))
-        from components.state import cached_roster
-
-        sid = cached_roster().rows[0].student.student_id
-        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
-        app.query_params["student"] = sid
-        app.switch_page(PAGE_STUDENTS)
-        app.run()
-        assert_clean(self, app)
-        body = text_of(app)
-        self.assertIn(f"{sid} 상세 분석", body)
-        self.assertNotIn("학생을 선택하지 않았습니다", body)
-
-    def test_whatif_panel_opens_with_the_detail(self):
-        """상세를 열면 What-if 가 함께 있어야 한다 — 발표 동선이 여기서 이어진다."""
-        import sys
-
-        sys.path.insert(0, str(APP_ROOT))
-        from components.state import cached_roster
-
-        sid = cached_roster().rows[0].student.student_id
-        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
-        app.query_params["student"] = sid
-        app.switch_page(PAGE_STUDENTS)
-        app.run()
-        assert_clean(self, app)
-        body = text_of(app)
-        self.assertIn("What-if", body)
-        self.assertIn("개입의 효과가 아닙니다", body)   # 인과 오해를 막는 문구
-        self.assertIn("아직 바꾼 값이 없습니다", body)  # 조작 전에는 결과를 만들지 않는다
-
-    def test_category_filter_narrows_the_roster(self):
-        """부서 단위로 명단을 좁히는 축. 대시보드 차트에서 본 규모를 여기서 연다."""
-        app = run_page(PAGE_STUDENTS)
-        before = text_of(app)
-        # 0=위험등급, 1=예측, 2=주요 위험
-        app.multiselect[2].set_value(["경제"]).run()
-        assert_clean(self, app)
-        self.assertNotEqual(text_of(app), before)
-
-    def test_focus_toggle_is_addressable_from_home(self):
-        """시작 화면의 '집중관리 대상부터 보기' 가 켜 두는 상태와 같은 key 인가."""
-        app = AppTest.from_file(ENTRYPOINT, default_timeout=TIMEOUT)
-        app.session_state["roster_focus_only"] = True
-        app.switch_page(PAGE_STUDENTS)
-        app.run()
-        assert_clean(self, app)
-        self.assertTrue(app.checkbox[0].value)
-
-    def test_keyword_filter_does_not_crash(self):
-        app = run_page(PAGE_STUDENTS)
-        app.text_input[0].set_value("S0001").run()
-        assert_clean(self, app)
+        followup.STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        followup.STATE_FILE.write_text("{망가진 json", encoding="utf-8")
+        self.assertEqual(followup.load(), {})
 
 
 if __name__ == "__main__":

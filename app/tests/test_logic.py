@@ -13,7 +13,7 @@ import unittest
 from dataclasses import replace
 
 from rules import recommendation_rules as rules
-from services import case_sheet, evaluation, model_metrics
+from services import case_sheet, model_metrics
 from services.dummy_predictor import DummyPredictor, _build_terms
 from services.predictor import (
     DECISION_THRESHOLD,
@@ -470,61 +470,6 @@ class TestWhatIf(unittest.TestCase):
             PREDICTOR.predict(s).dropout_probability,
             PREDICTOR.predict(replace(s)).dropout_probability,
         )
-
-
-# ---------------------------------------------------------------------------
-# 5.8 평가 계산 — sklearn 없이 직접 세는 부분
-# ---------------------------------------------------------------------------
-
-class TestEvaluation(unittest.TestCase):
-    """숫자를 직접 세는 코드라, 틀리면 성능이 조용히 거짓이 된다."""
-
-    LABELS = [1, 1, 1, 0, 0, 0, 0, 1]
-    PROBS = [0.9, 0.8, 0.4, 0.7, 0.3, 0.2, 0.1, 0.6]
-
-    def test_confusion_counts_add_up(self):
-        m = evaluation.confusion_at(self.LABELS, self.PROBS, 0.5)
-        self.assertEqual(m.total, len(self.LABELS))
-        self.assertEqual(m.tp + m.fn, sum(self.LABELS))
-        self.assertEqual(m.flagged, m.tp + m.fp)
-
-    def test_threshold_boundary_is_inclusive(self):
-        """'확률 ≥ 임계값이면 위험' 정의가 흔들리면 화면과 파일의 숫자가 갈라진다."""
-        m = evaluation.confusion_at([1], [0.5], 0.5)
-        self.assertEqual(m.tp, 1)
-
-    def test_lowering_threshold_never_lowers_recall(self):
-        previous = 0.0
-        for step in range(10, -1, -1):
-            m = evaluation.confusion_at(self.LABELS, self.PROBS, step / 10)
-            self.assertGreaterEqual(m.recall + 1e-9, previous)
-            previous = m.recall
-
-    def test_perfect_and_inverted_rankings(self):
-        labels = [0, 0, 1, 1]
-        self.assertAlmostEqual(evaluation.roc_auc(labels, [0.1, 0.2, 0.8, 0.9]), 1.0)
-        self.assertAlmostEqual(evaluation.roc_auc(labels, [0.9, 0.8, 0.2, 0.1]), 0.0)
-
-    def test_ties_are_averaged_not_ignored(self):
-        """동점을 무시하면 AUC 가 실제보다 좋게 나온다. 더미 확률에서 실제로 생기는 일이다."""
-        self.assertAlmostEqual(evaluation.roc_auc([0, 1], [0.5, 0.5]), 0.5)
-
-    def test_mismatched_lengths_are_refused(self):
-        with self.assertRaises(ValueError):
-            evaluation.confusion_at([1, 0], [0.5], 0.5)
-
-    def test_best_threshold_respects_the_recall_floor(self):
-        matrices = evaluation.sweep(self.LABELS, self.PROBS)
-        chosen = evaluation.best_threshold(matrices, minimum_recall=0.75)
-        self.assertIsNotNone(chosen)
-        self.assertGreaterEqual(chosen.recall, 0.75)
-        # 하한을 만족하는 것 중 상담 대상이 가장 적어야 한다.
-        eligible = [m for m in matrices if m.recall >= 0.75]
-        self.assertEqual(chosen.flagged, min(m.flagged for m in eligible))
-
-    def test_impossible_recall_floor_returns_nothing(self):
-        matrices = evaluation.sweep([0, 0, 0, 1], [0.9, 0.8, 0.7, 0.1])
-        self.assertIsNone(evaluation.best_threshold(matrices, minimum_recall=1.01))
 
 
 class TestMetricsReport(unittest.TestCase):

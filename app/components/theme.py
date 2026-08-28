@@ -301,6 +301,22 @@ def _css() -> str:
   }}
   .banner b {{ color: var(--fg, var(--primary)); }}
 
+  /* ── 도넛 범례 ─────────────────────────────────────────────────────── */
+  /* Plotly 범례는 이 높이에서 눌려 잘린다. 직접 그리면 값·비율을 같이 적을 수 있다. */
+  .dn-legend {{ margin-top: -{s['2']}; }}
+  .dn-item {{
+    display: flex; align-items: center; gap: {s['2']};
+    padding: {s['1']} 0; font-size: {t['secondary']};
+    border-bottom: 1px solid var(--line-soft);
+  }}
+  .dn-item:last-child {{ border-bottom: none; }}
+  .dn-item .sw {{ width: 10px; height: 10px; border-radius: 3px; flex: none; }}
+  .dn-item .lb {{ color: var(--ink); font-weight: 600; }}
+  .dn-item .vl {{ margin-left: auto; color: var(--ink-soft); }}
+  .dn-item .pc {{
+    width: 40px; text-align: right; color: var(--muted); font-weight: 700;
+  }}
+
   /* ── 위험 미터 — 속도계 대신 구간이 보이는 가로 미터 ───────────────── */
   .meter-val {{ display: flex; align-items: baseline; gap: {s['3']}; }}
   .meter-val .n {{
