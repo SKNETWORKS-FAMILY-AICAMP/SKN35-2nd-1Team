@@ -16,40 +16,33 @@ import streamlit as st
 
 from components import manual_input, student_detail, ui
 from components.state import cached_export, cached_roster, send_to_form, start_page
+from components.theme import RISK_COLORS, RISK_SOFT
 from rules import recommendation_rules as rules
 from services import case_sheet
 from services.predictor import RISK_LABELS_KO, RISK_LEVELS
 from services.prediction_service import get_service
+from utils.display_id import display_name, display_year
 from utils.feature_mapping import MAJOR_FIELDS
 
-TABLE_COLUMNS = [
-    "학생 ID",
-    "전공 계열",
-    "중도탈락 확률(%)",
-    "위험등급",
-    "주요 위험",
-    "집중관리",
-    "2학기 이수율",
-    "평균 성적",
-    "재정위험점수",
-]
+#: 표에 세우는 다섯 칸. **찾는 화면**이라 여기서는 누구인지만 알면 되고,
+#  확률·위험요인·이수율 같은 값은 고른 뒤 팝업에서 본다. 등급만 맨 뒤에 남긴다 —
+#  줄을 훑을 때 마지막에 눈이 닿는 자리가 "얼마나 급한가"이기 때문이다.
+TABLE_COLUMNS = ["학생 ID", "이름", "전공 계열", "학년", "위험등급"]
+
+#: 등급 셀 색. 표 안에서는 배지를 못 그리므로 셀 자체를 물들인다.
+_GRADE_STYLE = {
+    "HIGH": f"color:{RISK_COLORS['HIGH']};background-color:{RISK_SOFT['HIGH']};font-weight:700",
+    "MEDIUM": f"color:{RISK_COLORS['MEDIUM']};background-color:{RISK_SOFT['MEDIUM']};font-weight:700",
+    "LOW": f"color:{RISK_COLORS['LOW']};background-color:{RISK_SOFT['LOW']};font-weight:700",
+}
 
 
 def column_config() -> dict:
     return {
         "학생 ID": st.column_config.TextColumn("학번", width="small"),
-        "중도탈락 확률(%)": st.column_config.ProgressColumn(
-            "중도탈락 확률", format="%.1f%%", min_value=0.0, max_value=100.0,
-        ),
+        "이름": st.column_config.TextColumn("이름", width="small"),
+        "학년": st.column_config.TextColumn("학년", width="small"),
         "위험등급": st.column_config.TextColumn("등급", width="small"),
-        "2학기 이수율": st.column_config.NumberColumn("2학기 이수율", format="%.0f%%"),
-        "평균 성적": st.column_config.NumberColumn("평균 성적", format="%.1f",
-                                               help="원본 0~20 기준"),
-        "재정위험점수": st.column_config.NumberColumn(
-            "재정위험", format="%d", help="0~3 · 등록금 미납 + 채무 + 장학금 미수혜"
-        ),
-        "집중관리": st.column_config.TextColumn("집중", width="small",
-                                            help="서로 다른 영역의 위험이 겹친 학생"),
     }
 
 
@@ -103,9 +96,15 @@ filtered = frame[frame["위험등급"].isin(levels) & frame["전공 계열"].isi
 if keyword.strip():
     filtered = filtered[filtered["학생 ID"].str.contains(keyword.strip(), case=False, na=False)]
 filtered = filtered.sort_values("중도탈락 확률", ascending=False).reset_index(drop=True)
+# 원본(익명 데이터)에 없는 두 칸. 학번마다 **항상 같은 값**이 나온다 (utils/display_id.py).
+filtered = filtered.assign(
+    이름=filtered["학생 ID"].map(display_name),
+    학년=filtered["학생 ID"].map(lambda sid: f"{display_year(sid)}학년"),
+)
 
 # ── 표 ─────────────────────────────────────────────────────────────────────
 ui.section("명단", f"조회된 {len(filtered):,}명 · 행을 선택하면 상세 분석이 열립니다.")
+st.caption("이름·학년은 화면 예시용으로 만든 값입니다 — 원본은 익명 데이터라 두 값이 없습니다.")
 
 if filtered.empty:
     ui.empty_state(
@@ -114,7 +113,9 @@ if filtered.empty:
     )
 else:
     event = st.dataframe(
-        filtered.loc[:, TABLE_COLUMNS],
+        # 등급 칸만 등급 색으로 물들인다 — 셋을 눈으로 가르는 가장 빠른 방법이다.
+        filtered.loc[:, TABLE_COLUMNS].style.map(
+            lambda v: _GRADE_STYLE.get(v, ""), subset=["위험등급"]),
         hide_index=True,
         width="stretch",
         height=420,

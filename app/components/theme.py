@@ -1350,9 +1350,14 @@ def _css() -> str:
     background: color-mix(in srgb, var(--c, var(--primary)) 22%, {c['surface']});
     border: 1px solid color-mix(in srgb, var(--c, var(--primary)) 46%, {c['surface']});
   }}
+  .st-key-dlg_head_bar {{ align-items: center; }}
+  .st-key-dlg_head_bar [data-testid="stButtonGroup"] button {{
+    padding: 6px 12px !important; font-size: {t['caption']} !important;
+  }}
   .dlg-head .nm {{ font-size: {t['h2']}; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }}
   .dlg-head .sub {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
-  .dlg-head .lv {{
+  /* 등급 배지는 이제 머리 오른쪽 바 안에 있다 — 두 자리 모두에서 같게 보이게 한다 */
+  .dlg-head .lv, .st-key-dlg_head_bar .lv {{
     font-size: {t['caption']}; font-weight: 700; color: var(--c, var(--primary));
     padding: 6px {s['3']}; border-radius: {r['pill']}; white-space: nowrap;
     background: color-mix(in srgb, var(--c, var(--primary)) 20%, {c['surface']});

@@ -75,13 +75,15 @@ def plotly_globe(height: int = 380) -> go.Figure:
     )
     # 라벨을 붙이지 않는다. 지구본이 돌면 포르투갈이 가장자리로 가고, 그때 글자가
     # 그리는 영역 밖으로 잘린다. 어디가 포르투갈인지는 아래 캡션이 말한다.
+    # 이 마커는 **자리만 잡는다.** 실제로 보이는 빨간 점은 우리가 그 위에 얹는
+    # 맥박 점(#sdi-geo-ping)이다. 둘 다 칠하면 빨간 점이 두 개로 보인다.
     fig.add_trace(
         go.Scattergeo(
             lon=[PORTUGAL_LON],
             lat=[PORTUGAL_LAT],
             mode="markers",
-            marker=dict(size=11, color=PORTUGAL["highlight"],
-                        line=dict(color="#FFFFFF", width=1.8)),
+            marker=dict(size=11, color="rgba(0,0,0,0)",
+                        line=dict(color="rgba(0,0,0,0)", width=0)),
             hovertemplate="포르투갈<br>UCI 원본 데이터의 수집 국가<extra></extra>",
         )
     )
@@ -319,10 +321,18 @@ def _autorotate_script() -> str:
     var pt = host.querySelector('.scatterlayer .trace:last-of-type path.point');
     var box = pt && pt.getBoundingClientRect();
     if (!box || !box.width) {{ dot.style.display = 'none'; return; }}
-    var base = host.getBoundingClientRect();
+    // 기준은 **offsetParent** 여야 한다. host 로 재면 그 위 래퍼의 여백만큼
+    // 점이 어긋나서 빨간 표시가 두 개로 보인다(하나는 나라, 하나는 점).
+    var anchor = dot.offsetParent || host;
+    var base = anchor.getBoundingClientRect();
+    // 화면이 낮으면 지구본 전체가 CSS 로 축소돼 있다(theme.py 의 media query).
+    // getBoundingClientRect 는 **축소된 화면 좌표**를, style.left 는 **축소 전 좌표**를
+    // 쓰므로 그대로 넣으면 점이 나라에서 비껴 앉는다. 배율로 되돌린다.
+    var sx = anchor.offsetWidth ? base.width / anchor.offsetWidth : 1;
+    var sy = anchor.offsetHeight ? base.height / anchor.offsetHeight : 1;
     dot.style.display = 'block';
-    dot.style.left = (box.left + box.width / 2 - base.left) + 'px';
-    dot.style.top = (box.top + box.height / 2 - base.top) + 'px';
+    dot.style.left = ((box.left + box.width / 2 - base.left) / (sx || 1)) + 'px';
+    dot.style.top = ((box.top + box.height / 2 - base.top) / (sy || 1)) + 'px';
   }}
 
   function bindPause(gd) {{

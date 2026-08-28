@@ -208,12 +208,25 @@ class TestStudents(unittest.TestCase):
         self.assertTrue(pills)
         self.assertEqual(len(pills[0].options), 3)     # HIGH · MEDIUM · LOW
 
-    def test_names_are_never_invented(self):
-        """🔴 데이터에 없는 것을 있는 척하지 않는다 — 원본에 학생 이름이 없다."""
+    def test_made_up_columns_are_declared(self):
+        """🔴 원본에 없는 값(이름·학년)을 세우되 **만든 값임을 화면에서 밝힌다.**
+
+        원본은 익명 데이터라 이름도 학년도 없다. 화면에 세우는 것 자체는 발표용
+        결정이지만, 밝히지 않으면 그건 없는 데이터를 있는 척하는 것이 된다.
+        """
         app = run_page(PAGE_STUDENTS)
-        frame = app.get("dataframe")[0].value
-        self.assertNotIn("이름", list(frame.columns))
-        self.assertIn("학생 ID", list(frame.columns))
+        self.assertIn("화면 예시용", text_of(app))
+
+    def test_made_up_columns_are_stable(self):
+        """새로고침마다 이름이 바뀌면 아무도 그 화면을 믿지 않는다."""
+        import sys
+
+        sys.path.insert(0, str(APP_ROOT))
+        from utils.display_id import display_name, display_year
+
+        self.assertEqual(display_name("S0042"), display_name("S0042"))
+        self.assertEqual(display_year("S0042"), display_year("S0042"))
+        self.assertNotEqual(display_name("S0042"), display_name("S0043"))
 
     def test_no_match_shows_empty_state_not_error(self):
         app = run_page(PAGE_STUDENTS)

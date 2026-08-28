@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import math
 from html import escape
-from urllib.parse import quote
 
 import streamlit as st
 
@@ -24,9 +23,6 @@ from services import followup
 from services.predictor import RISK_CATEGORIES
 
 #: 필터 프리셋. 담당자가 실제로 쓰는 두 가지 폭이다.
-#: 학생 목록 화면의 주소. `st.navigation` 이 파일명에서 만드는 경로와 같아야 한다.
-STUDENT_PAGE_URL = "students"
-
 #: 왼쪽이 기본값이다 — 담당자가 여는 순간 보이는 폭.
 SCOPES: dict[str, tuple[str, ...]] = {
     "HIGH + MEDIUM": ("HIGH", "MEDIUM"),
@@ -129,31 +125,6 @@ window = rows[page * PER_PAGE:(page + 1) * PER_PAGE]
 ui.section("우선 처리 명단", f"카드를 누르면 상세 분석이 팝업으로 열립니다 · 전체 {len(rows):,}명")
 
 
-def status_control(picked) -> None:
-    """팝업 맨 아래 — 상담 진행 상태. 화면 밖으로 뺐던 것을 여기로 들였다.
-
-    명단 화면에 따로 두면 "학생을 고르고 → 아래로 내려가 상태를 바꾸는" 왕복이 생긴다.
-    상세를 보는 자리에서 바로 남기는 것이 실제 상담 흐름과 같다.
-    """
-    sid = picked.student.student_id
-    ui.spacer(10)
-    st.markdown('<div class="dlg-status">상담 진행 상태</div>', unsafe_allow_html=True)
-    with st.container(key="dlg_status"):
-        chosen = st.segmented_control(
-            "상담 진행 상태",
-            options=list(followup.STATUSES),
-            default=followup.status_of(table, sid),
-            format_func=lambda s: f"{followup.MARKS[s]} {s}",
-            label_visibility="collapsed",
-            key=f"dlg_status_{sid}",
-        )
-    # 팝업 안에서 st.rerun() 을 부르면 팝업이 닫힌다. 기록만 하고 닫을 때 새로 그린다
-    # (`st.dialog(on_dismiss="rerun")`).
-    if chosen and chosen != followup.status_of(table, sid):
-        followup.set_status(table, sid, chosen)
-    st.caption(f"학생 목록에서 열기 → {STUDENT_PAGE_URL}?student={quote(sid)}")
-
-
 for row in window:
     student = row.student
     sid = student.student_id
@@ -191,7 +162,7 @@ for row in window:
         )
         # 카드 전체를 덮는 투명 버튼. 카드가 곧 버튼이라 따로 "열기" 를 두지 않는다.
         if st.button("상세 열기", key=f"rl_open_{sid}", width="stretch"):
-            student_detail.open_modal(row, key="risk", extra=status_control)
+            student_detail.open_modal(row, key="risk")
 
 # ── 페이지 이동 ────────────────────────────────────────────────────────────
 if pages > 1:

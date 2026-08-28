@@ -15,6 +15,7 @@ import streamlit as st
 
 from components import ui, whatif
 from components.theme import RISK_COLORS
+from services import followup
 from services.predictor import RISK_LABELS_KO
 from services.prediction_service import get_service
 
@@ -52,19 +53,47 @@ def render(row, *, key: str) -> None:
 def _modal(row, key: str, extra=None) -> None:
     student, result = row.student, row.result
     level = result.risk_level
-    st.markdown(
-        f"""<div class="dlg-head">
+    sid = student.student_id
+
+    # 머리에 셋을 나란히 둔다 — 누구인가 · 지금 어디까지 갔는가 · 얼마나 위험한가.
+    # 상담 상태를 팝업 맨 아래 두면 스크롤을 내려야 보여서 아무도 안 쓴다.
+    who_col, status_col = st.columns([1.05, 1], vertical_alignment="center")
+    with who_col:
+        st.markdown(
+            f"""<div class="dlg-head">
       <div class="who">
-        <div class="avatar" style="--c:{RISK_COLORS[level]}">{student.student_id[-2:]}</div>
+        <div class="avatar" style="--c:{RISK_COLORS[level]}">{sid[-2:]}</div>
         <div>
-          <div class="nm">{student.student_id}</div>
+          <div class="nm">{sid}</div>
           <div class="sub">{student.major_field} · {result.dropout_percent:.1f}% 중도탈락 확률</div>
         </div>
       </div>
-      <div class="lv" style="--c:{RISK_COLORS[level]}">{level} · {RISK_LABELS_KO[level]}</div>
     </div>""",
-        unsafe_allow_html=True,
-    )
+            unsafe_allow_html=True,
+        )
+    with status_col:
+        with st.container(key="dlg_head_bar", horizontal=True, gap="small",
+                          horizontal_alignment="right", vertical_alignment="center"):
+            table = followup.load()
+            current = followup.status_of(table, sid)
+            chosen = st.segmented_control(
+                "상담 진행 상태",
+                options=list(followup.STATUSES),
+                default=current,
+                format_func=lambda s: f"{followup.MARKS[s]} {s}",
+                label_visibility="collapsed",
+                key=f"dlg_status_{sid}",
+            )
+            # 팝업 안에서 st.rerun() 을 부르면 팝업이 닫힌다. 기록만 하고,
+            # 닫을 때 화면을 새로 그린다(`on_dismiss="rerun"`).
+            if chosen and chosen != current:
+                followup.set_status(table, sid, chosen)
+            st.markdown(
+                f'<div class="lv" style="--c:{RISK_COLORS[level]}">'
+                f'{level} · {RISK_LABELS_KO[level]}</div>',
+                unsafe_allow_html=True,
+            )
+
     render(row, key=key)
     if extra is not None:
         extra(row)
