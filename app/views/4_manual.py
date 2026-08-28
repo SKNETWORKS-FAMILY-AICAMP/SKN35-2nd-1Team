@@ -24,11 +24,11 @@ service = get_service()
 
 start_page(
     "예비학생 예측",
-    "명단에 없는 학생의 값을 직접 넣어 위험도와 지원 방향을 확인합니다.",
-    meta=(
-        '<div class="ds-eyebrow">Manual</div>'
-        '<div class="ds-sub" style="margin-top:4px">단일 학생 예측</div>'
-    ),
+    # "명단에 없는 학생의 값을 직접 넣어 위험도와 지원 방향을 확인합니다.",
+    # meta=(
+    #     '<div class="ds-eyebrow">Manual</div>'
+    #     '<div class="ds-sub" style="margin-top:4px">단일 학생 예측</div>'
+    # ),
 )
 
 student = manual_input.render()

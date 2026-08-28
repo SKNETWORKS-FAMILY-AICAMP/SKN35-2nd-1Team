@@ -39,11 +39,11 @@ table = followup.load()
 
 start_page(
     "집중관리 대상",
-    "위험이 높은 순서로 줄을 세운 처리 화면입니다.",
-    meta=(
-        '<div class="ds-eyebrow">Priority</div>'
-        '<div class="ds-sub" style="margin-top:4px">확률 내림차순</div>'
-    ),
+    # "위험이 높은 순서로 줄을 세운 처리 화면입니다.",
+    # meta=(
+    #     '<div class="ds-eyebrow">Priority</div>'
+    #     '<div class="ds-sub" style="margin-top:4px">확률 내림차순</div>'
+    # ),
 )
 
 # ── 필터 ───────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ with st.container(key="risk_filter", border=True):
         ) or next(iter(SCOPES))
     with f2:
         segments = st.multiselect(
-            "세그먼트 · 위험 영역", options=list(RISK_CATEGORIES.values()), default=[],
+            "위험 영역", options=list(RISK_CATEGORIES.values()), default=[],
             placeholder="전체",
         ) or list(RISK_CATEGORIES.values())
     with f3:
@@ -152,7 +152,6 @@ for row in window:
           {'주간' if student.attendance == 1 else '야간'}</div>
       </div>
       <div class="rl-tags">
-        <div class="k">핵심 요인</div>
         <div class="t">{"".join(f'<span class="tag f">{escape(x)}</span>' for x in factors)}
           {"".join(f'<span class="tag a">{escape(x)}</span>' for x in actions)}</div>
       </div>

@@ -72,7 +72,7 @@ with st.container(key="hero"):
         st.markdown(
             """<div class="hero-brand">
       <span class="mark material-symbols-rounded">school</span>
-      <span class="t"><span class="n">Student Dropout Intelligence</span>
+      <span class="t"><span class="n">대학생 학업 지속 시스템</span>
         <span class="s">중도탈락 예측 · 지원</span></span>
     </div>""",
             unsafe_allow_html=True,
@@ -94,8 +94,7 @@ with st.container(key="hero"):
         학생 {total:,}명 · 위험도 재계산 완료</span></div>
       <h1>위험을 미리 찾고, <span class="hl">맞춤 지원</span>을 제안합니다</h1>
       <p class="hero-lead">학업·경제·입학 배경 데이터로 중도탈락 위험을
-         <b>학기 중에 조기 식별</b>하고, 그 학생의 위험요인에 대응하는
-         교내 지원 방향까지 함께 제안합니다.</p>
+         <b>학기 중에 조기 식별</b>하고, 맞춤 지원을 제안합니다.</p>
     </div>""",
         unsafe_allow_html=True,
     )
@@ -114,7 +113,7 @@ with st.container(key="hero"):
     # ── 숫자 셋 ───────────────────────────────────────────────────────────
     st.markdown(
         f"""<div class="hero-chips">
-      {chip("groups", f"{total:,}", "전체 재학생")}
+      {chip("groups", f"{total:,}명", "전체 재학생")}
       {chip("percent", f"{dropout / total * 100:.1f}%", "예측 Dropout 비율")}
       {chip("crisis_alert", f"{high:,}명", "고위험 HIGH")}
     </div>""",

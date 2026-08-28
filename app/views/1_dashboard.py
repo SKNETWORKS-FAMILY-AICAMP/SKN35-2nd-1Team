@@ -121,11 +121,11 @@ frame = roster.frame
 
 start_page(
     "중도탈락 위험 대시보드",
-    "이번 학기 명단의 중도탈락 위험 예측 현황입니다.",
-    meta=(
-        '<div class="ds-eyebrow">Students</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명 · 위험도 재계산 완료</div>'
-    ),
+    # "이번 학기 명단의 중도탈락 위험 예측 현황입니다.",
+    # meta=(
+    #     '<div class="ds-eyebrow">Students</div>'
+    #     f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명 · 위험도 재계산 완료</div>'
+    # ),
 )
 
 total = len(frame)

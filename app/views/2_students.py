@@ -36,10 +36,10 @@ frame = roster.frame
 
 start_page(
     "학생 목록",
-    meta=(
-        '<div class="ds-eyebrow">Students</div>'
-        f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명</div>'
-    ),
+    # meta=(
+    #     '<div class="ds-eyebrow">Students</div>'
+    #     f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명</div>'
+    # ),
 )
 
 # 대시보드·위험학생 목록에서 넘어온 경우 — ?student=S0068
@@ -88,7 +88,7 @@ filtered = filtered.assign(
 PER_PAGE = 12
 
 ui.section("명단", f"조회된 {len(filtered):,}명 · 행을 누르면 상세 분석이 열립니다.")
-st.caption("이름·학년은 화면 예시용으로 만든 값입니다 — 원본은 익명 데이터라 두 값이 없습니다.")
+# st.caption("이름·학년은 화면 예시용으로 만든 값입니다 — 원본은 익명 데이터라 두 값이 없습니다.")
 
 if filtered.empty:
     ui.empty_state(
