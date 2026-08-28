@@ -234,6 +234,59 @@ def _build_terms(student: StudentInput) -> list[_Term]:
     ]
 
 
+#: 기여도 화면에 세울 짧은 이름. `_Term.label` 은 "2학기 이수율 저조" 처럼 문장이라
+#  축 라벨로는 길다. 여기 없는 키는 라벨을 그대로 쓴다.
+CONTRIBUTION_LABELS = {
+    "sem2_approval": "2학기 이수율",
+    "sem1_approval": "1학기 이수율",
+    "sem2_grade": "2학기 성적",
+    "sem1_grade": "1학기 성적",
+    "grade_change": "성적 하락 폭",
+    "no_evaluation": "평가 미응시 과목",
+    "admission_grade": "입학 성적",
+    "financial_risk": "재정위험점수",
+    "tuition_unpaid": "등록금 납부 여부",
+    "debtor": "채무 보유",
+    "scholarship": "장학금 수혜",
+    "age": "입학 시 나이",
+    "evening": "야간 과정",
+    "application_order": "지망 순위",
+    "displaced": "타지 거주",
+}
+
+
+def contribution_profile(students: Iterable[StudentInput]) -> list[tuple[str, float]]:
+    """명단 전체에서 각 항이 **실제로 움직인 크기**의 비중. 큰 것부터.
+
+    ⚠️ 학습된 모델의 feature importance 가 아니다. 이건 지금 화면의 확률을 만들고
+    있는 **규칙식이 이 명단에서 얼마나 썼는가**를 그대로 집계한 값이다. 가중치를
+    베껴 쓰는 게 아니라 학생 885명에 대해 항의 절댓값을 평균 낸 것이라, 명단이
+    바뀌면 이 그림도 바뀐다. 화면은 이 값을 **모델 중요도라고 말하지 않는다.**
+
+    학습 결과서(`reports/model_metrics.json`)가 들어오면 화면은 그쪽을 쓰고 이
+    함수는 더 이상 불리지 않는다.
+    """
+    totals: dict[str, float] = {}
+    labels: dict[str, str] = {}
+    count = 0
+    for student in students:
+        count += 1
+        for term in _build_terms(student):
+            totals[term.key] = totals.get(term.key, 0.0) + abs(term.value)
+            labels.setdefault(term.key, term.label)
+    if not count:
+        return []
+
+    grand = sum(totals.values())
+    if grand <= 0:
+        return []
+    ranked = sorted(totals.items(), key=lambda pair: pair[1], reverse=True)
+    return [
+        (CONTRIBUTION_LABELS.get(key, labels.get(key, key)), value / grand)
+        for key, value in ranked
+    ]
+
+
 def _top_factors(terms: list[_Term]) -> list[RiskFactor]:
     """위험을 올린 항만 골라 상대 기여도로 정규화한다."""
     positive = [t for t in terms if t.value > FACTOR_MIN_TERM]
@@ -260,6 +313,10 @@ class DummyPredictor:
     name = "DummyPredictor (규칙 기반 · 학습되지 않음)"
     version = "0.2.0-modelB"
     is_dummy = True
+
+    def contribution_profile(self, students: Iterable[StudentInput]) -> list[tuple[str, float]]:
+        """이 명단에서 각 항을 실제로 얼마나 반영했는지 — 모듈 함수를 그대로 쓴다."""
+        return contribution_profile(students)
 
     def predict(self, student: StudentInput) -> PredictionResult:
         terms = _build_terms(student)

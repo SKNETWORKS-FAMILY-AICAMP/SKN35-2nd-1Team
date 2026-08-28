@@ -39,6 +39,16 @@ class PredictionService:
     def predict_many(self, students: Iterable[StudentInput]) -> list[PredictionResult]:
         return self._predictor.predict_many(students)
 
+    def contribution_profile(self, students: Iterable[StudentInput]) -> list[tuple[str, float]]:
+        """예측기가 이 명단에서 각 변수를 실제로 얼마나 반영했는지 (비중, 큰 것부터).
+
+        규칙 기반 더미만 답할 수 있다. 실제 모델이 붙으면 화면은 팀 학습 결과서의
+        feature importance 를 쓰므로 여기서는 빈 목록을 낸다 — **못 내는 값을
+        비슷한 다른 값으로 채우지 않는다.**
+        """
+        profile = getattr(self._predictor, "contribution_profile", None)
+        return list(profile(students)) if profile is not None else []
+
     # -- 출처 표기 ---------------------------------------------------------
 
     @property

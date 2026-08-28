@@ -26,11 +26,11 @@ from __future__ import annotations
 import streamlit as st
 
 from components import ui
-from components.state import PAGE_RISK, PAGE_STUDENTS, cached_roster, start_page
+from components.state import PAGE_RISK, cached_roster, start_page
 from components.theme import CATEGORY_COLORS, CLASS_COLORS, COLORS, RISK_COLORS
 from services import model_metrics
-from services.predictor import RISK_CATEGORIES, RISK_LABELS_KO
 from services.prediction_service import get_service
+from services.predictor import RISK_CATEGORIES, RISK_LABELS_KO
 
 RISK_ORDER = ("HIGH", "MEDIUM", "LOW")
 
@@ -120,8 +120,8 @@ roster = cached_roster()
 frame = roster.frame
 
 start_page(
-    "위험 현황",
-    "오늘 먼저 확인해야 할 학생을 찾는 화면입니다.",
+    "중도탈락 위험 대시보드",
+    "이번 학기 명단의 중도탈락 위험 예측 현황입니다.",
     meta=(
         '<div class="ds-eyebrow">Students</div>'
         f'<div class="ds-sub" style="margin-top:4px">{len(frame):,}명 · 위험도 재계산 완료</div>'
@@ -134,54 +134,74 @@ high = int(counts.get("HIGH", 0))
 medium = int(counts.get("MEDIUM", 0))
 predicted_dropout = int((frame["예측(원본)"] == "Dropout").sum())
 
-# ── Level 1 — 지금 조치가 필요한 규모 ──────────────────────────────────────
-ui.section("지금 조치가 필요한 규모", "이 화면에서 가장 먼저 읽어야 할 숫자입니다.")
+# ── 지금 규모 — 넷을 한 줄로 ───────────────────────────────────────────────
+ui.kpi_row(
+    [
+        {"label": "전체 재학생", "value": f"{total:,}", "unit": "명",
+         "caption": "명단 전체", "accent": COLORS["primary"], "icon": "groups"},
+        {"label": "HIGH 위험", "value": f"{high:,}", "unit": "명",
+         "caption": "즉시 개입 필요", "accent": RISK_COLORS["HIGH"], "icon": "crisis_alert"},
+        {"label": "MEDIUM 위험", "value": f"{medium:,}", "unit": "명",
+         "caption": "예방 지원 권장", "accent": RISK_COLORS["MEDIUM"], "icon": "target"},
+        {"label": "예측 Dropout 비율",
+         "value": f"{predicted_dropout / total * 100:.1f}" if total else "0", "unit": "%",
+         "caption": f"{predicted_dropout:,}명 · 확률 50% 이상",
+         "accent": CLASS_COLORS["Dropout"], "icon": "percent"},
+    ],
+    columns=4,
+)
 
-hero_col, side_col = st.columns([1, 1.9], gap="medium")
-with hero_col:
-    ui.kpi_hero(
-        "즉시 개입 필요 · HIGH",
-        f"{high:,}",
-        f"전체 {total:,}명 중 {high / total * 100:.1f}% · 중도탈락 확률 60% 이상",
-        RISK_COLORS["HIGH"],
-        unit="명",
-        share=high / total if total else 0,
+# ── 지금 움직여야 하는 이유 하나 ───────────────────────────────────────────
+ui.spacer(12)
+# 줄을 칸으로 나누면 경보가 화면 폭을 다 못 쓴다. 줄은 폭 전체로 두고 버튼을 그 **안에**
+# 겹쳐 놓는다 (theme.py 가 이 컨테이너 안의 버튼만 절대 배치한다).
+with st.container(key="dash_alert"):
+    ui.alert_bar(
+        f"즉시 개입 필요 학생 {high:,}명",
+        "HIGH 위험 학생은 이번 주 안에 상담 배정을 권장합니다.",
     )
-    # 규모를 본 다음 할 일은 하나다 — 그 명단을 여는 것.
-    if st.button("위험학생 목록 열기 →", width="stretch", type="primary", key="go_risk"):
+    if st.button("위험학생목록 보기", type="primary", key="go_risk",
+                 icon=":material/list_alt:"):
         st.switch_page(PAGE_RISK)
-
-with side_col:
-    ui.kpi_row(
-        [
-            {"label": "전체 학생", "value": f"{total:,}", "unit": "명",
-             "caption": "명단 전체",
-             "accent": COLORS["primary"]},
-            {"label": "MEDIUM", "value": f"{medium:,}", "unit": "명",
-             "caption": "정기 모니터링", "accent": RISK_COLORS["MEDIUM"],
-             "share": medium / total if total else 0},
-            {"label": "예측 Dropout 비율", "value": f"{predicted_dropout / total * 100:.1f}" if total else "0",
-             "unit": "%", "caption": f"{predicted_dropout:,}명 · 확률 50% 이상",
-             "accent": CLASS_COLORS["Dropout"],
-             "share": predicted_dropout / total if total else 0},
-        ],
-        columns=3,
-    )
 
 # ── Level 2 — 그 위험이 어떤 성격인가 ──────────────────────────────────────
 ui.section("위험의 성격", "무엇을 준비해야 하고, 어디에 몰려 있는가.")
 
 c1, c2 = st.columns(2, gap="large")
 
-with c1, st.container(border=True):
+with c1, st.container(border=True, key="dash_c1"):
+    # 이 자리는 Feature Importance 다. 출처가 둘이고 **어느 쪽인지 반드시 밝힌다.**
+    #   1) 팀 학습 결과서가 있으면 → 학습된 모델의 중요도
+    #   2) 없으면 → 지금 화면의 확률을 만든 규칙식이 이 명단에서 실제로 쓴 비중
+    # 2번은 명단 885명에 대해 항의 절댓값을 평균 낸 실측값이라 지어낸 수치가 아니다.
+    # 다만 **학습된 모델의 중요도가 아니므로** 부제에서 그 사실을 그대로 적는다.
+    report = model_metrics.load()
+    model_importance = report.feature_importance if report is not None else []
+
+    if model_importance:
+        rows = [{"label": name, "value": value, "color": COLORS["primary"],
+                 "display": f"{value:.3f}"}
+                for name, value in model_importance[:8]]
+        sub_text = "학습 결과서의 모델 중요도 — 순위라서 막대로 그립니다."
+    else:
+        profile = service.contribution_profile(row.student for row in roster.rows)
+        rows = [{"label": name, "value": share, "color": COLORS["primary"],
+                 "display": f"{share:.1%}"}
+                for name, share in profile[:8]]
+        sub_text = ("현재 예측기(규칙 기반)가 이 명단에서 실제로 반영한 비중입니다. "
+                    "학습된 모델의 중요도가 아니며, 학습 결과서가 들어오면 그 값으로 바뀝니다.")
+
     st.markdown(
-        '<div class="card-title">위험등급 구성</div>'
-        '<div class="card-sub">전체 명단이 어떤 비율로 나뉘는지.</div>',
+        '<div class="card-title">Feature Importance</div>'
+        f'<div class="card-sub">{sub_text}</div>',
         unsafe_allow_html=True,
     )
-    ui.donut(risk_rows(frame), center_value=f"{total:,}", center_label="전체 학생")
+    if rows:
+        ui.bar_chart(rows, label_width=150)
+    else:
+        ui.donut(risk_rows(frame), center_value=f"{total:,}", center_label="전체 학생")
 
-with c2, st.container(border=True):
+with c2, st.container(border=True, key="dash_c2"):
     st.markdown(
         '<div class="card-title">위험요인 카테고리</div>'
         '<div class="card-sub">학생마다 1순위 위험 하나로 집계 — 어느 부서로 보낼지의 기준.</div>',
@@ -193,7 +213,7 @@ with c2, st.container(border=True):
 ui.spacer(6)
 c3, c4 = st.columns(2, gap="large")
 
-with c3, st.container(border=True):
+with c3, st.container(border=True, key="dash_c3"):
     st.markdown(
         '<div class="card-title">전공계열별 Dropout 분포</div>'
         '<div class="card-sub">막대 옆의 <b>율</b>은 그 계열 안에서의 비율.</div>',
@@ -202,7 +222,7 @@ with c3, st.container(border=True):
     ui.bar_chart(major_rows(frame), label_width=132,
                  hint="막대를 가리키면 나머지는 옅어집니다.")
 
-with c4, st.container(border=True):
+with c4, st.container(border=True, key="dash_c4"):
     st.markdown(
         '<div class="card-title">재정 · 학업 이슈 비중</div>'
         '<div class="card-sub">발동한 규칙 <b>건수</b> 기준 — 부서별 업무량.</div>',
@@ -211,25 +231,3 @@ with c4, st.container(border=True):
     workload = workload_rows(roster)
     ui.donut(workload, center_value=f"{sum(r['value'] for r in workload):,}",
              center_label="지원 연결 건")
-
-# ── 피처 중요도 — 순위라 막대로 둔다 ───────────────────────────────────────
-# 결과서가 없으면 카드 자체를 그리지 않는다. 빈 자리를 남겨 두면 미완성으로 읽힌다.
-report = model_metrics.load()
-if report is not None and report.feature_importance:
-    ui.spacer(6)
-    with st.container(border=True):
-        st.markdown(
-            '<div class="card-title">모델이 크게 본 변수</div>'
-            '<div class="card-sub">순위라서 도넛이 아니라 막대로 그립니다.</div>',
-            unsafe_allow_html=True,
-        )
-        ui.bar_chart(
-            [{"label": name, "value": value, "color": COLORS["primary"],
-              "display": f"{value:.3f}"}
-             for name, value in report.feature_importance[:10]],
-            label_width=190,
-        )
-
-ui.spacer(12)
-if st.button("전체 학생 목록 보기", width="stretch", key="go_students"):
-    st.switch_page(PAGE_STUDENTS)
