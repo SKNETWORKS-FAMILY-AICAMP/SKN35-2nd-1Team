@@ -7,8 +7,9 @@
 
     views/0_home.py        메인 (소개 · 핵심 수치 · 바로가기)
     views/1_dashboard.py   대시보드 (규모 → 성격, 도넛 넷)
-    views/2_students.py    학생 목록 (좁히기 → 상세 → 직접 입력)
+    views/2_students.py    학생 목록 (좁히기 → 상세)
     views/3_risk_list.py   집중관리 대상 (우선 처리 명단 · 상담 진행 상태)
+    views/4_manual.py      예비학생 예측 (명단에 없는 학생을 직접 입력)
 
     components/  디자인 시스템(theme) · 공통 UI · 지구본 · 상태
     services/    예측 계층 (더미 ↔ 실제 모델 교체 지점)
@@ -32,6 +33,7 @@ import streamlit as st
 from components.state import (
     PAGE_DASHBOARD,
     PAGE_HOME,
+    PAGE_MANUAL,
     PAGE_RISK,
     PAGE_STUDENTS,
     roster_size,
@@ -50,6 +52,7 @@ PAGES = [
     st.Page(PAGE_DASHBOARD, title="대시보드", icon=":material/monitoring:"),
     st.Page(PAGE_STUDENTS, title="학생 목록", icon=":material/table_rows:"),
     st.Page(PAGE_RISK, title="집중관리 대상", icon=":material/priority_high:"),
+    st.Page(PAGE_MANUAL, title="예비학생 예측", icon=":material/person_add:"),
 ]
 
 

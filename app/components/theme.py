@@ -294,6 +294,122 @@ def _css() -> str:
   .kpi .val .unit {{ font-size: .58em; font-weight: 600; color: var(--faint); margin-left: 2px; }}
   .kpi .cap {{ font-size: {t['caption']}; color: var(--muted); margin-top: {s['1']}; }}
 
+  /* 아이콘이 붙은 KPI — 숫자가 넷 늘어설 때 무엇에 대한 값인지 먼저 읽힌다 */
+  .kpi.has-icon {{ display: flex; align-items: center; gap: {s['4']}; }}
+  .kpi.has-icon .ico {{
+    width: 44px; height: 44px; border-radius: var(--radius-md); flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 23px;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, {c['surface']});
+  }}
+  .kpi.has-icon .kpi-body {{ min-width: 0; }}
+  .kpi.has-icon .val {{ margin-top: 0; }}
+
+  /* 경보 줄 — 지금 움직여야 하는 이유 하나 */
+  .alert-bar {{
+    display: flex; align-items: center; gap: {s['4']};
+    background: var(--s); border: 1px solid var(--l); border-left: 3px solid var(--c);
+    border-radius: var(--radius-lg); padding: {s['4']} {s['5']};
+  }}
+  .alert-bar .ico {{
+    width: 42px; height: 42px; border-radius: var(--radius-md); flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    color: {c['canvas']}; background: var(--c);
+  }}
+  .alert-bar .t {{ display: flex; flex-direction: column; }}
+  .alert-bar .n {{ font-size: {t['h3']}; font-weight: 700; color: var(--c); }}
+  .alert-bar .d {{ font-size: {t['secondary']}; color: var(--ink-soft); margin-top: 2px; }}
+  /* 버튼은 줄을 나눠 옆에 세우지 않고 **줄 안쪽 오른쪽**에 앉힌다. 칸을 나누면
+     경보 줄이 그만큼 짧아져서 "화면을 가로지르는 한 줄"이 아니게 된다. Streamlit
+     위젯은 HTML 안에 못 넣으므로 컨테이너째 겹쳐 놓고, 줄은 그만큼 오른쪽을
+     비워 글이 버튼 밑으로 들어가지 않게 한다. */
+  .st-key-dash_alert {{ position: relative; }}
+  .st-key-dash_alert .alert-bar {{ padding-right: 252px; min-height: 86px; }}
+  .st-key-dash_alert [data-testid="stElementContainer"]:has(.stButton) {{
+    position: absolute; right: {s['5']}; top: 50%; transform: translateY(-50%);
+    width: auto; margin: 0;
+  }}
+  /* 버튼 색은 줄의 색을 따른다 — 경보와 다른 색이면 둘이 남남으로 읽힌다 */
+  /* 아래쪽 전역 규칙(.stButton > button[kind="primary"])과 특이도가 같으면 나중에
+     오는 그쪽이 이긴다 — 여기서도 [kind] 를 붙여 한 단계 위로 올린다. */
+  .st-key-dash_alert .stButton > button[kind="primary"] {{
+    padding: 12px {s['5']}; font-weight: 700; white-space: nowrap;
+    background: var(--high); border: 1px solid var(--high); color: {c['canvas']};
+  }}
+  .st-key-dash_alert .stButton > button[kind="primary"]:hover {{
+    background: color-mix(in srgb, var(--high) 82%, #fff);
+    border-color: color-mix(in srgb, var(--high) 82%, #fff); color: {c['canvas']};
+  }}
+  .st-key-dash_alert .stButton > button[kind="primary"] p {{ color: {c['canvas']}; }}
+  .st-key-dash_alert .stButton > button[kind="primary"]:focus-visible {{
+    outline: 2px solid var(--ink); outline-offset: 2px;
+  }}
+  /* 폭이 좁으면 겹칠 수밖에 없다 — 그때만 줄 아래로 내려 앉힌다 */
+  @media (max-width: 1000px) {{
+    .st-key-dash_alert .alert-bar {{ padding-right: {s['5']}; }}
+    .st-key-dash_alert [data-testid="stElementContainer"]:has(.stButton) {{
+      position: static; transform: none; width: 100%; margin-top: {s['3']};
+    }}
+  }}
+
+  /* 차트 카드 넷은 좌우 높이를 맞춘다 — 줄이 어긋나면 화면이 흔들려 보인다 */
+  [class*="st-key-dash_c"] {{ min-height: 470px; }}
+  /* 그래프가 앉을 바닥을 한 겹 깐다 — 카드 안에서 그림 영역이 어디까지인지
+     선 없이 보이게 하는 방법이다. 대시보드 카드 안에서만 적용한다. */
+  [class*="st-key-dash_c"] .bars,
+  [class*="st-key-dash_c"] .cols,
+  [class*="st-key-dash_c"] .dn {{
+    background: rgba(255,255,255,.1);
+    border-radius: var(--radius-md);
+    padding: {s['4']};
+    box-sizing: border-box;
+  }}
+
+  /* ── 명단 표 (직접 그린다) ─────────────────────────────────────────── */
+  /* `st.dataframe` 은 행 선택을 켜면 체크박스 열이 따라붙는다. 담당자가 하는 일은
+     고르는 게 아니라 **여는 것**이라 그 한 칸이 군더더기다. 직접 그리고 덮는다. */
+  .rt-head, .rt-row {{
+    display: grid; grid-template-columns: 1.1fr 1.1fr 1.6fr .8fr .9fr;
+    align-items: center; gap: {s['3']}; padding: {s['3']} {s['4']};
+  }}
+  .rt-head {{
+    font-size: {t['label']}; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--faint);
+    border-bottom: 1px solid var(--line);
+  }}
+  .rt-row {{
+    font-size: {t['secondary']}; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line-soft);
+    transition: background .14s ease;
+  }}
+  [class*="st-key-rt_row_"] {{ position: relative; }}
+  [class*="st-key-rt_row_"]:hover .rt-row {{ background: var(--raised); }}
+  .rt-row .nm {{ color: var(--ink); font-weight: 600; }}
+  .rt-row .g {{ text-align: right; }}
+  .rt-head .g {{ text-align: right; }}
+  .rt-row .lv {{
+    display: inline-block; font-size: {t['label']}; font-weight: 800; letter-spacing: .05em;
+    color: var(--c); background: color-mix(in srgb, var(--c) 16%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--c) 38%, {c['surface']});
+    border-radius: {r['pill']}; padding: 2px {s['2']};
+  }}
+  /* 줄 전체가 버튼이다 (집중관리 카드와 같은 방식) */
+  [class*="st-key-rt_row_"] [data-testid="stElementContainer"]:has(.stButton) {{
+    position: absolute !important; inset: 0 !important; height: auto !important;
+    margin: 0 !important; z-index: 2;
+  }}
+  [class*="st-key-rt_row_"] .stButton {{
+    position: static !important; width: 100%; height: 100%; margin: 0;
+  }}
+  [class*="st-key-rt_row_"] .stButton > button {{
+    width: 100%; height: 100%; opacity: 0; padding: 0; border: none;
+    background: transparent; cursor: pointer;
+  }}
+  [class*="st-key-rt_row_"] .stButton > button:focus-visible {{
+    opacity: 1; background: rgba(91,155,232,.12); border: 2px solid var(--primary);
+    color: var(--ink);
+  }}
+
   /* hero KPI — 화면에서 가장 먼저 읽혀야 하는 하나 */
   .kpi-hero {{
     background: linear-gradient(180deg, var(--surface), var(--raised));

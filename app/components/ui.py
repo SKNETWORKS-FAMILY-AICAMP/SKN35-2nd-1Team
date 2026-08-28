@@ -16,6 +16,7 @@ from components.theme import (
     CLASS_COLORS,
     COLORS,
     RISK_COLORS,
+    RISK_LINE,
     RISK_SOFT,
 )
 from rules.recommendation_rules import (
@@ -97,6 +98,23 @@ def banner(
     )
 
 
+def alert_bar(title: str, desc: str, *, icon: str = "bolt",
+              accent: str = "", soft: str = "", line: str = "") -> None:
+    """화면 폭을 가로지르는 경보 줄. **지금 움직여야 하는 이유** 하나만 담는다.
+
+    KPI 카드가 "얼마나" 라면 이 줄은 "그래서 지금 무엇을" 이다. 오른쪽 버튼은 화면
+    파일이 이 함수 **다음에** 그린다 (버튼은 Streamlit 위젯이라 HTML 안에 못 넣는다).
+    """
+    accent = accent or RISK_COLORS["HIGH"]
+    _html(
+        f'<div class="alert-bar" style="--c:{accent};--s:{soft or RISK_SOFT["HIGH"]};'
+        f'--l:{line or RISK_LINE["HIGH"]}">'
+        f'<span class="ico material-symbols-rounded">{escape(icon)}</span>'
+        f'<span class="t"><span class="n">{escape(title)}</span>'
+        f'<span class="d">{escape(desc)}</span></span></div>'
+    )
+
+
 def empty_state(title: str, desc: str = "") -> None:
     _html(
         f'<div class="empty"><div class="t">{escape(title)}</div>'
@@ -125,7 +143,11 @@ def kpi_hero(label: str, value: str, caption: str, accent: str, *, unit: str = "
 
 
 def kpi_row(items: list[dict], columns: int = 4) -> None:
-    """보조 지표. `{label, value, caption, accent, unit?, share?}` 목록."""
+    """보조 지표. `{label, value, caption, accent, unit?, share?, icon?}` 목록.
+
+    `icon` 은 Material Symbols 이름이다. 넣으면 왼쪽에 색 아이콘이 서고, 라벨과 값이
+    그 오른쪽으로 간다 — 숫자가 넷 이상 늘어설 때 무엇에 대한 숫자인지 먼저 읽힌다.
+    """
     cards = []
     for it in items:
         share = it.get("share")
@@ -134,13 +156,18 @@ def kpi_row(items: list[dict], columns: int = 4) -> None:
             if share is not None else ""
         )
         unit = it.get("unit", "")
+        icon = it.get("icon", "")
+        body = (
+            f'<div class="lab">{escape(it["label"])}</div>'
+            f'<div class="val">{escape(it["value"])}'
+            f'{f"<span class=\'unit\'>{escape(unit)}</span>" if unit else ""}</div>'
+            f'<div class="cap">{escape(it.get("caption", ""))}</div>'
+        )
         cards.append(
-            f"""<div class="kpi" style="--accent:{it.get('accent', COLORS['primary'])}">
-                  <div class="lab">{escape(it['label'])}</div>
-                  <div class="val">{escape(it['value'])}
-                    {f'<span class="unit">{escape(unit)}</span>' if unit else ''}</div>
-                  <div class="cap">{escape(it.get('caption', ''))}</div>{bar}
-                </div>"""
+            f'<div class="kpi{" has-icon" if icon else ""}" '
+            f'style="--accent:{it.get("accent", COLORS["primary"])}">'
+            + (f'<span class="ico material-symbols-rounded">{escape(icon)}</span>' if icon else "")
+            + f'<div class="kpi-body">{body}{bar}</div></div>'
         )
     _html(
         f'<div class="kpi-row" style="grid-template-columns:repeat({columns},1fr)">'

@@ -6,7 +6,7 @@
 `streamlit.testing.v1.AppTest` 는 스크립트를 그대로 실행하므로 여기서 잡으려는 것은
 **렌더 중 죽는가**와 **말하지 말아야 할 것을 말하는가** 둘이다. 픽셀은 브라우저에서 본다.
 
-화면은 넷이다 (팀 초안 기준) — 메인 · 대시보드 · 학생 목록 · 집중관리 대상.
+화면은 다섯이다 — 메인 · 대시보드 · 학생 목록 · 집중관리 대상 · 예비학생 예측.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ ENTRYPOINT = str(APP_ROOT / "app.py")
 PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_STUDENTS = "views/2_students.py"
 PAGE_RISK = "views/3_risk_list.py"
+PAGE_MANUAL = "views/4_manual.py"
 
 #: 명단 예측 + 차트가 있어 기본 3초로는 모자란다.
 TIMEOUT = 180
@@ -61,7 +62,7 @@ def click(app: AppTest, label: str) -> None:
 # ---------------------------------------------------------------------------
 
 class TestEveryPage(unittest.TestCase):
-    PAGES = (None, PAGE_DASHBOARD, PAGE_STUDENTS, PAGE_RISK)
+    PAGES = (None, PAGE_DASHBOARD, PAGE_STUDENTS, PAGE_RISK, PAGE_MANUAL)
 
     def test_all_pages_render(self):
         for page in self.PAGES:
@@ -137,14 +138,15 @@ class TestDashboard(unittest.TestCase):
     def test_kpi_and_shortcut(self):
         app = run_page(PAGE_DASHBOARD)
         body = text_of(app)
-        for wanted in ("즉시 개입 필요", "전체 학생", "MEDIUM", "예측 Dropout 비율"):
+        for wanted in ("전체 재학생", "HIGH 위험", "MEDIUM 위험", "예측 Dropout 비율"):
             with self.subTest(kpi=wanted):
                 self.assertIn(wanted, body)
-        self.assertIn("위험학생 목록 열기 →", [b.label for b in app.button])
+        self.assertIn("즉시 개입 필요 학생", body)     # 경고 띠
+        self.assertIn("위험학생목록 보기", [b.label for b in app.button])
 
     def test_four_charts_are_present(self):
         body = text_of(run_page(PAGE_DASHBOARD))
-        for title in ("위험등급 구성", "위험요인 카테고리",
+        for title in ("Feature Importance", "위험요인 카테고리",
                       "전공계열별 Dropout 분포", "재정 · 학업 이슈 비중"):
             with self.subTest(chart=title):
                 self.assertIn(title, body)
@@ -166,6 +168,45 @@ class TestDashboard(unittest.TestCase):
         body = text_of(run_page(PAGE_DASHBOARD))
         self.assertIn("--len:", body)     # 도넛 조각의 목표 길이
         self.assertIn("--fill:", body)    # 세로 막대의 목표 높이
+
+    def test_feature_importance_declares_where_it_came_from(self):
+        """🔴 1번 카드는 **어느 쪽 값인지 반드시 밝힌다.**
+
+        학습 결과서가 없으면 거기 서는 것은 모델의 중요도가 아니라, 지금 화면의
+        확률을 만든 규칙식이 이 명단에서 실제로 쓴 비중이다. 둘을 같은 얼굴로
+        내보내면 없는 모델 해석을 주장하는 셈이라 발표에서 가장 큰 사고가 된다.
+        """
+        from services import model_metrics
+
+        body = text_of(run_page(PAGE_DASHBOARD))
+        self.assertIn("Feature Importance", body)
+        if model_metrics.available():
+            self.assertIn("학습 결과서의 모델 중요도", body)
+        else:
+            self.assertIn("현재 예측기(규칙 기반)", body)
+            self.assertIn("학습된 모델의 중요도가 아니며", body)
+
+    def test_contribution_profile_is_measured_not_typed(self):
+        """규칙 예측기의 기여도는 명단에서 **실측**한 값이다 — 손으로 적은 표가 아니다.
+
+        같은 명단이면 항상 같고, 합이 1 이고, 학생을 빼면 값이 달라져야 한다.
+        """
+        import sys
+
+        sys.path.insert(0, str(APP_ROOT))
+        from components.state import cached_roster
+        from services.prediction_service import get_service
+
+        service = get_service()
+        if not service.is_dummy:
+            self.skipTest("실제 모델이 붙어 있습니다.")
+        students = [row.student for row in cached_roster().rows]
+        full = service.contribution_profile(students)
+        self.assertTrue(full)
+        self.assertAlmostEqual(sum(share for _, share in full), 1.0, places=6)
+        self.assertEqual(full, service.contribution_profile(students))
+        self.assertEqual(full, sorted(full, key=lambda pair: pair[1], reverse=True))
+        self.assertNotEqual(full, service.contribution_profile(students[:20]))
 
     def test_no_placeholder_card_without_the_report(self):
         """결과서가 없으면 그 카드는 **그리지 않는다** — 빈 자리는 미완성으로 읽힌다."""
@@ -255,14 +296,30 @@ class TestStudents(unittest.TestCase):
         self.assertTrue(any("상담 카드" in label for label in labels), labels)
         self.assertTrue(any("명단 요약" in label for label in labels), labels)
 
-    def test_manual_input_is_absorbed_here(self):
-        """예측 화면을 흡수했다 — 명단에 없는 학생도 이 화면에서 넣는다."""
+    def test_manual_input_left_this_screen(self):
+        """직접 입력은 여기서 뺐다 — 명단은 **있는 학생을 찾는 곳**이다.
+
+        접힌 폼이 명단 아래 남아 있으면 화면이 길어지기만 한다. 없는 학생을
+        넣어 보는 일은 `예비학생 예측` 화면이 가져갔다.
+        """
         app = run_page(PAGE_STUDENTS)
+        self.assertNotIn("실제 학생 기록이 아닙니다", text_of(app))
+        self.assertNotIn("HIGH · 복합 위험", [b.label for b in app.button])
+
+
+# ---------------------------------------------------------------------------
+# 예비학생 예측 — 명단에 없는 학생을 손으로 넣는 화면
+# ---------------------------------------------------------------------------
+
+class TestManual(unittest.TestCase):
+    def test_form_and_presets_are_here(self):
+        app = run_page(PAGE_MANUAL)
+        assert_clean(self, app)
         self.assertIn("실제 학생 기록이 아닙니다", text_of(app))
         self.assertIn("HIGH · 복합 위험", [b.label for b in app.button])
 
     def test_manual_input_produces_a_result(self):
-        app = run_page(PAGE_STUDENTS)
+        app = run_page(PAGE_MANUAL)
         click(app, "HIGH · 복합 위험")
         click(app, "위험도 분석")
         assert_clean(self, app)
@@ -277,7 +334,7 @@ class TestStudents(unittest.TestCase):
 
 class TestRecommendationEvidence(unittest.TestCase):
     def _analysed(self) -> AppTest:
-        app = run_page(PAGE_STUDENTS)
+        app = run_page(PAGE_MANUAL)
         click(app, "HIGH · 복합 위험")
         click(app, "위험도 분석")
         return app

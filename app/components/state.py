@@ -19,6 +19,7 @@ PAGE_HOME = "views/0_home.py"
 PAGE_DASHBOARD = "views/1_dashboard.py"
 PAGE_STUDENTS = "views/2_students.py"
 PAGE_RISK = "views/3_risk_list.py"
+PAGE_MANUAL = "views/4_manual.py"
 
 
 @st.cache_resource(show_spinner="학생 명단을 예측하는 중입니다…")
