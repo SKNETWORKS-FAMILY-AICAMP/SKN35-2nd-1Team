@@ -1,0 +1,3 @@
+model,team_member,threshold,recall,f1
+LightGBM,조현주,0.5,0.8596,0.8046
+MLP,조현주,0.4,0.8421,0.8040
