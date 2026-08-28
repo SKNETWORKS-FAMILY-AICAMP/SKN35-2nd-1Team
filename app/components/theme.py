@@ -877,6 +877,37 @@ def _css() -> str:
   }}
   .hero-chips .chip .k {{ font-size: {t['caption']}; color: #A9C0DE; margin-top: 1px; }}
 
+  /* 위험 구성 띠 — 칩이 "얼마나"라면 이 띠는 "어떻게 나뉘는가"다 */
+  .hero-split {{
+    padding: {s['4']} {s['5']}; border-radius: var(--radius-lg);
+    background: rgba(13,24,42,.58); border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(14px);
+  }}
+  .hero-split .hs-head {{
+    display: flex; align-items: baseline; gap: {s['3']};
+    font-size: {t['caption']}; font-weight: 700; color: #E4ECF8;
+    letter-spacing: .04em;
+  }}
+  .hero-split .hs-head .n {{ font-size: {t['label']}; font-weight: 600; color: #93A9C6; }}
+  .hero-split .hs-bar {{
+    display: flex; height: 12px; margin-top: {s['3']};
+    border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.08);
+  }}
+  .hero-split .hs-bar > span {{
+    display: block; height: 100%; transform-origin: left center;
+    animation: ds-grow .7s cubic-bezier(.2,.75,.3,1) both;
+  }}
+  .hero-split .hs-bar > span:nth-child(2) {{ animation-delay: .08s; }}
+  .hero-split .hs-bar > span:nth-child(3) {{ animation-delay: .16s; }}
+  .hero-split .hs-legend {{
+    display: flex; flex-wrap: wrap; gap: {s['5']}; margin-top: {s['3']};
+    font-size: {t['caption']}; color: #A9C0DE;
+  }}
+  .hero-split .hs-legend .l {{ display: inline-flex; align-items: center; gap: 6px; }}
+  .hero-split .hs-legend i {{ width: 9px; height: 9px; border-radius: 3px; }}
+  .hero-split .hs-legend b {{ color: #FFFFFF; font-weight: 700; }}
+  .hero-split .hs-legend em {{ font-style: normal; color: #7F93AE; }}
+
   /* 아래 카드 — 이 제품이 답하는 것 */
   .st-key-hero_card {{
     padding: {s['5']} {s['6']}; border-radius: var(--radius-lg);
@@ -901,9 +932,18 @@ def _css() -> str:
 
   /* 지구본 — 콘텐츠가 아니라 배경이다. 오른쪽에 얹고 클릭은 통과시킨다. */
   /* Streamlit 이 컨테이너를 래퍼로 한 겹 더 감싸므로 자식 선택자(>)로는 못 잡는다 */
+  /* 지구본 자리 — 글자 블록의 오른쪽 위를 비껴 앉고, 오른쪽으로 살짝 흘러나간다.
+     화면이 낮으면(노트북·빔프로젝터) 통째로 줄여서 위아래를 넘지 않게 한다. */
   .st-key-hero > div:has(> .st-key-hero_globe) {{
-    position: absolute; top: 50%; right: -{s['4']}; transform: translateY(-50%);
-    z-index: 0; width: clamp(420px, 52%, 880px); pointer-events: none;
+    position: absolute; top: 46%; right: -3%; transform: translateY(-50%);
+    z-index: 0; width: clamp(420px, 48vw, 880px); pointer-events: none;
+    transform-origin: 70% 50%;
+  }}
+  @media (max-height: 900px) {{
+    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: translateY(-50%) scale(.86); }}
+  }}
+  @media (max-height: 800px) {{
+    .st-key-hero > div:has(> .st-key-hero_globe) {{ transform: translateY(-50%) scale(.74); }}
   }}
   .st-key-hero .st-key-hero_globe {{ position: static; width: 100%; opacity: .96; }}
   /* 구 뒤에 옅은 빛을 깔면 평면 그림이 아니라 떠 있는 물체로 읽힌다.

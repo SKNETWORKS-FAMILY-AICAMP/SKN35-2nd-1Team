@@ -24,7 +24,8 @@ from components.state import (
     cached_roster,
     start_page,
 )
-from components.theme import inject_hero_photo
+from components.theme import RISK_COLORS, inject_hero_photo
+from services.predictor import RISK_LABELS_KO
 
 start_page("")
 inject_hero_photo()
@@ -33,7 +34,20 @@ inject_hero_photo()
 frame = cached_roster().frame
 total = len(frame)
 high = int((frame["위험등급"] == "HIGH").sum())
+medium = int((frame["위험등급"] == "MEDIUM").sum())
+low = int((frame["위험등급"] == "LOW").sum())
 dropout = int((frame["예측(원본)"] == "Dropout").sum())
+
+
+def segment(level: str, count: int) -> tuple[str, str]:
+    """위험 구성 띠의 조각 하나 + 범례 한 줄. 색은 화면 전체가 쓰는 등급 색 그대로."""
+    share = count / total * 100
+    color = RISK_COLORS[level]
+    bar = f'<span style="width:{share:.1f}%;background:{color}"></span>'
+    legend = (f'<span class="l"><i style="background:{color}"></i>'
+              f'{level} · {RISK_LABELS_KO[level]} <b>{count:,}명</b>'
+              f'<em>{share:.1f}%</em></span>')
+    return bar, legend
 
 
 def chip(icon: str, value: str, label: str) -> str:
@@ -102,6 +116,22 @@ with st.container(key="hero"):
       {chip("groups", f"{total:,}", "전체 재학생")}
       {chip("percent", f"{dropout / total * 100:.1f}%", "예측 Dropout 비율")}
       {chip("crisis_alert", f"{high:,}명", "고위험 HIGH")}
+    </div>""",
+        unsafe_allow_html=True,
+    )
+
+    ui.spacer(12)
+
+    # ── 위험 구성 한 줄 ───────────────────────────────────────────────────
+    # 칩 셋이 "얼마나"를 말한다면 이 띠는 "어떻게 나뉘어 있는가"를 말한다.
+    # 대시보드를 열기 전에 명단의 모양이 눈에 먼저 들어온다.
+    bars, legends = zip(*(segment(level, count) for level, count in
+                          (("HIGH", high), ("MEDIUM", medium), ("LOW", low))))
+    st.markdown(
+        f"""<div class="hero-split">
+      <div class="hs-head">위험 구성<span class="n">전체 {total:,}명</span></div>
+      <div class="hs-bar">{"".join(bars)}</div>
+      <div class="hs-legend">{"".join(legends)}</div>
     </div>""",
         unsafe_allow_html=True,
     )
