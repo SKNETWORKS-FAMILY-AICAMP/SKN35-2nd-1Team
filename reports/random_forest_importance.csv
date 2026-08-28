@@ -1,11 +1,82 @@
-﻿feature,importance
-num__sem2_approval_rate,0.13118579530854516
-num__Curricular units 2nd sem (approved),0.10824046031063181
-num__sem1_approval_rate,0.09801370283584399
-num__Curricular units 2nd sem (grade),0.08029728686361746
-num__Curricular units 1st sem (approved),0.05912183106849021
-num__Curricular units 1st sem (grade),0.04798031891286551
-remainder__financial_risk_score,0.042798326941214854
-remainder__Tuition fees up to date,0.03841259787116774
-num__grade_change,0.03635155080051324
-num__Age at enrollment,0.03195010023227164
+﻿rank,feature,importance
+1,num__sem2_approval_rate,0.13118579530854516
+2,num__Curricular units 2nd sem (approved),0.10824046031063181
+3,num__sem1_approval_rate,0.09801370283584399
+4,num__Curricular units 2nd sem (grade),0.08029728686361746
+5,num__Curricular units 1st sem (approved),0.05912183106849021
+6,num__Curricular units 1st sem (grade),0.04798031891286551
+7,remainder__financial_risk_score,0.042798326941214854
+8,remainder__Tuition fees up to date,0.03841259787116774
+9,num__grade_change,0.03635155080051324
+10,num__Age at enrollment,0.03195010023227164
+11,num__Curricular units 2nd sem (evaluations),0.029609944720422148
+12,num__Admission grade,0.02844165575237639
+13,num__Previous qualification (grade),0.024893791615611015
+14,num__Curricular units 1st sem (evaluations),0.02251907646063398
+15,num__Curricular units 2nd sem (enrolled),0.014553134454005592
+16,num__Curricular units 1st sem (enrolled),0.014459531597700333
+17,remainder__Debtor,0.011213012865174335
+18,remainder__Scholarship holder,0.010956230061259049
+19,remainder__Gender,0.010344605458894497
+20,num__Application order,0.008778309813477745
+21,cat__Admission_pathway_일반전형,0.006190973202720305
+22,cat__Father_education_level_중등교육 이하,0.006062138693316749
+23,remainder__Displaced,0.0060429382617291985
+24,num__Curricular units 1st sem (credited),0.005912061687097713
+25,cat__Major_field_예술·디자인,0.005132794784304302
+26,cat__Mother_education_level_중등교육 이하,0.0048524916434834545
+27,cat__Mother_occupation_group_기술·생산,0.004832028826494053
+28,cat__Father_education_level_고등학교,0.004730485383654445
+29,cat__Admission_pathway_성인학습자 전형,0.004615141875829059
+30,num__Curricular units 2nd sem (credited),0.004613348537705582
+31,cat__Mother_occupation_group_사무·서비스,0.004532667894251944
+32,cat__Father_occupation_group_기술·생산,0.004500438602289354
+33,cat__Major_field_보건,0.0044558109104140915
+34,cat__Mother_education_level_고등학교,0.00444559516950183
+35,remainder__zero_enrolled_1st_sem,0.004348464844850859
+36,cat__Mother_occupation_group_전문·관리직,0.004320123345721529
+37,cat__Father_occupation_group_전문·관리직,0.0042466389361692026
+38,cat__Major_field_인문·사회,0.004175993249652396
+39,cat__Major_field_교육,0.004081222156406115
+40,cat__Father_occupation_group_사무·서비스,0.0036787288391142707
+41,cat__Major_field_경영,0.0036401818295524278
+42,cat__Major_field_사회,0.003330471132089787
+43,cat__Father_education_level_대학,0.003280508915900832
+44,cat__Mother_education_level_대학,0.0030484756252392754
+45,num__Curricular units 2nd sem (without evaluations),0.0026332023339236533
+46,num__Curricular units 1st sem (without evaluations),0.0025587949379005906
+47,cat__Admission_pathway_편입·전과,0.002485402805297443
+48,cat__Father_occupation_group_무직·기타,0.0024389035505433367
+49,cat__Mother_occupation_group_무직·기타,0.002421979829812546
+50,cat__Previous_education_level_Secondary,0.0022337106710790654
+51,cat__Major_field_공학·IT,0.002171968505897177
+52,cat__Father_occupation_group_농림,0.0019719406123474845
+53,cat__Mother_education_level_미상·기타,0.0019611417848066585
+54,cat__Major_field_자연·농생명,0.0019146438401614532
+55,remainder__Daytime/evening attendance,0.0017783385407720382
+56,cat__Major_field_경영·서비스,0.001543074444396907
+57,cat__Marital status_1,0.00146172827190929
+58,cat__Father_education_level_미상·기타,0.001371252343809694
+59,cat__Previous_education_level_Vocational,0.0012979019929463542
+60,cat__Admission_pathway_직업·기술교육 연계전형,0.0012822033975111746
+61,cat__Marital status_2,0.0011874415113128313
+62,cat__Previous_education_level_Below secondary,0.001062391099428088
+63,cat__Previous_education_level_Bachelor,0.0009883756562187207
+64,cat__Admission_pathway_고등교육 이수자 전형,0.00090717751779794
+65,remainder__International,0.0008577825219879865
+66,remainder__Educational special needs,0.0005838348067519109
+67,cat__Father_education_level_전문·직업교육,0.000539870955923278
+68,cat__Mother_occupation_group_농림,0.0005243657591937316
+69,cat__Mother_education_level_대학원,0.0005117024171564158
+70,cat__Admission_pathway_외국인·국제학생 전형,0.0004888415876807331
+71,cat__Admission_pathway_특별전형,0.00044193135678114137
+72,cat__Father_education_level_대학원,0.00038603305382955473
+73,cat__Marital status_4,0.00020948366459890534
+74,cat__Admission_pathway_기타·특수전형,0.00019207473162653792
+75,cat__Marital status_5,0.00014772669910514402
+76,cat__Mother_education_level_전문·직업교육,0.00010775337705408065
+77,cat__Previous_education_level_Graduate,9.803455813258085e-05
+78,cat__Marital status_3,4.763422091264808e-05
+79,cat__Major_field_공학·자연,3.1720057854108156e-07
+80,cat__Previous_education_level_Higher education experience,5.114860888619324e-08
+81,cat__Marital status_6,0.0
