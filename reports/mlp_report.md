@@ -9,8 +9,7 @@
 
 ## 1. 모델 학습 및 튜닝 과정
 
-기본 구조 설계 → EarlyStopping 기준 문제 발견 및 수정 → threshold 조정까지
-4단계에 걸쳐 성능을 비교했다.
+기본 구조 설계 → EarlyStopping 기준 문제 발견 및 수정 → threshold 조정
 
 | 단계 | 설정 | Recall | F1 |
 |---|---|---|---|
