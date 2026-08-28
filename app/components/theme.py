@@ -746,8 +746,12 @@ def _css() -> str:
     background-position: center, center 56%, center, center;
     background-repeat: no-repeat;
     border-radius: var(--radius-lg);
-    padding: {s['16']} {s['12']} {s['8']} {s['12']};
+    padding: {s['16']} {s['12']} {s['12']} {s['12']};
     color: #FFFFFF;
+    /* 창 높이에 맞춘다. 표지 아래에 빈 바닥이 남으면 잘린 페이지처럼 보인다 */
+    min-height: calc(100vh - 92px);
+    /* 내용은 세로 가운데로 — 위아래 여백이 화면 비율에 따라 알아서 나뉜다 */
+    display: flex; flex-direction: column; justify-content: center;
   }}
   .st-key-hero::after {{
     content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
@@ -897,9 +901,22 @@ def _css() -> str:
 
   /* 지구본 — 콘텐츠가 아니라 배경이다. 오른쪽에 얹고 클릭은 통과시킨다. */
   /* Streamlit 이 컨테이너를 래퍼로 한 겹 더 감싸므로 자식 선택자(>)로는 못 잡는다 */
-  .st-key-hero .st-key-hero_globe {{
-    position: absolute; top: 0; right: 0; z-index: 0;
-    width: min(46%, 680px); pointer-events: none; opacity: .95;
+  .st-key-hero > div:has(> .st-key-hero_globe) {{
+    position: absolute; top: 50%; right: -{s['4']}; transform: translateY(-50%);
+    z-index: 0; width: clamp(420px, 52%, 880px); pointer-events: none;
+  }}
+  .st-key-hero .st-key-hero_globe {{ position: static; width: 100%; opacity: .96; }}
+  /* 구 뒤에 옅은 빛을 깔면 평면 그림이 아니라 떠 있는 물체로 읽힌다.
+     3D 오브젝트를 하나 더 얹는 것보다 이 편이 조용하고, 발표 화면에서 덜 시끄럽다. */
+  .st-key-hero .st-key-hero_globe::before {{
+    content: ""; position: absolute; inset: 8% 6%; border-radius: 50%;
+    background: radial-gradient(circle at 42% 38%,
+      rgba(120,190,255,.20), rgba(44,182,189,.12) 46%, transparent 68%);
+    filter: blur(18px); z-index: -1;
+  }}
+  /* 화면이 좁으면 글자와 겹친다 — 그때는 지구본을 내린다 */
+  @media (max-width: 1180px) {{
+    .st-key-hero .st-key-hero_globe {{ display: none; }}
   }}
 
   /* 유리 카드 — 사진 위에 얹는 밝은 면. 숫자는 어두운 잉크로 읽는다 */

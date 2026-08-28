@@ -49,7 +49,7 @@ with st.container(key="hero"):
     # 지구본을 먼저 그린다 — 절대 위치라 순서가 화면에 영향을 주지 않고,
     # 뒤에 오는 글자들이 자연스럽게 그 위에 얹힌다.
     with st.container(key="hero_globe"):
-        render_globe(height=430)
+        render_globe(height=560)
 
     # ── 상단 바 — 브랜드 왼쪽, 이동 오른쪽 ────────────────────────────────
     brand_col, nav_col = st.columns([1, 1], vertical_alignment="center")
