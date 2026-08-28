@@ -40,8 +40,9 @@ model = keras.Sequential([
     layers.Dense(1, activation="sigmoid")
 ])
 ```
+![MLP 모델 구조](mlp_architecture.png)
 
-- 총 파라미터: 21,761개 (Trainable 21,313 / Non-trainable 448)
+- 총 파라미터: 21,761개 (Trainable 21,313 / Non-trainable 448)`
 - 클래스 불균형(32:68) 보정을 위해 `class_weight="balanced"` 적용
 - 입력 shape: (81,)
 
