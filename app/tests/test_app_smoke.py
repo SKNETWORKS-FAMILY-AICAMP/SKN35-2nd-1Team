@@ -247,7 +247,7 @@ class TestStudents(unittest.TestCase):
         body = text_of(app)
         self.assertIn(sid, body)                   # 팝업 머리의 학번
         self.assertNotIn("학생을 선택하지 않았습니다", body)
-        self.assertIn("지금 할 일", body)          # 조치 탭의 상담 카드
+        self.assertIn("맞춤 조치 제안", body)      # 조치 탭의 조치 패널
 
     def test_detail_offers_downloads(self):
         app, _ = self._with_student()

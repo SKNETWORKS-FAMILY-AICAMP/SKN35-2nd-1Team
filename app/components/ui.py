@@ -27,6 +27,7 @@ from rules.recommendation_rules import (
 )
 from services import case_sheet
 from services.predictor import (
+    RISK_CATEGORIES,
     RISK_LABELS_KO,
     RISK_THRESHOLDS,
     PredictionResult,
@@ -624,24 +625,8 @@ def report_card(
     )
 
     programs = recommendation.programs        # 규칙 우선순위 순 · 중복 제거된 목록
-    steps = []
-    for index, program in enumerate(programs[:CARD_STEPS], start=1):
-        steps.append(
-            f'<div class="rc-step"><span class="i">{index}</span><div>'
-            f'<span class="t">{escape(program.name)}</span>'
-            f'<span class="o">{escape(program.owner)}</span>'
-            f'<span class="d">{escape(program.action)}</span></div></div>'
-        )
-    if not steps:
-        steps.append(
-            '<div class="rc-more">조건을 넘는 규칙이 없습니다. 정기 모니터링 대상으로 유지합니다.</div>'
-        )
-    remaining = len(programs) - CARD_STEPS
-    more = (
-        f'<div class="rc-more">외 {remaining}건은 아래 &lsquo;무엇을 할 것인가&rsquo; 에 있습니다.</div>'
-        if remaining > 0 else ""
-    )
-
+    # 할 일 목록은 이 카드가 아니라 옆의 `action_plan()` 패널이 그린다.
+    # 카드는 **누구인가와 얼마나 위험한가**까지만 말한다.
     stats = "".join(
         f'<div><div class="k">{escape(k)}</div><div class="v">{escape(v)}</div></div>'
         for k, v in facts
@@ -661,12 +646,76 @@ def report_card(
         f'<span class="p">%</span></span><span class="l">중도탈락 확률</span></div>'
         f'<div class="rc-bar"><span style="width:{result.dropout_percent:.1f}%"></span></div>'
         f'<div class="rc-stats">{stats}</div>'
-        f'<div class="rc-todo"><div class="k">지금 할 일</div>{"".join(steps)}{more}</div>'
         f"</div>"
         f'<div class="rc-foot">위험요인에 대응하는 교내 지원을 연결한 결과이며, '
         f"최종 판단은 담당자가 합니다.</div>"
         f"</div>"
     )
+
+#: 규칙 우선순위(1이 가장 급함) → 담당자가 읽는 기한 문구.
+PLAN_WHEN: dict[int, str] = {
+    1: "1주 이내 진행 권장",
+    2: "이번 학기 내 진행 권장",
+    3: "정기 모니터링 유지",
+}
+
+
+def action_plan(recommendation: RecommendationSet) -> None:
+    """**맞춤 조치 제안** — 이 학생에게 무엇부터 할지 번호를 매긴 목록.
+
+    상담 카드가 "누구를 · 얼마나 위험하게" 라면 이 패널은 "그래서 무엇부터" 다.
+    아래 `support_cards()` 는 규칙별 근거까지 전부 펼치는 자리이고, 여기는 **위에서
+    세 개만** 뽑아 담당자가 회의에서 그대로 읽을 수 있게 둔다.
+    """
+    # 프로그램은 중복을 지우되, 그 프로그램을 부른 **규칙의 급함과 영역**을 함께 들고 온다.
+    picked: list[tuple] = []
+    names: set[str] = set()
+    for matched in recommendation.matched:
+        for program in matched.rule.programs:
+            if program.name in names:
+                continue
+            names.add(program.name)
+            picked.append((program, matched.rule.priority, matched.rule.category))
+
+    if not picked:
+        empty_state("조건을 넘는 규칙이 없습니다", "정기 모니터링 대상으로 유지합니다.")
+        return
+
+    cats = "".join(
+        f'<span class="cat" style="--c:{CATEGORY_COLORS[key]}">'
+        f'<span class="material-symbols-rounded">label</span>{escape(label)}</span>'
+        for key, label in
+        ((c, RISK_CATEGORIES.get(c, c)) for c in recommendation.categories)
+    )
+
+    items = []
+    for index, (program, priority, category) in enumerate(picked[:CARD_STEPS], start=1):
+        chips = [f'<span class="chip when"><span class="material-symbols-rounded">'
+                 f'schedule</span>{escape(PLAN_WHEN.get(priority, "검토"))}</span>']
+        if index == 1 and priority == 1:
+            chips.append('<span class="chip star">'
+                         '<span class="material-symbols-rounded">star</span>최우선 지원</span>')
+        chips.append(f'<span class="chip dept">담당 부서: {escape(program.owner)}</span>')
+        items.append(
+            f'<div class="plan-item" style="--c:{CATEGORY_COLORS[category]}">'
+            f'<span class="n">{index}</span><div class="b">'
+            f'<div class="t">{escape(program.name)}</div>'
+            f'<div class="m">{"".join(chips)}</div></div></div>'
+        )
+
+    remaining = len(picked) - CARD_STEPS
+    more = (f'<div class="plan-more">외 {remaining}건은 아래 '
+            f'&lsquo;무엇을 할 것인가&rsquo; 에 있습니다.</div>') if remaining > 0 else ""
+
+    _html(
+        f'<div class="plan"><div class="plan-head">'
+        f'<span class="ico material-symbols-rounded">volunteer_activism</span>'
+        f'<span class="t"><span class="n">맞춤 조치 제안</span>'
+        f'<span class="s">위험요인에 대응하는 개인 맞춤 지원 우선순위입니다.</span></span>'
+        f'<span class="cats">{cats}</span></div>'
+        f'{"".join(items)}{more}</div>'
+    )
+
 
 # ---------------------------------------------------------------------------
 # 학생 요약 / 결과 패널
@@ -742,14 +791,17 @@ def action_panel(
     운영 화면에서는 이 탭이 기본값이다. 담당자에게 필요한 건 누구를 · 얼마나 급하게 ·
     무엇부터이고, 근거는 설명을 요구받았을 때 옆 탭에서 펼치면 된다.
     """
-    # 카드와 조치 목록을 나란히 둔다. 팝업처럼 넓은 자리에서 세로로 쌓으면
-    # 카드(최대 660px) 옆이 통째로 비어 화면이 반쪽으로 보인다.
-    card_col, action_col = st.columns([1, 1.25], gap="large")
+    # 위: 상담 카드(누구를·얼마나) + 조치 제안(무엇부터). 아래: 규칙별 근거 전체.
+    # 근거는 폭이 넓어야 세 영역이 나란히 서므로 아래로 내려 전체 폭을 쓴다.
+    card_col, plan_col = st.columns([1, 1.25], gap="large")
     with card_col:
         report_card(student, result, recommendation)
-    with action_col:
-        section("무엇을 할 것인가", "위험요인에 대응하는 지원 연결입니다.")
-        support_cards(recommendation, result=result)
+    with plan_col:
+        action_plan(recommendation)
+
+    spacer(14)
+    section("무엇을 할 것인가", "위험요인에 대응하는 지원 연결입니다.")
+    support_cards(recommendation, result=result)
 
 
 def evidence_panel(

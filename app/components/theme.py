@@ -1326,6 +1326,66 @@ def _css() -> str:
   }}
   .sb-foot .d {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
 
+  /* ── 맞춤 조치 제안 ────────────────────────────────────────────────── */
+  /* 상담 카드가 "누구를 · 얼마나 위험하게" 라면 이 패널은 "그래서 무엇부터" 다.
+     레퍼런스는 밝은 크림색이었는데, 우리 화면은 다크라 같은 구조를 어두운 면 위에
+     올리고 강조만 카테고리 색으로 가져왔다. */
+  .plan {{
+    background: linear-gradient(180deg, {c['raised']}, {c['surface']});
+    border: 1px solid var(--line); border-radius: var(--radius-lg);
+    padding: {s['5']};
+  }}
+  .plan-head {{ display: flex; align-items: center; gap: {s['3']}; }}
+  .plan-head .ico {{
+    width: 40px; height: 40px; border-radius: var(--radius-md); flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 21px;
+    color: {c['accent']}; background: {c['accent_soft']};
+    border: 1px solid {c['accent_line']};
+  }}
+  .plan-head .t {{ display: flex; flex-direction: column; min-width: 0; }}
+  .plan-head .n {{ font-size: {t['h3']}; font-weight: 700; color: var(--ink); }}
+  .plan-head .s {{ font-size: {t['caption']}; color: var(--muted); margin-top: 2px; }}
+  .plan-head .cats {{ margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }}
+  .plan-head .cat {{
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    font-size: {t['label']}; font-weight: 700; color: var(--c);
+    background: color-mix(in srgb, var(--c) 16%, {c['surface']});
+    border: 1px solid color-mix(in srgb, var(--c) 38%, {c['surface']});
+    border-radius: {r['pill']}; padding: 3px {s['2']};
+  }}
+  .plan-head .cat .material-symbols-rounded {{ font-size: 13px; }}
+
+  .plan-item {{
+    display: flex; align-items: flex-start; gap: {s['3']};
+    margin-top: {s['3']}; padding: {s['3']} {s['4']};
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--c, var(--primary)); border-radius: var(--radius-md);
+  }}
+  .plan-item .n {{
+    width: 24px; height: 24px; border-radius: 50%; flex: none; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: {t['label']}; font-weight: 800; color: #0B1524;
+    background: var(--c, var(--primary));
+  }}
+  .plan-item .t {{ font-size: {t['h3']}; font-weight: 700; color: var(--ink); }}
+  .plan-item .m {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }}
+  .plan-item .chip {{
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    font-size: {t['label']}; font-weight: 600; padding: 3px {s['2']};
+    border-radius: var(--radius-sm); border: 1px solid var(--line);
+    background: var(--raised); color: var(--muted);
+  }}
+  .plan-item .chip .material-symbols-rounded {{ font-size: 13px; }}
+  /* 언제까지 · 최우선 두 개만 색을 준다 — 나머지는 사실 표기다 */
+  .plan-item .chip.when {{
+    color: {c['accent']}; background: {c['accent_soft']}; border-color: {c['accent_line']};
+  }}
+  .plan-item .chip.star {{
+    color: {RISK_COLORS['MEDIUM']}; background: {RISK_SOFT['MEDIUM']};
+    border-color: {RISK_LINE['MEDIUM']};
+  }}
+  .plan-more {{ font-size: {t['caption']}; color: var(--faint); margin-top: {s['3']}; }}
+
   /* ── 팝업 (학생 상세) ──────────────────────────────────────────────── */
   /* 기본 폭은 이 내용(조치 3장 + 근거 + What-if)에 좁다. 넓히고 스크롤은 안쪽에 준다. */
   /* 패널은 <section role="dialog"> 다 — div 로 지정하면 걸리지 않는다.
