@@ -156,7 +156,7 @@ ColumnTransformer가 붙인 접두사이며, 아래 표에서는 가독성을 �
   제외하고 확장과제로 남긴다. Admission grade와 마찬가지로 재학 중 개입이 불가능한 입학시점
   요인이나, A6까지만 우선 반영했다.
 
-최종 규칙 수: 12개(A1~A5, F1~F3, P1~P4) → **13개(A1~A6, F1~F3, P1~P4)**.
+최종 규칙 수: 12개(A1~A5, F1~F3, P1~P4) ➡️ 13개(A1~A6, F1~F3, P1~P4)
 상세 검증 절차와 코드 변경 내역은 `app/rules/recommendation_rules.py`참고.
 
 ![상위 10개 피처 중요도](lightgbm_importance_top10.png)
