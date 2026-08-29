@@ -30,36 +30,36 @@ TABS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 )
 
 #: 발표 중 값을 하나씩 바꾸지 않도록 준비한 예시. **실제 학생이 아니라 예시 입력값이다.**
-PRESETS: dict[str, dict[str, Any]] = {
-    "HIGH · 복합 위험": dict(
-        student_id="예시-HIGH", age_at_enrollment=30, gender=1, major_field="사회",
-        attendance=0, displaced=1, admission_pathway="성인학습자 전형", application_order=3,
-        admission_grade=118.0, tuition_fees_up_to_date=0, scholarship_holder=0, debtor=1,
-        sem1_enrolled=6, sem1_approved=3, sem1_grade=10.8, sem1_without_evaluations=1,
-        sem2_enrolled=6, sem2_approved=1, sem2_grade=7.9, sem2_without_evaluations=2,
-    ),
-    "MEDIUM · 학업 부진": dict(
-        student_id="예시-MEDIUM", age_at_enrollment=20, gender=1, major_field="공학·IT",
-        attendance=1, displaced=1, admission_pathway="일반전형", application_order=1,
-        admission_grade=124.0, tuition_fees_up_to_date=1, scholarship_holder=0, debtor=0,
-        sem1_enrolled=6, sem1_approved=4, sem1_grade=11.6, sem1_without_evaluations=0,
-        sem2_enrolled=6, sem2_approved=2, sem2_grade=10.2, sem2_without_evaluations=1,
-    ),
-    "MEDIUM · 재정 위험": dict(
-        student_id="예시-FIN", age_at_enrollment=21, gender=0, major_field="경영",
-        attendance=1, displaced=0, admission_pathway="일반전형", application_order=0,
-        admission_grade=131.0, tuition_fees_up_to_date=0, scholarship_holder=0, debtor=1,
-        sem1_enrolled=6, sem1_approved=5, sem1_grade=13.1, sem1_without_evaluations=0,
-        sem2_enrolled=6, sem2_approved=4, sem2_grade=12.4, sem2_without_evaluations=0,
-    ),
-    "LOW · 안정": dict(
-        student_id="예시-LOW", age_at_enrollment=19, gender=0, major_field="보건",
-        attendance=1, displaced=0, admission_pathway="일반전형", application_order=0,
-        admission_grade=152.0, tuition_fees_up_to_date=1, scholarship_holder=1, debtor=0,
-        sem1_enrolled=6, sem1_approved=6, sem1_grade=16.1, sem1_without_evaluations=0,
-        sem2_enrolled=6, sem2_approved=6, sem2_grade=16.8, sem2_without_evaluations=0,
-    ),
-}
+# PRESETS: dict[str, dict[str, Any]] = {
+#     "HIGH · 복합 위험": dict(
+#         student_id="예시-HIGH", age_at_enrollment=30, gender=1, major_field="사회",
+#         attendance=0, displaced=1, admission_pathway="성인학습자 전형", application_order=3,
+#         admission_grade=118.0, tuition_fees_up_to_date=0, scholarship_holder=0, debtor=1,
+#         sem1_enrolled=6, sem1_approved=3, sem1_grade=10.8, sem1_without_evaluations=1,
+#         sem2_enrolled=6, sem2_approved=1, sem2_grade=7.9, sem2_without_evaluations=2,
+#     ),
+#     "MEDIUM · 학업 부진": dict(
+#         student_id="예시-MEDIUM", age_at_enrollment=20, gender=1, major_field="공학·IT",
+#         attendance=1, displaced=1, admission_pathway="일반전형", application_order=1,
+#         admission_grade=124.0, tuition_fees_up_to_date=1, scholarship_holder=0, debtor=0,
+#         sem1_enrolled=6, sem1_approved=4, sem1_grade=11.6, sem1_without_evaluations=0,
+#         sem2_enrolled=6, sem2_approved=2, sem2_grade=10.2, sem2_without_evaluations=1,
+#     ),
+#     "MEDIUM · 재정 위험": dict(
+#         student_id="예시-FIN", age_at_enrollment=21, gender=0, major_field="경영",
+#         attendance=1, displaced=0, admission_pathway="일반전형", application_order=0,
+#         admission_grade=131.0, tuition_fees_up_to_date=0, scholarship_holder=0, debtor=1,
+#         sem1_enrolled=6, sem1_approved=5, sem1_grade=13.1, sem1_without_evaluations=0,
+#         sem2_enrolled=6, sem2_approved=4, sem2_grade=12.4, sem2_without_evaluations=0,
+#     ),
+#     "LOW · 안정": dict(
+#         student_id="예시-LOW", age_at_enrollment=19, gender=0, major_field="보건",
+#         attendance=1, displaced=0, admission_pathway="일반전형", application_order=0,
+#         admission_grade=152.0, tuition_fees_up_to_date=1, scholarship_holder=1, debtor=0,
+#         sem1_enrolled=6, sem1_approved=6, sem1_grade=16.1, sem1_without_evaluations=0,
+#         sem2_enrolled=6, sem2_approved=6, sem2_grade=16.8, sem2_without_evaluations=0,
+#     ),
+# }
 
 
 def _key(spec: FieldSpec) -> str:
@@ -144,16 +144,16 @@ def render() -> StudentInput | None:
 
     `prepare()` 가 이미 불려 있어야 한다 — 이 함수는 위젯을 만든다.
     """
-    st.markdown(
-        '<div class="ds-caption">발표용으로 준비한 입력값입니다. 실제 학생 기록이 아닙니다.</div>',
-        unsafe_allow_html=True,
-    )
-    preset_cols = st.columns(len(PRESETS), gap="small")
-    for col, (name, values) in zip(preset_cols, PRESETS.items()):
-        with col:
-            if st.button(name, width="stretch", key=f"preset_{name}"):
-                apply_values(values)
-                st.rerun()
+    # st.markdown(
+    #     '<div class="ds-caption">발표용으로 준비한 입력값입니다. 실제 학생 기록이 아닙니다.</div>',
+    #     unsafe_allow_html=True,
+    # )
+    # preset_cols = st.columns(len(PRESETS), gap="small")
+    # for col, (name, values) in zip(preset_cols, PRESETS.items()):
+    #     with col:
+    #         if st.button(name, width="stretch", key=f"preset_{name}"):
+    #             apply_values(values)
+    #             st.rerun()
 
     current_id = st.session_state.get("manual_student_id", "직접 입력")
     if current_id != "직접 입력":

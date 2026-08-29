@@ -41,7 +41,7 @@ from components.state import (
 from components.theme import inject_css
 
 st.set_page_config(
-    page_title="Student Dropout Intelligence",
+    page_title="대학생 학업 지속 지원 시스템",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -59,7 +59,7 @@ PAGES = [
 def _block_auto_translate() -> None:
     """브라우저 자동 번역을 막는다.
 
-    화면에 영문(Student Dropout Intelligence, Prototype Mode …)과 한글이 섞여 있어서
+    화면에 영문(대학생 학업 지속 지원 시스템, Prototype Mode …)과 한글이 섞여 있어서
     Chrome 이 페이지를 영어로 판정하고 한국어로 자동 번역해 버린다. 그러면
     **이미 한국어인 문장까지 다시 번역돼** "학생 목록" 이 "당신 목록" 이 되는 식으로 깨진다.
     발표 PC 에서 그대로 나면 손쓸 방법이 없으므로 문서 속성으로 미리 막는다.
@@ -112,7 +112,7 @@ def _sidebar() -> None:
     with st.sidebar:
         st.markdown(
             '<div class="sb-brand">'
-            '<div class="n">Student Dropout Intelligence</div>'
+            '<div class="n">대학생 학업 지속 지원 시스템</div>'
             '<div class="s">SKN35 · 2ND TEAM PROJECT</div></div>',
             unsafe_allow_html=True,
         )

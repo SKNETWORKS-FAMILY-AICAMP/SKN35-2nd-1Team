@@ -151,6 +151,7 @@ def _css() -> str:
 
   /* ── 기본 ──────────────────────────────────────────────────────────── */
   html, body, .stApp, [class*="st-"] {{ font-family: {FONT_STACK}; }}
+  html {{ font-size: 20px; }}
   /* 아이콘 폰트까지 덮으면 아이콘이 글자로 깨진다 — 되돌린다 */
   [data-testid="stIconMaterial"],
   span.material-symbols-rounded, span.material-symbols-outlined, .material-icons
