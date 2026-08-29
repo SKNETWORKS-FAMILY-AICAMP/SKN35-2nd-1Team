@@ -112,7 +112,7 @@ weighted avg       0.88      0.88      0.88       885
 - threshold=0.35 옵션은 Recall은 가장 높지만 Precision 손실(0.65)이 커서 메인으로 채택하지 않음
 - 팀 전체 5개 모델(LightGBM/MLP/LR/RF/XGBoost)을 공통 threshold=0.5 기준으로 재비교한 결과,
   LightGBM이 recall 기준 1위를 유지
-  (자세한 비교 과정은 `reports/4) final_model_selection_report.md` 참고)
+  (자세한 비교 과정은 `reports/5) final_model_selection_report.md` 참고)
 
 ## 4. 어떤 요인이 자퇴에 가장 큰 영향을 미쳤는가 (Feature Importance)
 
