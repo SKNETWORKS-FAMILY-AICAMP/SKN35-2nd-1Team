@@ -21,8 +21,11 @@ from utils.feature_mapping import StudentInput
 # ▶ 실제 모델 연결 스위치
 #   models/ 에 학습된 모델을 넣은 뒤 True 로 바꾼다.
 #   전처리기(preprocessor.joblib)는 이미 저장소에 있으므로 추가 작업이 없다.
+#
+#   2026-08-28: 팀 최종 모델 LightGBM(threshold=0.5)이 models/best_model.joblib 로
+#   도착해 True 로 전환했다. 화면 코드는 한 줄도 고치지 않았다.
 # ---------------------------------------------------------------------------
-USE_REAL_MODEL = False
+USE_REAL_MODEL = True
 
 
 class PredictionService:
