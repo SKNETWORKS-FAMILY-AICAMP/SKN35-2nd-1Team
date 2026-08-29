@@ -1,7 +1,6 @@
 # LightGBM 모델링 결과 리포트
 
 - 작성자: 조현주
-- 작성일: 2026-08-28 (2026-08-29 정정: 하이퍼파라미터 기록 오류 수정 + test 성능 추가)
 - 노트북: `notebooks/modeling_lightgbm.ipynb`
 - 관련 파일: `models/lightgbm.joblib`, `models/best_model.joblib`, `reports/lightgbm_importance.csv`, `reports/3) model_results.csv`
 
@@ -38,7 +37,7 @@ model = lgb.LGBMClassifier(
 - n_iter=30에서는 Recall만 미세하게 개선(F1은 오히려 소폭 하락) → 우연적 변동 수준으로 판단
 - **n_iter=80으로 탐색 횟수를 늘리자 Recall·F1 모두 baseline 대비 개선** → 이 결과를 최종 모델로 채택
 
-**최종 채택 하이퍼파라미터 (정정됨):**
+**최종 채택 하이퍼파라미터:**
 ```python
 {'subsample': 0.8, 'num_leaves': 15, 'n_estimators': 300,
  'min_child_samples': 20, 'max_depth': -1, 'learning_rate': 0.01,
@@ -143,10 +142,22 @@ ColumnTransformer가 붙인 접두사이며, 아래 표에서는 가독성을 �
 3. **인구통계/배경 (2위)** — 입학 나이가 상위 10위 안에서 유일한 개인 배경 요인으로,
    그만큼 영향력이 두드러짐
 
-**STEP 8 관련 참고사항**: 세희님의 기존 규칙(A1~A5: 학업, F1~F3: 재정)이 top10 중
-sem2_approval_rate·sem1_approval_rate·Tuition fees·financial_risk_score·grade_change를
-이미 커버하고 있음. Admission grade(7위)·Previous qualification(8위)는 여전히 별도 규칙이
-없으므로, 신규 규칙(A6) 제안 여부는 팀 논의로 결정할 것.
+**관련 참고사항:** 
+
+- **A6 신규 추가**: Admission grade ≤ 112점 규칙 추가. Train 단일 Decision Tree(depth=1) 분기점
+  111.85를 기준으로 삼았고, Test에서 112점 이하 그룹의 실제 중도탈락률 53.4% vs 초과 그룹 28.8%로
+  차이를 확인했다. 다만 단독 Recall이 22.2%로 낮아 "즉시 위험 판정"이 아닌 **입학 초기 모니터링
+  전용 규칙(priority=3)**으로 설계했으며, 기초학습 진단·신입생 튜터링 프로그램에 연결한다.
+- **A1 기준 보정**: 기존 2학기 이수율 임계값(50%, 임의값)도 같은 방식으로 재검증해 **60%**로
+  보정했다. Train/Validation에서 50/55/60%를 비교한 결과 60%에서 F1·Recall이 모두 최고였고
+  (Val F1 0.7679), Test에서도 유지됨을 확인했다(F1 0.7886, 60% 미만 그룹 중도탈락률 79.6% vs
+  이상 그룹 10.2%).
+- **여전히 미커버**: Previous qualification grade(8위)는 이번 스코프에서는 신규 규칙 대상에서
+  제외하고 확장과제로 남긴다. Admission grade와 마찬가지로 재학 중 개입이 불가능한 입학시점
+  요인이나, A6까지만 우선 반영했다.
+
+최종 규칙 수: 12개(A1~A5, F1~F3, P1~P4) → **13개(A1~A6, F1~F3, P1~P4)**.
+상세 검증 절차와 코드 변경 내역은 `app/rules/recommendation_rules.py`참고.
 
 ![상위 10개 피처 중요도](lightgbm_importance_top10.png)
 
