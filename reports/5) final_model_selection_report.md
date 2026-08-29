@@ -1,8 +1,7 @@
 # 최종 모델 선정 결과 보고서
 
 - 작성자: 조현주 (PM)
-- 작성일: 2026-08-28 (2026-08-29 갱신: test 성능 재검증 및 확정)
-- 관련 파일: `reports/3) model_results.csv`, `models/best_model.joblib`, `reports/4) lightgbm_report.md`, `reports/model_metrics.json`
+- 관련 파일: `reports/3) model_results.csv`, `models/best_model.joblib`, `reports/4) lightgbm_report.md`
 
 ---
 
