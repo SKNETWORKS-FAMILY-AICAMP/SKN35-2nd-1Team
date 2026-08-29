@@ -8,6 +8,3 @@ lightgbm>=4.5.0
 imbalanced-learn>=0.13.0
 jupyter>=1.0.0
 tensorflow>=2.16
-streamlit>=1.49  
-plotly>=5.22          
-joblib>=1.4           
