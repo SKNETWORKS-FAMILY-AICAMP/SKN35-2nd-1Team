@@ -168,12 +168,64 @@ class RecommendationSet:
 # 규칙 정의
 # ---------------------------------------------------------------------------
 
-LOW_APPROVAL = 0.50          # 이수율이 이 아래면 "낮다"고 본다
+# 검증된 운영 기준
+# - LOW_APPROVAL:
+#   원본 데이터의 기존 Train/Validation 분할(random_state=42, stratify)을 재현한 뒤
+#   50% / 55% / 60% 후보를 비교했다.
+#   Train과 Validation 모두 60% 기준에서 세 후보 중 F1이 가장 높았고,
+#   Validation Recall도 77.2%로 가장 높아 최종 지원 기준을 60% 미만으로 설정했다.
+LOW_APPROVAL = 0.60
 LOW_GRADE = 11.0             # 원본 0~20 기준
+
+# - LOW_ADMISSION_GRADE:
+#   Train 데이터에서 Admission grade 하나만 사용한 깊이 1 Decision Tree가
+#   첫 분기점 111.85를 선택했다.
+#   운영 편의성을 위해 112점 이하를 기준으로 사용하고,
+#   Validation에서도 112점 이하 그룹의 실제 중도탈락률이 48.7%,
+#   112점 초과 그룹은 29.7%로 차이가 확인되었다.
+#   단, 단독 Recall은 낮으므로 '즉시 개입'이 아니라 초기 모니터링/기초학습 지원용으로 사용한다.
+LOW_ADMISSION_GRADE: float = 112.0
 APPROVAL_DROP = 0.15         # 1→2학기 이수율 하락 폭
 GRADE_DROP = 2.0             # 학기 평점 하락 폭 (grade_change 기준)
 HIGH_FINANCIAL_RISK = 2      # 재정위험점수 0~3 중 이 값 이상이면 복합 재정위험
 LATE_CHOICE_ORDER = 3        # 지망 순위 4지망 이상
+
+
+def _admission_grade(student: StudentInput) -> float | None:
+    """StudentInput에서 입학 성적을 안전하게 읽는다.
+
+    팀 feature_mapping.py에서 일반적으로 admission_grade로 매핑하는 것을 가정한다.
+    실제 필드명이 다르면 아래 후보에 그 이름을 추가하면 된다.
+    """
+    for name in ("admission_grade", "Admission grade"):
+        value = getattr(student, name, None)
+        if value is not None:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _low_admission_grade(student: StudentInput) -> bool:
+    """검증된 기준값이 설정된 경우에만 '낮은 입학 성적' 규칙을 발동한다."""
+    value = _admission_grade(student)
+    return (
+        LOW_ADMISSION_GRADE is not None
+        and value is not None
+        and value <= LOW_ADMISSION_GRADE
+    )
+
+
+def _admission_grade_evidence(student: StudentInput) -> Evidence:
+    value = _admission_grade(student)
+    if value is None or LOW_ADMISSION_GRADE is None:
+        raise ValueError("입학 성적 또는 검증된 기준값이 없습니다.")
+    return Evidence(
+        "입학 성적", round(value, 1), LOW_ADMISSION_GRADE,
+        unit="점", worse="below", minimum=0.0, maximum=200.0,
+    )
+
 
 RULES: tuple[Rule, ...] = (
     # ---------------- 학업 위험 ----------------------------------------
@@ -276,6 +328,23 @@ RULES: tuple[Rule, ...] = (
                            "성적이 떨어진 학기의 수강 구성과 생활 여건을 함께 점검한다."),
         ),
         priority=2,
+    ),
+    Rule(
+        id="A6",
+        category="academic",
+        title="입학 초기 학업지원 필요",
+        reason_template="입학 성적이 {admission_grade:.1f}점으로 기준({threshold:.1f}점) 이하입니다.",
+        condition=lambda s, r: _low_admission_grade(s),
+        feature="Admission grade",
+        evidence=_admission_grade_evidence,
+        factor_keys=("admission_grade",),
+        programs=(
+            SupportProgram("입학 초기 기초학습 진단", "교수학습개발센터",
+                           "기초학업 역량을 진단하고 보완이 필요한 영역을 확인한다."),
+            SupportProgram("신입생 튜터링 프로그램", "교수학습개발센터",
+                           "기초과목 중심으로 튜터를 매칭하고 1학기 학업 적응을 지원한다."),
+        ),
+        priority=3,
     ),
     # ---------------- 경제 위험 ----------------------------------------
     Rule(
@@ -414,9 +483,11 @@ PRIORITY_LABELS: dict[int, str] = {1: "즉시", 2: "이번 학기", 3: "모니�
 def _fill_reason(rule: Rule, student: StudentInput, result: PredictionResult) -> str:
     """규칙의 사유 문구에 이 학생의 실제 값을 채운다."""
     if "{avg_grade" in rule.reason_template:
-        threshold: float = LOW_GRADE
+        threshold: float | None = LOW_GRADE
     elif "{grade_change" in rule.reason_template:
         threshold = GRADE_DROP
+    elif "{admission_grade" in rule.reason_template:
+        threshold = LOW_ADMISSION_GRADE
     else:
         threshold = LOW_APPROVAL
 
@@ -425,6 +496,7 @@ def _fill_reason(rule: Rule, student: StudentInput, result: PredictionResult) ->
         "sem2_rate": student.sem2_approval_rate,
         "avg_grade": student.average_grade,
         "grade_change": student.grade_change,
+        "admission_grade": _admission_grade(student),
         "financial_risk": student.financial_risk_score,
         "threshold": threshold,
         "choice": student.application_order + 1,
