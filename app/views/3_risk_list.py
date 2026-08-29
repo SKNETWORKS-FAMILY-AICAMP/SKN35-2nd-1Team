@@ -122,6 +122,7 @@ page = min(int(st.session_state.get("risk_page", 0)), pages - 1)
 st.session_state["risk_page"] = page
 window = rows[page * PER_PAGE:(page + 1) * PER_PAGE]
 
+ui.spacer(20)
 ui.section("우선 처리 명단", f"카드를 누르면 상세 분석이 팝업으로 열립니다 · 전체 {len(rows):,}명")
 
 

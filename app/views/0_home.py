@@ -72,7 +72,7 @@ with st.container(key="hero"):
         st.markdown(
             """<div class="hero-brand">
       <span class="mark material-symbols-rounded">school</span>
-      <span class="t"><span class="n">대학생 학업 지속 시스템</span>
+      <span class="t"><span class="n">대학생 학업 지속 지원 시스템</span>
         <span class="s">중도탈락 예측 · 지원</span></span>
     </div>""",
             unsafe_allow_html=True,

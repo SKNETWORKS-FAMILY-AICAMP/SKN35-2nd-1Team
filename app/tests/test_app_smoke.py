@@ -48,6 +48,30 @@ def assert_clean(case: unittest.TestCase, app: AppTest) -> None:
     case.assertEqual(list(app.exception), [], f"화면에서 예외가 발생했습니다: {list(app.exception)}")
 
 
+#: 예시 버튼(PRESETS)은 2026-08-28 회의 결정으로 화면에서 빠졌다. 규칙이 실제로
+#  발동하는 학생이 있어야 근거 화면을 검사할 수 있으므로, 버튼 대신 폼 위젯의
+#  session_state 를 직접 심는다 (예전 "HIGH · 복합 위험" 예시와 같은 값).
+HIGH_RISK_INPUT: dict[str, object] = {
+    "age_at_enrollment": 30, "gender": 1, "major_field": "사회",
+    "attendance": 0, "displaced": 1, "admission_pathway": "성인학습자 전형",
+    "application_order": 3, "admission_grade": 118.0,
+    "tuition_fees_up_to_date": 0, "scholarship_holder": 0, "debtor": 1,
+    "sem1_enrolled": 6, "sem1_approved": 3, "sem1_grade": 10.8,
+    "sem1_without_evaluations": 1,
+    "sem2_enrolled": 6, "sem2_approved": 1, "sem2_grade": 7.9,
+    "sem2_without_evaluations": 2,
+}
+
+
+def analysed_manual(app: AppTest | None = None) -> AppTest:
+    """예비학생 예측 화면에 고위험 값을 넣고 '위험도 분석' 까지 누른 상태."""
+    app = app or run_page(PAGE_MANUAL)
+    for key, value in HIGH_RISK_INPUT.items():
+        app.session_state[f"in_{key}"] = value
+    click(app, "위험도 분석")
+    return app
+
+
 def click(app: AppTest, label: str) -> None:
     for button in app.button:
         if button.label == label:
@@ -106,7 +130,7 @@ class TestHome(unittest.TestCase):
         """표지 구성 — 브랜드·표제·규모 칩 셋·버튼 셋."""
         app = run_page()
         body = text_of(app)
-        self.assertIn("Student Dropout", body)
+        self.assertIn("대학생 학업 지속 지원 시스템", body)
         self.assertIn("전체 재학생", body)
         self.assertIn("고위험 HIGH", body)
 
@@ -249,14 +273,9 @@ class TestStudents(unittest.TestCase):
         self.assertTrue(pills)
         self.assertEqual(len(pills[0].options), 3)     # HIGH · MEDIUM · LOW
 
-    def test_made_up_columns_are_declared(self):
-        """🔴 원본에 없는 값(이름·학년)을 세우되 **만든 값임을 화면에서 밝힌다.**
-
-        원본은 익명 데이터라 이름도 학년도 없다. 화면에 세우는 것 자체는 발표용
-        결정이지만, 밝히지 않으면 그건 없는 데이터를 있는 척하는 것이 된다.
-        """
-        app = run_page(PAGE_STUDENTS)
-        self.assertIn("화면 예시용", text_of(app))
+    # 원본에 없는 값(이름·학년)을 만든 값이라고 밝히던 캡션은 2026-08-28 회의
+    # 결정으로 화면에서 빠졌다. 고지 문구를 검사하던 테스트도 함께 내린다.
+    # 이름·학년이 화면 예시용이라는 사실 자체는 여전히 참이다.
 
     def test_made_up_columns_are_stable(self):
         """새로고침마다 이름이 바뀌면 아무도 그 화면을 믿지 않는다."""
@@ -312,16 +331,13 @@ class TestStudents(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestManual(unittest.TestCase):
-    def test_form_and_presets_are_here(self):
+    def test_form_is_here(self):
         app = run_page(PAGE_MANUAL)
         assert_clean(self, app)
-        self.assertIn("실제 학생 기록이 아닙니다", text_of(app))
-        self.assertIn("HIGH · 복합 위험", [b.label for b in app.button])
+        self.assertIn("위험도 분석", [b.label for b in app.button])
 
     def test_manual_input_produces_a_result(self):
-        app = run_page(PAGE_MANUAL)
-        click(app, "HIGH · 복합 위험")
-        click(app, "위험도 분석")
+        app = analysed_manual()
         assert_clean(self, app)
         body = text_of(app)
         self.assertIn("분석 결과", body)
@@ -334,10 +350,7 @@ class TestManual(unittest.TestCase):
 
 class TestRecommendationEvidence(unittest.TestCase):
     def _analysed(self) -> AppTest:
-        app = run_page(PAGE_MANUAL)
-        click(app, "HIGH · 복합 위험")
-        click(app, "위험도 분석")
-        return app
+        return analysed_manual()
 
     def test_evidence_meter_is_drawn_for_numeric_rules(self):
         body = text_of(self._analysed())
@@ -402,7 +415,7 @@ class TestRiskList(unittest.TestCase):
     def test_cards_carry_what_the_team_asked_for(self):
         """표가 아니라 카드다 — 확률 링 · 등급 · 핵심 요인 · 상담 상태가 한 줄에 있다."""
         body = text_of(run_page(PAGE_RISK))
-        for marker in ("rl-ring", "핵심 요인", "rl-status", "미착수"):
+        for marker in ("rl-ring", "rl-tags", "rl-status", "미착수"):
             with self.subTest(marker=marker):
                 self.assertIn(marker, body)
 

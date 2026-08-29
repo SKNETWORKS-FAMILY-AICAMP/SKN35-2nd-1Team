@@ -96,13 +96,26 @@ app/
 
 ---
 
-## 2. 현재 상태 — 학습된 모델이 아직 없습니다
+## 2. 현재 상태 — 실제 모델이 연결되어 있습니다 (2026-08-28)
 
-`models/` 에는 `preprocessor.joblib` 만 있고 학습된 모델은 없습니다.
-지금 화면의 확률·위험요인은 전부 `services/dummy_predictor.py` 의 **규칙 기반 DummyPredictor**
-값이며, 모든 화면 상단에 그 사실을 배너로 띄웁니다.
+팀 최종 모델 **LightGBM (threshold=0.5)** 이 `models/best_model.joblib` 로 도착해
+`USE_REAL_MODEL = True` 로 전환했습니다. 화면 코드는 한 줄도 고치지 않았습니다.
 
-이 프로토타입이 **하지 않는 것**: 모델 학습 · 성능 수치 주장 · 실제 SHAP 분석 표시.
+| 항목 | 지금 쓰는 것 |
+|---|---|
+| 확률 | `models/best_model.joblib` (LightGBM) — 실제 모델 |
+| 명단 | `data/processed/test.csv` 885명 — 학습에 안 쓰인 홀드아웃, 역변환으로 원래 값 복원 |
+| 성능 표기 | `reports/model_metrics.json` (팀 `3) model_results.csv` 에서 조립) |
+| 위험요인 설명 | **feature importance 기반** — SHAP 이 아니며, 화면이 출처를 그대로 밝힙니다 |
+
+전처리 정합은 실측했습니다 — `data/processed/test.csv` 를 모델에 직접 넣은 확률과
+우리 경로(역변환 → `StudentInput` → `transform` → 예측)의 확률이 885명 전원에서
+**최대 오차 0.0058 · 평균 0.00005** 로 일치합니다 (역변환 반올림 수준).
+
+`X does not have valid feature names` 경고는 `transform()` 이 이름 없는 배열을 주기 때문이며,
+위 실측이 **순서가 어긋나지 않았음**을 보증합니다.
+
+여전히 **하지 않는 것**: 모델 학습 · 우리가 만들지 않은 성능 수치 주장 · SHAP 을 했다고 표시.
 
 ---
 
@@ -131,11 +144,14 @@ app/
 
 ---
 
-## 4. 모델이 나오면 — 할 일은 두 가지뿐입니다
+## 4. 모델 연결 — 끝났습니다 (되돌리는 법 포함)
 
-1. 학습된 모델을 `models/best_model.joblib` 로 저장합니다.
+1. ~~학습된 모델을 `models/best_model.joblib` 로 저장합니다.~~ → 2026-08-28 도착
    (`.pkl` · `model.joblib` 도 인식합니다 — `services/real_predictor.py` 의 `MODEL_CANDIDATES`)
-2. `services/prediction_service.py` 의 `USE_REAL_MODEL = False` → `True`
+2. ~~`services/prediction_service.py` 의 `USE_REAL_MODEL = False` → `True`~~ → 전환 완료
+
+발표 중 모델에 문제가 생기면 `USE_REAL_MODEL = True` → `False` 한 줄로 프로토타입 모드에
+그대로 돌아갑니다. 화면은 배너·사이드바 표기만 바뀌고 나머지는 동일하게 뜹니다.
 
 **화면 코드(`views/`, `components/`)는 한 줄도 고치지 않습니다.**
 전처리는 `real_predictor.py` 안에서 `preprocessor.joblib` 으로 끝냅니다 (`transform` 만, `fit` 금지).
@@ -157,8 +173,10 @@ cd app
 python -m unittest discover -s tests -t .
 ```
 
-**102개 통과** (로직 73 + 화면 29). 가장 중요한 것은 `TestPreprocessorContract` 입니다 —
-학습된 모델이 없는 지금도 **팀 전처리기가 우리 입력을 그대로 받는지**는 실제로 확인할 수 있습니다.
+**104개 통과 · 2개 건너뜀** (2026-08-29 실측, 회의 수정사항 반영 후). 건너뛴 2개는 실제 모델·학습
+결과서가 없을 때만 도는 프로토타입 전용 검사라, 붙은 지금은 건너뛰는 것이 정상입니다.
+가장 중요한 것은 `TestPreprocessorContract` 입니다 — **팀 전처리기가 우리 입력을 그대로 받는지**를
+실제로 확인합니다.
 
 - 더미 80명 → `to_model_row()` → `preprocessor.transform()` 이 **경고 없이 (80, 81)** 을 반환
 - 범주형 8개 컬럼에 **미지 범주 0건** (라벨 문자열 대조)

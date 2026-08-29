@@ -172,9 +172,16 @@ def _css() -> str:
     padding: {s['6']} {s['8']} {s['16']} {s['8']};
     max-width: 100%;
   }}
-  /* 사이드바가 없는 표지에서는 좌우 여백을 조금 더 준다 — 사진이 끝까지 붙으면 답답하다 */
-  [data-testid="stAppViewContainer"]:not(:has([data-testid="stSidebar"])) .block-container {{
-    padding-left: {s['12']}; padding-right: {s['12']};
+  /* 표지(시작화면)는 사진이 창 끝까지 닿아야 한 장짜리 표지로 읽힌다.
+     바깥 여백을 상하좌우 모두 걷어낸다 — 안쪽 여백은 히어로가 따로 갖고 있다. */
+  [data-testid="stAppViewContainer"]:has(.st-key-hero) .block-container {{
+    padding: 0 !important; max-width: 100%;
+  }}
+  /* 히어로 앞에는 높이 0 짜리 블록(CSS 주입 · 번역차단 iframe · 페이지 머리)이 서 있고,
+     그 사이 간격 12px 씩만 남아 사진 위에 검은 띠가 생긴다. 표지에서만 간격을 없앤다. */
+  [data-testid="stAppViewContainer"]:has(.st-key-hero)
+    .block-container > [data-testid="stVerticalBlock"] {{
+    gap: 0;
   }}
 
   /* 표지(시작화면)에는 사이드바가 없다. 다른 화면에서 돌아오면 내용 없는 껍데기가
@@ -324,7 +331,7 @@ def _css() -> str:
      경보 줄이 그만큼 짧아져서 "화면을 가로지르는 한 줄"이 아니게 된다. Streamlit
      위젯은 HTML 안에 못 넣으므로 컨테이너째 겹쳐 놓고, 줄은 그만큼 오른쪽을
      비워 글이 버튼 밑으로 들어가지 않게 한다. */
-  .st-key-dash_alert {{ position: relative; }}
+  .st-key-dash_alert {{ position: relative; margin-top: {s['6']}; }}
   /* Streamlit 의 마크다운 컨테이너는 margin-bottom: -16px 를 달고 나온다. 그래서 줄을
      감싼 상자가 줄보다 16px 짧아지고, 그 절반(8px)만큼 top:50% 가운데가 위로 빗나간다.
      이 줄에서만 그 음수 여백을 지운다 — 상자와 줄의 높이가 같아야 가운데가 맞는다. */
@@ -953,11 +960,12 @@ def _css() -> str:
     background-size: auto, cover, auto, auto;
     background-position: center, center 56%, center, center;
     background-repeat: no-repeat;
-    border-radius: var(--radius-lg);
+    /* 바깥 여백이 없으니 모서리를 굴리면 네 귀퉁이에 바닥색이 비친다 */
+    border-radius: 0;
     padding: {s['16']} {s['12']} {s['12']} {s['12']};
     color: #FFFFFF;
     /* 창 높이에 맞춘다. 표지 아래에 빈 바닥이 남으면 잘린 페이지처럼 보인다 */
-    min-height: calc(100vh - 92px);
+    min-height: 100vh;
     /* 내용은 세로 가운데로 — 위아래 여백이 화면 비율에 따라 알아서 나뉜다 */
     display: flex; flex-direction: column; justify-content: center;
   }}
@@ -1394,6 +1402,76 @@ def _css() -> str:
     background: var(--surface); padding: {s['6']};
   }}
   [data-testid="stForm"] [data-testid="stVerticalBlock"] {{ gap: {s['2']}; }}
+
+  /* 폼 배경과 입력칸 배경이 같은 색이라 **어디까지가 칸인지** 눈에 안 들어온다.
+     칸마다 얕은 면과 테두리를 깔아 라벨과 입력 영역을 갈라 준다. */
+  /* 셀렉트박스는 이 버전에 data-baseweb 이 없다 — 라벨 다음에 오는 래퍼 안의
+     컨트롤 div 가 실제 칸이다. 폼 안에서만 쓰므로 구조가 바뀌어도 피해가 좁다. */
+  [data-testid="stForm"] [data-testid="stNumberInputContainer"],
+  [data-testid="stForm"] [data-testid="stSelectbox"] > div > div {{
+    background: rgba(255,255,255,.06) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-sm) !important;
+  }}
+  [data-testid="stForm"] [data-testid="stNumberInputField"] {{
+    background: transparent !important; border: none !important;
+  }}
+  /* 슬라이더는 라벨 다음 래퍼가 곧 칸이다. 라벨까지 감싸면 옆 숫자칸과 줄이 어긋난다. */
+  [data-testid="stForm"] [data-testid="stSlider"] > div:not([data-testid]) {{
+    background: rgba(255,255,255,.06); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 0 {s['4']} {s['1']};
+  }}
+
+  /* 위험도 분석 — 폼 제출 버튼은 kind 가 `primaryFormSubmit` 이라 위의 primary
+     규칙에 걸리지 않았다. 화면에서 가장 중요한 버튼이 회색으로 앉아 있었다.
+     평소 색을 파랑(예전 hover 색)으로 올리고 hover 는 한 단계 더 밝게 간다. */
+  .stFormSubmitButton > button[kind="primaryFormSubmit"] {{
+    background: {c['primary_soft']}; border-color: {c['primary_line']};
+    color: {c['primary']};
+  }}
+  .stFormSubmitButton > button[kind="primaryFormSubmit"] p {{ color: {c['primary']}; }}
+  .stFormSubmitButton > button[kind="primaryFormSubmit"]:hover {{
+    background: {c['primary_fill']}; border-color: {c['primary_fill_hover']};
+    color: #FFFFFF;
+  }}
+  .stFormSubmitButton > button[kind="primaryFormSubmit"]:hover p {{ color: #FFFFFF; }}
+
+  /* 상세 팝업 — 팝업 바닥과 카드가 둘 다 --surface 라 블록 경계가 사라진다.
+     팝업 안에서만 카드 면을 한 단계 밝게 올려 상자를 상자로 보이게 한다. */
+  [data-testid="stDialog"] .rc,
+  [data-testid="stDialog"] .plan,
+  [data-testid="stDialog"] .act,
+  [data-testid="stDialog"] .card,
+  [data-testid="stDialog"] [data-testid="stExpander"] details,
+  [data-testid="stDialog"] [class*="st-key-whatif_box"] {{
+    background: rgba(255,255,255,.1);
+  }}
+
+  /* 상담 카드와 학생 기본 정보도 나란히 선다. 이쪽은 순수 HTML 카드라
+     stElementContainer 부터 카드까지 사슬을 늘려야 아래쪽이 맞는다. */
+  .st-key-result_summary [data-testid="stColumn"] {{ display: flex; }}
+  .st-key-result_summary [data-testid="stColumn"] > [data-testid="stVerticalBlock"],
+  .st-key-result_summary [data-testid="stElementContainer"],
+  .st-key-result_summary [data-testid="stMarkdown"],
+  .st-key-result_summary [data-testid="stMarkdown"] > div,
+  .st-key-result_summary [data-testid="stMarkdownContainer"] {{
+    flex: 1; display: flex; flex-direction: column;
+  }}
+  .st-key-result_summary .rc, .st-key-result_summary .card {{ flex: 1; }}
+
+  /* 예측 결과의 두 박스(확률 · 왜 위험한가)는 나란히 서므로 높이를 맞추고
+     같은 면을 깐다. 한쪽만 짧으면 계단처럼 보이고 아래 블록 시작선도 어긋난다.
+     st.container(border=True) 는 1.62 에서 stLayoutWrapper 안의 stVerticalBlock 이다
+     (예전의 stVerticalBlockBorderWrapper 가 아니다) — 그래서 키로 범위를 좁혀 잡는다. */
+  .st-key-risk_split [data-testid="stColumn"] {{ display: flex; }}
+  .st-key-risk_split [data-testid="stColumn"] > [data-testid="stVerticalBlock"] {{
+    flex: 1; display: flex;
+  }}
+  .st-key-risk_split [data-testid="stColumn"] [data-testid="stLayoutWrapper"] {{ flex: 1; }}
+  .st-key-risk_split [data-testid="stColumn"]
+    [data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"] {{
+    flex: 1; background: rgba(255,255,255,.1);
+  }}
 
   /* 익스팬더 */
   [data-testid="stExpander"] {{

@@ -77,7 +77,8 @@ def render(
     )
     ui.spacer(10)
 
-    with st.container(border=True):
+    # key 는 CSS 훅이다 — 팝업 안에서 이 상자도 다른 카드와 같은 면을 쓴다.
+    with st.container(border=True, key=f"whatif_box_{key}"):
         col1, col2, col3 = st.columns([1.3, 1.3, 1.1], gap="large")
         with col1:
             approved = st.slider(

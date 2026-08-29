@@ -748,7 +748,7 @@ def action_plan(recommendation: RecommendationSet) -> None:
 # 학생 요약 / 결과 패널
 # ---------------------------------------------------------------------------
 
-def student_summary(student: StudentInput) -> None:
+def student_summary(student: StudentInput, *, title: str = "") -> None:
     items = [
         ("학생 ID", student.student_id),
         ("전공 계열", student.major_field),
@@ -766,8 +766,13 @@ def student_summary(student: StudentInput) -> None:
         f"{escape(v)}</div></div>"
         for k, v in items
     )
+    head = (
+        f'<div class="card-title">{escape(title)}</div>'
+        '<div class="card-sub" style="margin-bottom:14px">예측에 들어간 값입니다.</div>'
+        if title else ""
+    )
     _html(
-        '<div class="card"><div style="display:grid;gap:16px;'
+        f'<div class="card">{head}<div style="display:grid;gap:16px;'
         f'grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">{cells}</div></div>'
     )
 
@@ -781,20 +786,22 @@ def risk_and_factors(
     두 화면(예측 · 목록 상세)이 이 블록을 같은 모양으로 쓴다. 예측 화면은 한 흐름으로
     읽고 상세 화면은 '근거' 탭 안에 넣는데, **모양이 갈리면 같은 것을 두 번 배우게 된다.**
     """
-    left, right = st.columns([1, 1.35], gap="large")
+    # 컨테이너에 key 를 주는 이유는 CSS 훅 하나뿐이다 — 두 카드의 높이를 맞춘다.
+    with st.container(key="risk_split"):
+        left, right = st.columns([1, 1.35], gap="large")
 
-    # st.markdown 은 호출마다 독립된 블록이라 여는 태그와 닫는 태그를 따로 내보내면
-    # 감싸지지 않는다. 위젯을 감싸야 할 때는 Streamlit 컨테이너를 쓰고 CSS 로 카드를 입힌다.
-    with left, st.container(border=True):
-        risk_meter(result)
-        probability_split(result)
+        # st.markdown 은 호출마다 독립된 블록이라 여는 태그와 닫는 태그를 따로 내보내면
+        # 감싸지지 않는다. 위젯을 감싸야 할 때는 Streamlit 컨테이너를 쓰고 CSS 로 카드를 입힌다.
+        with left, st.container(border=True):
+            risk_meter(result)
+            probability_split(result)
 
-    with right, st.container(border=True):
-        _html(
-            '<div class="card-title">왜 이 학생이 위험한가</div>'
-            '<div class="card-sub">기여도가 큰 순서입니다.</div>'
-        )
-        factor_list(result, recommendation)
+        with right, st.container(border=True):
+            _html(
+                '<div class="card-title">왜 이 학생이 위험한가</div>'
+                '<div class="card-sub">기여도가 큰 순서입니다.</div>'
+            )
+            factor_list(result, recommendation)
 
 
 def trace_expander(
@@ -859,11 +866,16 @@ def result_panel(
     (매일 쓰는 담당자 화면은 순서가 다르다 — `action_panel` 참조.)
     """
     if show_summary:
-        report_card(student, result, recommendation)
+        # 확률 카드와 학생 기본 정보를 좌우로 세운다. 세로로 쌓으면 "누구인가" 가
+        # 확률 아래로 밀려 스크롤을 내려야 보이고, 그러면 아무도 안 본다.
+        # key 는 CSS 훅이다 — 두 카드의 높이를 맞춘다.
+        with st.container(key="result_summary"):
+            card_col, info_col = st.columns([1, 1.15], gap="large")
+            with card_col:
+                report_card(student, result, recommendation)
+            with info_col:
+                student_summary(student, title="학생 기본 정보")
         spacer(12)
-        with st.expander("학생 기본 정보 전체", expanded=False):
-            student_summary(student)
-        spacer(4)
 
     risk_and_factors(result, recommendation)
 
