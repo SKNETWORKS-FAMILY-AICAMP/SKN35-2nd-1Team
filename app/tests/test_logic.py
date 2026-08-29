@@ -228,8 +228,8 @@ class TestRules(unittest.TestCase):
         self.assertNotIn("A5", self.fire(student(sem1_grade=15.0, sem2_grade=14.5)))
 
     def test_low_admission_grade_fires_a6(self):
-    self.assertIn("A6", self.fire(student(admission_grade=100.0)))
-    self.assertNotIn("A6", self.fire(student(admission_grade=150.0)))
+        self.assertIn("A6", self.fire(student(admission_grade=100.0)))
+        self.assertNotIn("A6", self.fire(student(admission_grade=150.0)))
 
     def test_unpaid_tuition_fires_f1(self):
         self.assertIn("F1", self.fire(student(tuition_fees_up_to_date=0)))
