@@ -52,7 +52,7 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 
 | 역할 | 담당 | 주요 업무 |
 | --- | --- | --- |
-| **1. PM·서비스 통합** | 조현주 | 전체 산출물 취합, PPT 총괄, LightGBM·MLP 모델링 |
+| **1. PM·서비스 통합** | 조현주 | 전체 산출물 취합, PPT 총괄, LightGBM·MLP 모델링, 모델 성능 지표 취합(model_metrics.json) |
 | **2. 데이터 전처리·EDA** | 박수휘 | 품질점검, EDA, 결측/이상치 처리, Target 정의 근거 마련, 범주 일반화(Model B), 전처리 결과서 |
 | **3. 모델링 A (ML 계열 1)** | 고은하 | Logistic Regression + Random Forest 학습·튜닝, 변수중요도 분석 |
 | **4. 모델링 B (ML 계열 2 + DL)** | 정은미, 조현주 | XGBoost / LightGBM·MLP(딥러닝) 학습·튜닝, 임계값 최적화 |
@@ -69,7 +69,7 @@ SKN35-2nd-1Team
 ├── app/                                    # Streamlit 서비스 — 완성·실제 모델 연동 완료
 │   ├── app.py                              # 진입점 (st.navigation 라우팅)
 │   ├── views/                              # 화면당 파일 1개
-│   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·F1·바로가기
+│   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·바로가기
 │   │   ├── 1_dashboard.py                  # 대시보드 — KPI 4개 + 시각화
 │   │   ├── 2_students.py                   # 학생 목록 — 필터 → 상세 3탭
 │   │   ├── 3_risk_list.py                  # 집중관리 대상 — 우선순위 명단·상담 상태
@@ -107,22 +107,28 @@ SKN35-2nd-1Team
 │   ├── logistic_regression.joblib
 │   ├── random_forest.joblib
 │   ├── xgboost.joblib
-│   ├── lightgbm.joblib                     # 최종 채택 모델
+│   ├── lightgbm.joblib                     
 │   ├── mlp.keras                           # MLP는 TensorFlow/Keras 형식
 │   ├── mlp_threshold.json                  # MLP 최종 threshold(0.40) 기록
 │   └── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
 │
 ├── reports/
 │   ├── 1) eda_report.md
-│   ├── 2) preprocessing_report.md          # Model B(범주 일반화) 전처리 결과서
+│   ├── 2) preprocessing_report.md
 │   ├── 3) model_results.csv
 │   ├── 4) lightgbm_report.md
 │   ├── 5) final_model_selection_report.md
-│   ├── logistic_regression_report.md / logistic_regression_importance.csv
-│   ├── random_forest_report.md / random_forest_importance.csv / random_forest_importance_top10.png
-│   ├── xgboost_report.md / xgboost_importance.csv
-│   ├── mlp_report.md / mlp_architecture.png
-│   ├── lightgbm_importance.csv / lightgbm_importance_top10.png
+│   ├── logistic_regression_report.md
+│   ├── logistic_regression_importance.csv
+│   ├── random_forest_report.md
+│   ├── random_forest_importance.csv
+│   ├── random_forest_importance_top10.png
+│   ├── xgboost_report.md
+│   ├── xgboost_importance.csv
+│   ├── mlp_report.md
+│   ├── mlp_architecture.png
+│   ├── lightgbm_importance.csv
+│   ├── lightgbm_importance_top10.png
 │   ├── model_metrics.json                  # 앱 "모델 성능" 비교표가 읽는 파일
 │   └── figures/
 │       ├── target_distribution.png
@@ -336,10 +342,10 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 
 ## 13. 회고
 
-### 조현주 (PM · LightGBM · MLP)
+### 👤 조현주 (PM · LightGBM · MLP)
 작성 필요
 
-### 박수휘 (데이터 전처리 · EDA)
+### 👤 박수휘 (데이터 전처리 · EDA)
 
 이번 프로젝트에서는 데이터 전처리와 EDA를 담당했습니다. 데이터에 결측치나 중복은 없었으나 전형, 전공, 부모 직업 등 범주형 변수가 지나치게 세분화되어 있어, 모델 일반화를 위해 상위 그룹 및 계열 단위로 묶어 재분류했습니다. 또한 1학기 수강 이력이나 학기별 이수율 같은 파생변수를 생성했는데, 이 과정에서 직접 생성한 이수율이 원본 데이터보다 자퇴 여부와 더 강한 상관관계를 보이는 것을 확인하며 데이터를 어떻게 가공하느냐가 결과에 큰 영향을 준다는 걸 체감할 수 있었습니다.
 
@@ -347,7 +353,7 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 
 전처리 단계의 의사결정이 모델링을 거쳐 최종 서비스 화면까지 직결되는 유기적 과정을 경험하며 프로젝트 전체 구조를 깊이 이해할 수 있었습니다. 나아가 팀원들과 지속적으로 기준을 조율하며 하나의 완성도 높은 서비스를 만들어내는 협업의 가치를 배웠습니다.
 
-### 고은하 (Logistic Regression · Random Forest)
+### 👤 고은하 (Logistic Regression · Random Forest)
 이번 프로젝트에서는 Logistic Regression과 Random Forest 모델링을
 담당했고, 전처리 단계에서도 데이터의 특성을 보면서 여러 의견을
 제안했습니다. 포르투갈의 상황에 한정된 거시경제 변수를 제외하고, 부모
@@ -376,7 +382,7 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 완성되는 과정 역시 이번 팀 프로젝트를 통해 배울 수 있었던 부분이라고
 생각합니다.
 
-### 정은미 (XGBoost)
+### 👤 정은미 (XGBoost)
 이번 프로젝트에서는 XGBoost 머신러닝 모델링을 담당했다.
 XGBoost Baseline을 기준으로 성능을 확인하고, RandomizedSearchCV를 활용해 하이퍼파라미터 튜닝을 진행했다.
 중도탈락 학생을 놓치지 않는 것이 중요하다고 판단하여 Recall을 주요 평가 지표로 설정했으며, 클래스 불균형을 고려해 scale_pos_weight를 적용했다.
@@ -394,7 +400,7 @@ XGBoost Baseline을 기준으로 성능을 확인하고, RandomizedSearchCV를 �
 다만 Feature Importance가 높다고 해서 해당 변수가 중도탈락의 원인이라는 의미는 아니라는 점을 주의해야 했다.
 이번 과정을 통해 단순히 성능이 높은 모델보다 프로젝트 목적에 맞는 평가 기준과 모델 해석이 중요하다는 것을 배웠다.
 
-### 이세희 (Streamlit)
+### 👤 이세희 (Streamlit)
 이번 프로젝트에서는 Streamlit 서비스 구현과 Streamlit Cloud 배포를 담당했습니다.
 
 시작할 때 정한 것은 모델이 없는 상태에서 화면을 먼저 완성하는 것이었습니다.
