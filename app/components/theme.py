@@ -386,6 +386,11 @@ def _css() -> str:
     text-transform: uppercase; color: var(--faint);
     border-bottom: 1px solid var(--line);
   }}
+  /* 원본에 없는 값(이름·학년)임을 헤더에서 밝힌다. 컬럼 이름보다 약하게 둔다 */
+  .rt-head .ex {{
+    font-style: normal; font-weight: 600; letter-spacing: 0;
+    color: var(--muted); opacity: .8; margin-left: 4px;
+  }}
   .rt-row {{
     font-size: {t['secondary']}; color: var(--ink-soft);
     border-bottom: 1px solid var(--line-soft);

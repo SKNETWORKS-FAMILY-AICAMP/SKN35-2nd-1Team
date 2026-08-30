@@ -102,9 +102,12 @@ page = min(int(st.session_state.get("roster_page", 0)), pages - 1)
 st.session_state["roster_page"] = page
 window = filtered.iloc[page * PER_PAGE:(page + 1) * PER_PAGE]
 
+# 이름·학년은 원본에 없는 값이라 헤더에 (예시) 를 달아 화면에서 밝힌다.
+# 값을 만드는 곳은 utils/display_id.py 이고, 배경은 README 3절에 적어 두었다.
 st.markdown(
-    '<div class="rt-head"><span>학번</span><span>이름</span><span>전공 계열</span>'
-    '<span>학년</span><span class="g">등급</span></div>',
+    '<div class="rt-head"><span>학번</span>'
+    '<span>이름<em class="ex">(예시)</em></span><span>전공 계열</span>'
+    '<span>학년<em class="ex">(예시)</em></span><span class="g">등급</span></div>',
     unsafe_allow_html=True,
 )
 
