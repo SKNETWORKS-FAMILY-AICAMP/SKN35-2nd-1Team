@@ -458,12 +458,16 @@ def evidence_bar_html(evidence: Evidence, accent: str) -> str:
     thr = evidence.ratio(evidence.threshold) * 100
     val = evidence.ratio(evidence.value) * 100
 
+    # 경계값이 발동에 포함되는지에 따라 말이 갈린다 — 조건이 `<=` 면 "이하", `<` 면 "미만".
+    # 규칙이 `Evidence.inclusive` 로 알려 준다. 여기서 임의로 정하면 경계에 걸린 학생에게
+    # "발동했는데 기준 미만은 아니다" 라는 화면이 나온다.
     if evidence.worse == "below":
         danger = f"left:0;width:{thr:.1f}%"
-        foot_note = f"{evidence.threshold_text} 미만이면 발동"
+        edge = "이하" if evidence.inclusive else "미만"
     else:
         danger = f"left:{thr:.1f}%;width:{100 - thr:.1f}%"
-        foot_note = f"{evidence.threshold_text} 이상이면 발동"
+        edge = "이상" if evidence.inclusive else "초과"
+    foot_note = f"{evidence.threshold_text} {edge}이면 발동"
 
     return (
         f'<div class="ev" style="--accent:{accent}">'
@@ -495,7 +499,10 @@ def rule_trace(recommendation: RecommendationSet, student: StudentInput) -> None
         color = CATEGORY_COLORS.get(rule.category, COLORS["primary"])
         if evidence is not None:
             value_cell = escape(evidence.value_text)
-            sign = "&lt;" if evidence.worse == "below" else "≥"
+            if evidence.worse == "below":
+                sign = "≤" if evidence.inclusive else "&lt;"
+            else:
+                sign = "≥" if evidence.inclusive else "&gt;"
             threshold_cell = f"{sign} {escape(evidence.threshold_text)}"
         else:
             value_cell = "—"

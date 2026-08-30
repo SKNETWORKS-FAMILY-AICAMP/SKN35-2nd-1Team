@@ -379,10 +379,14 @@ class TestRuleEvidence(unittest.TestCase):
                     continue
                 with self.subTest(rule=m.rule.id, overrides=overrides):
                     e = m.evidence
-                    if e.worse == "below":
+                    if e.worse == "below" and e.inclusive:
+                        self.assertLessEqual(e.value, e.threshold)
+                    elif e.worse == "below":
                         self.assertLess(e.value, e.threshold)
-                    else:
+                    elif e.inclusive:
                         self.assertGreaterEqual(e.value, e.threshold)
+                    else:
+                        self.assertGreater(e.value, e.threshold)
 
     def test_evidence_value_stays_inside_its_own_scale(self):
         """눈금 범위를 벗어난 값은 막대 밖에 표식을 그린다. ratio 가 잘라 주는지 본다."""
@@ -405,6 +409,39 @@ class TestRuleEvidence(unittest.TestCase):
             for key in rule.factor_keys:
                 with self.subTest(rule=rule.id, key=key):
                     self.assertIn(key, known)
+
+    def test_threshold_edge_matches_the_wording(self):
+        """기준선에 **딱 걸린** 학생으로 조건과 화면 문구가 같은 말을 하는지 본다.
+
+        `<=` 규칙에 "미만이면 발동" 이라 적으면, 정확히 기준값인 학생에게
+        "발동했는데 기준 미만은 아니다" 라는 화면이 나온다. 눈으로는 안 잡힌다.
+        """
+        from components.ui import evidence_bar_html
+
+        # (규칙 id, 기준값에 딱 맞춘 입력)
+        edges = (
+            ("A6", {"admission_grade": rules.LOW_ADMISSION_GRADE}),
+            ("A5", {"sem1_grade": 14.0, "sem2_grade": 14.0 - rules.GRADE_DROP}),
+        )
+        for rule_id, overrides in edges:
+            with self.subTest(rule=rule_id):
+                s, rec = self._evaluate(**overrides)
+                fired = {m.rule.id for m in rec.matched}
+                self.assertIn(rule_id, fired, "기준값에 딱 걸린 학생인데 발동하지 않았습니다")
+
+                rule = next(r for r in rules.RULES if r.id == rule_id)
+                evidence = rules.evidence_of(rule, s)
+                self.assertTrue(evidence.inclusive)
+                self.assertIn("이하이면 발동", evidence_bar_html(evidence, "#000000"))
+
+    def test_exclusive_rules_still_say_미만(self):
+        """`<` 규칙까지 같이 "이하" 로 바뀌면 그것도 거짓말이다."""
+        from components.ui import evidence_bar_html
+
+        rule = next(r for r in rules.RULES if r.id == "A1")
+        evidence = rules.evidence_of(rule, student(sem2_approved=1))
+        self.assertFalse(evidence.inclusive)
+        self.assertIn("미만이면 발동", evidence_bar_html(evidence, "#000000"))
 
     def test_evidence_of_never_raises(self):
         """근거 하나가 깨져도 추천 자체는 나와야 한다."""

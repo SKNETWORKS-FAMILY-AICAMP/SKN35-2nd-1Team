@@ -50,6 +50,10 @@ class Evidence:
     threshold: float            # 규칙 기준선
     unit: str = ""              # "%" | "점" | "/3"
     worse: str = "below"        # "below" | "above" — 기준선의 어느 쪽이 위험한가
+    #: 기준선 **자기 값**이 발동에 포함되는가. 조건이 `<=` · `>=` 면 True, `<` · `>` 면 False.
+    #  화면 문구가 여기서 갈린다 — 미만/이하, 초과/이상. 조건과 다르게 적으면
+    #  경계에 딱 걸린 학생에게 "발동했는데 기준 미만은 아니다" 라는 화면이 나온다.
+    inclusive: bool = False
     minimum: float = 0.0        # 눈금 범위 (막대를 그리려면 필요하다)
     maximum: float = 100.0
 
@@ -223,7 +227,7 @@ def _admission_grade_evidence(student: StudentInput) -> Evidence:
         raise ValueError("입학 성적 또는 검증된 기준값이 없습니다.")
     return Evidence(
         "입학 성적", round(value, 1), LOW_ADMISSION_GRADE,
-        unit="점", worse="below", minimum=0.0, maximum=200.0,
+        unit="점", worse="below", inclusive=True, minimum=0.0, maximum=200.0,
     )
 
 
@@ -282,7 +286,7 @@ RULES: tuple[Rule, ...] = (
         evidence=lambda s: Evidence(
             "이수율 하락폭",
             round((s.sem1_approval_rate - s.sem2_approval_rate) * 100, 1),
-            APPROVAL_DROP * 100, unit="%p", worse="above",
+            APPROVAL_DROP * 100, unit="%p", worse="above", inclusive=True,
         ),
         factor_keys=("sem2_approval", "sem1_approval"),
         programs=(
@@ -320,7 +324,7 @@ RULES: tuple[Rule, ...] = (
         feature="grade_change",
         evidence=lambda s: Evidence(
             "학기 평점 변화", round(s.grade_change, 1), -GRADE_DROP,
-            unit="점", worse="below", minimum=-10.0, maximum=10.0,
+            unit="점", worse="below", inclusive=True, minimum=-10.0, maximum=10.0,
         ),
         factor_keys=("grade_change",),
         programs=(
@@ -389,7 +393,7 @@ RULES: tuple[Rule, ...] = (
         feature="financial_risk_score",
         evidence=lambda s: Evidence(
             "재정위험점수", s.financial_risk_score, HIGH_FINANCIAL_RISK,
-            unit="/3", worse="above", maximum=3.0,
+            unit="/3", worse="above", inclusive=True, maximum=3.0,
         ),
         factor_keys=("financial_risk", "scholarship"),
         programs=(
@@ -408,7 +412,7 @@ RULES: tuple[Rule, ...] = (
         feature="Application order",
         evidence=lambda s: Evidence(
             "지망 순위", s.application_order + 1, LATE_CHOICE_ORDER + 1,
-            unit="지망", worse="above", minimum=1.0, maximum=10.0,
+            unit="지망", worse="above", inclusive=True, minimum=1.0, maximum=10.0,
         ),
         factor_keys=("application_order",),
         programs=(
