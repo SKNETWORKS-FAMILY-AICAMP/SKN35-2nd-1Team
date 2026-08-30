@@ -1,0 +1,15 @@
+# Streamlit Cloud 가 이 앱을 세울 때 쓰는 목록.
+# 루트 requirements.txt 는 모델링·노트북 환경이라 tensorflow · jupyter 처럼
+# 앱이 한 줄도 쓰지 않는 것이 들어 있고, 그대로 설치하면 빌드가 무거워진다.
+# 여기에는 app/ 이 실제로 필요한 것만 둔다.
+
+streamlit>=1.49          # st.navigation 멀티페이지 · width="stretch" API
+plotly>=5.22             # 게이지 · 분포 차트 · 시작화면 지구본
+pandas>=2.2.3
+numpy>=2.1.0
+joblib>=1.4              # models/*.joblib 로드
+
+# 아래 둘은 코드가 직접 import 하지 않는다. joblib 이 저장된 객체를 되살릴 때
+# 그 클래스가 있어야 해서 필요하다 — 빼면 로드 시점에 죽는다.
+scikit-learn==1.9.0      # preprocessor.joblib (버전이 다르면 경고·불일치)
+lightgbm>=4.5.0          # best_model.joblib
