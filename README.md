@@ -247,7 +247,6 @@ python -m venv venv
 venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 
-⚠️ pyproject.toml / uv.lock 은 실험적으로 추가된 파일로, 현재 사용하지 않습니다.
 
 ---
 
