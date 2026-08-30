@@ -1,5 +1,5 @@
 # EDA 결과서 : 대학생 중도탈락(Dropout) 예측
-
+- 작성자: 박수휘
 - **데이터**: UCI Predict Students' Dropout and Academic Success (4,424행 × 37열)
 - **분석 노트북**: [`notebooks/01_eda.ipynb`](../notebooks/01_eda.ipynb)
 - **Target 정의**: Dropout(1) vs Non-Dropout(0, Graduate+Enrolled) — 이진분류
