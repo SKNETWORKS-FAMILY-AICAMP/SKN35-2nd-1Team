@@ -1,5 +1,6 @@
 # Random Forest 모델링 결과 리포트
 
+- 작성자: 고은하
 - 작성일: 2026-08-28
 - 노트북: `notebooks/modeling_random_forest.ipynb`
 - 모델: `models/random_forest.joblib`

@@ -1,5 +1,5 @@
 # 데이터 전처리 결과서 — Model B (범주 일반화)
-
+- 작성자: 박수휘
 - **원본 데이터**: `data/raw/data.csv` (UCI Predict Students' Dropout and Academic Success, 4,424행 × 37열)
 - **전처리 코드**: [`notebooks/preprocess.ipynb`](../notebooks/preprocess.ipynb)
 - **기준 문서**: `model_b_preprocessing_guide.html` (팀 공유 가이드)
