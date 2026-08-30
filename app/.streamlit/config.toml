@@ -1,0 +1,13 @@
+# 발표 PC 의 밝기 설정과 무관하게 화면이 같아야 한다. 다크로 고정한다.
+[theme]
+base = "dark"
+primaryColor = "#5B9BE8"
+backgroundColor = "#0B1524"
+secondaryBackgroundColor = "#131F33"
+textColor = "#EEF3FA"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

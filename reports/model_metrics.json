@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-08-29",
+  "dataset": {
+    "train": 2654,
+    "valid": 885,
+    "test": 885
+  },
+  "threshold": 0.5,
+  "selected": "LightGBM",
+  "models": [
+    {
+      "name": "LightGBM",
+      "type": "ML",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8596,
+      "f1": 0.8046,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    },
+    {
+      "name": "MLP",
+      "type": "DL",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8421,
+      "f1": 0.804,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    },
+    {
+      "name": "Logistic Regression",
+      "type": "ML",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8134,
+      "f1": 0.8091,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    },
+    {
+      "name": "Random Forest",
+      "type": "ML",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8099,
+      "f1": 0.8273,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    },
+    {
+      "name": "Random Forest (threshold=0.5 재검증)",
+      "type": "ML",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8386,
+      "f1": 0.8115,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    },
+    {
+      "name": "XGBoost",
+      "type": "ML",
+      "accuracy": null,
+      "precision": null,
+      "recall": 0.8,
+      "f1": 0.8,
+      "roc_auc": null,
+      "confusion_matrix": null,
+      "notes": ""
+    }
+  ],
+  "feature_importance": [
+    {
+      "feature": "sem2_approval_rate",
+      "importance": 0.184
+    },
+    {
+      "feature": "Age at enrollment",
+      "importance": 0.1352
+    },
+    {
+      "feature": "Tuition fees up to date",
+      "importance": 0.1148
+    },
+    {
+      "feature": "sem1_approval_rate",
+      "importance": 0.1016
+    },
+    {
+      "feature": "financial_risk_score",
+      "importance": 0.0988
+    },
+    {
+      "feature": "Curricular units 2nd sem (grade)",
+      "importance": 0.0943
+    },
+    {
+      "feature": "Admission grade",
+      "importance": 0.0775
+    },
+    {
+      "feature": "Previous qualification (grade)",
+      "importance": 0.0746
+    },
+    {
+      "feature": "Curricular units 2nd sem (approved)",
+      "importance": 0.0623
+    },
+    {
+      "feature": "grade_change",
+      "importance": 0.057
+    }
+  ]
+}
