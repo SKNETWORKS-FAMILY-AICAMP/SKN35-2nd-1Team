@@ -377,11 +377,20 @@ def _css() -> str:
     }}
   }}
 
-  /* 차트 카드 넷은 좌우 높이를 맞추고, 바닥을 한 겹 밝게 띄운다 — 그래프 영역이
-     아니라 **카드(큰 네모) 전체**다. 배경은 카드 자신에게 준다: 이 버전의 Streamlit 은
-     테두리를 이 요소에 직접 그리고 BorderWrapper 를 더 이상 두지 않는다. */
+  /* 차트 카드 넷은 **크기가 같아야** 화면이 흔들려 보이지 않는다. 두 가지를 건다.
+       ① 한 줄 안에서 — Streamlit 은 칸(stColumn)의 높이만 서로 맞추고 그 안의 카드는
+          내용만큼만 그린다. 그래서 칸을 flex 로 만들고 카드가 칸 높이를 다 쓰게 한다.
+       ② 줄과 줄 사이 — 바닥값을 두 줄의 내용 높이(실측 505 · 500)보다 크게 잡아 넷이
+          같은 높이로 선다. 창이 아주 좁아 라벨이 접히면 내용이 이 값을 넘을 수 있는데,
+          그때도 ①이 살아 있어 한 줄 안에서는 어긋나지 않는다.
+     바닥색은 카드 자신에게 준다: 이 버전의 Streamlit 은 테두리를 이 요소에 직접
+     그리고 BorderWrapper 를 더 이상 두지 않는다. */
+  [data-testid="stHorizontalBlock"]:has([class*="st-key-dash_c"]) [data-testid="stColumn"] {{
+    display: flex;
+  }}
   [class*="st-key-dash_c"] {{
-    min-height: 470px;
+    min-height: 520px;
+    flex: 1;
     background: rgba(255,255,255,.1);
   }}
 
