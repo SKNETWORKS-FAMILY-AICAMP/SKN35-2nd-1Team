@@ -69,11 +69,10 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 ```
 SKN35-2nd-1Team
 ├── app/                                    # Streamlit 서비스 — 완성·실제 모델 연동 완료
-│   ├── .streamlit/config.toml              # 다크 테마 고정 (발표 환경 일관성)
+│   ├── .streamlit/config.toml
 │   ├── assets
 │   │   ├── demo.gif
 │   │   └── hero_campus.jpg
-│   │
 │   ├── components/                         # theme(디자인 시스템)·ui·whatif·student_detail 등
 │   │   ├── __init__.py
 │   │   ├── globe.py
@@ -83,7 +82,6 @@ SKN35-2nd-1Team
 │   │   ├── theme.py
 │   │   ├── ui.py
 │   │   └── whatif.py
-│   │
 │   ├── data/dummy_students.csv             # 실데이터 없을 때 쓰는 폴백용 합성 데이터
 │   ├── rules/
 │   │   ├── __init__.py
@@ -95,10 +93,9 @@ SKN35-2nd-1Team
 │   │   ├── dummy_predictor.py
 │   │   ├── followup.py
 │   │   ├── model_metrics.py
-│   │   ├── prediction_serive.py
-│   │   ├── predictor.py
-│   │   └── roster.py
-│   │
+│   │   ├── prediction_serive.py            # 실제 예측 처리
+│   │   ├── predictor.py                    # 모델을 이용해 이탈 확률 예측
+│   │   └── roster.py                       # 학생 데이터 관리
 │   ├── tests/                              # unittest
 │   │   ├── __init__.py
 │   │   ├── test_app_smoke.py
@@ -107,9 +104,9 @@ SKN35-2nd-1Team
 │   │   ├── __init__.py
 │   │   ├── display_id.py
 │   │   ├── dummy_data.py
-│   │   ├── feature_mapping.py
-│   │   ├── real_data.py
-│   │   └── schema.py
+│   │   ├── feature_mapping.py              # 원본 학생 데이터 → 모델 입력 feature로 매핑
+│   │   ├── real_data.py                    # 실제 데이터 처리
+│   │   └── schema.py                       # 모델 입력 feature 구조/순서 정의
 │   │
 │   ├── views/                              # 화면당 파일 1개
 │   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·바로가기
@@ -117,13 +114,12 @@ SKN35-2nd-1Team
 │   │   ├── 2_students.py                   # 학생 목록 — 필터 → 상세 3탭
 │   │   ├── 3_risk_list.py                  # 집중관리 대상 — 우선순위 명단·상담 상태
 │   │   └── 4_manual.py                     # 예비학생 예측 — 수동 입력 예측
-│   │   
 │   ├── README.md
-│   ├── app.py                              # 진입점 (st.navigation 라우팅)
+│   ├── app.py                              # Streamlit 서비스의 진입점 (st.navigation 라우팅)
 │   └── requirements.txt                    # 배포 전용 최소 의존성 (tensorflow·jupyter 제외)
 │
 ├── data/
-│   ├── processed/
+│   ├── processed/                          # 전처리가 끝난 데이터
 │   │   ├── .gitkeep
 │   │   ├── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
 │   │   └── test.csv / train.csv / val.csv  # 전처리 완료 데이터 
@@ -147,7 +143,7 @@ SKN35-2nd-1Team
 │   ├── modeling_mlp.ipynb
 │   └── preprocess.ipynb                    # 전처리 파이프라인
 │
-├── reports/
+├── reports/                                # 분석 결과/모델 평가 결과 저장
 │   ├── 1) eda_report.md
 │   ├── 2) preprocessing_report.md
 │   ├── 3) model_results.csv
@@ -173,7 +169,7 @@ SKN35-2nd-1Team
 │       ├── numeric_boxplots.png
 │       └── target_distribution.png
 │
-├── src/
+├── src/                                    #  모델링 관련 코드
 │   ├── build_model_metrics.py                   
 │   ├── modeling_logistic_regression.ipynb
 │   ├── modeling_random_forest.ipynb
@@ -183,8 +179,8 @@ SKN35-2nd-1Team
 ├── .gitignore
 ├── .gitattributes
 ├── .python-version
-├── README.md
-└── requirements.txt
+├── README.md                               # 프로젝트 설명서
+└── requirements.txt                        # 프로젝트 전체 의존성
 ```
 
 ---
