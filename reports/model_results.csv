@@ -1,0 +1,4 @@
+Model,Accuracy,Precision,Dropout Recall,F1-score,ROC-AUC
+Baseline XGBoost,0.876836,0.815884,0.795775,0.805704,0.914942
+Tuned XGBoost,0.877966,0.803448,0.820423,0.811847,0.932021
+reports/model_results.csv
