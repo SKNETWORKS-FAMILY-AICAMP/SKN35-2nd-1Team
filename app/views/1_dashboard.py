@@ -31,6 +31,7 @@ from components.theme import CATEGORY_COLORS, CLASS_COLORS, COLORS, RISK_COLORS
 from services import model_metrics
 from services.prediction_service import get_service
 from services.predictor import RISK_CATEGORIES, RISK_LABELS_KO
+from utils.feature_mapping import column_label
 
 RISK_ORDER = ("HIGH", "MEDIUM", "LOW")
 
@@ -179,7 +180,9 @@ with c1, st.container(border=True, key="dash_c1"):
     model_importance = report.feature_importance if report is not None else []
 
     if model_importance:
-        rows = [{"label": name, "value": value, "color": COLORS["primary"],
+        # 결과서는 전처리기 컬럼명(sem2_approval_rate 같은 것)을 그대로 쓴다.
+        # 화면 라벨로 바꿔 세운다 — 칸에 안 들어가 잘리면 무슨 변수인지 알 수 없다.
+        rows = [{"label": column_label(name), "value": value, "color": COLORS["primary"],
                  "display": f"{value:.3f}"}
                 for name, value in model_importance[:8]]
         sub_text = "학습 결과서의 모델 중요도 — 순위라서 막대로 그립니다."
@@ -197,7 +200,8 @@ with c1, st.container(border=True, key="dash_c1"):
         unsafe_allow_html=True,
     )
     if rows:
-        ui.bar_chart(rows, label_width=150)
+        # 라벨 칸은 가장 긴 이름("등록금 납부 정상 여부")이 잘리지 않을 만큼 준다.
+        ui.bar_chart(rows, label_width=172)
     else:
         ui.donut(risk_rows(frame), center_value=f"{total:,}", center_label="전체 학생")
 

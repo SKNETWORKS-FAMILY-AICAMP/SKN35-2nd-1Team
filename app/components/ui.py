@@ -784,6 +784,12 @@ def student_summary(student: StudentInput, *, title: str = "") -> None:
     )
 
 
+#: 결과 화면 좌우 분할 비율. **두 줄이 같은 값을 써야** 카드 사이 세로 이음선이 한 줄로
+#  선다. 줄마다 비율이 다르면 창 폭이 바뀔 때마다 어긋나는 정도까지 달라져서, 넓은
+#  화면에서 특히 티가 난다(실측 1226px 폭에서 46px 어긋남).
+RESULT_SPLIT = [1, 1.15]
+
+
 def risk_and_factors(
     result: PredictionResult,
     recommendation: RecommendationSet | None = None,
@@ -795,7 +801,7 @@ def risk_and_factors(
     """
     # 컨테이너에 key 를 주는 이유는 CSS 훅 하나뿐이다 — 두 카드의 높이를 맞춘다.
     with st.container(key="risk_split"):
-        left, right = st.columns([1, 1.35], gap="large")
+        left, right = st.columns(RESULT_SPLIT, gap="large")
 
         # st.markdown 은 호출마다 독립된 블록이라 여는 태그와 닫는 태그를 따로 내보내면
         # 감싸지지 않는다. 위젯을 감싸야 할 때는 Streamlit 컨테이너를 쓰고 CSS 로 카드를 입힌다.
@@ -877,7 +883,7 @@ def result_panel(
         # 확률 아래로 밀려 스크롤을 내려야 보이고, 그러면 아무도 안 본다.
         # key 는 CSS 훅이다 — 두 카드의 높이를 맞춘다.
         with st.container(key="result_summary"):
-            card_col, info_col = st.columns([1, 1.15], gap="large")
+            card_col, info_col = st.columns(RESULT_SPLIT, gap="large")
             with card_col:
                 report_card(student, result, recommendation)
             with info_col:

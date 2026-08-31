@@ -255,6 +255,30 @@ DERIVED_COLUMNS: tuple[str, ...] = (
 )
 
 
+#: 파생 5종의 화면 이름. 입력 필드는 `UI_FIELDS` 가 이미 라벨을 갖고 있는데
+#  파생변수는 폼에 없어서 이름을 줄 자리가 여기밖에 없다.
+DERIVED_LABELS: dict[str, str] = {
+    "sem1_approval_rate": "1학기 이수율",
+    "sem2_approval_rate": "2학기 이수율",
+    "grade_change": "학기 간 성적 변화",
+    "zero_enrolled_1st_sem": "1학기 수강 0과목",
+    "financial_risk_score": "재정위험점수",
+}
+
+#: 전처리기 컬럼명 → 화면 라벨. 학습 결과서(model_metrics.json)가 컬럼명을 그대로
+#  쓰기 때문에 화면에 세울 때 이 표를 거친다.
+COLUMN_LABELS: dict[str, str] = {
+    **{f.column: f.label for f in UI_FIELDS},
+    **DERIVED_LABELS,
+}
+
+
+def column_label(column: str) -> str:
+    """전처리기 컬럼명을 화면 라벨로. **모르는 이름은 그대로 돌려준다** —
+    팀이 새 변수를 넣었을 때 지어낸 한글 이름이 아니라 원래 이름이 보여야 한다."""
+    return COLUMN_LABELS.get(column, column)
+
+
 def missing_model_columns() -> tuple[str, ...]:
     """전처리기가 요구하는데 화면도 파생도 채우지 못하는 컬럼.
 

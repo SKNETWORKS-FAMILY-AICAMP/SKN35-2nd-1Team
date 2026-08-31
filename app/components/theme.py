@@ -212,6 +212,19 @@ def _css() -> str:
   }}
   [data-testid="stExpanderDetails"] {{ padding-top: {s['2']}; }}
 
+  /* 🔴 직접 그린 블록이 다음 요소와 겹치는 것을 여기서 한 번에 막는다.
+     Streamlit 은 마크다운 컨테이너에 margin-bottom: -16px 를 달아 문단(p 요소)의
+     아래 여백 1rem 을 상쇄한다. 그런데 `_html()` 로 내보내는 우리 블록은 문단이
+     아니라 div 요소라서 상쇄할 여백이 없고, 그 -16px 이 그대로 남아 **다음 요소가
+     위로 올라와 글자를 덮는다.** 그래서 문단이 아닌 블록에서만 음수 여백을 지운다
+     (st.caption 은 컨테이너에 data-testid 가 있어 여기 걸리지 않는다 — 그쪽은 안에
+     문단이 있으므로 -16px 이 제 역할을 한다).
+     ※ 이 주석에 홑화살괄호로 태그를 적으면 스타일 블록이 HTML 블록으로 오인돼
+        `test_html_blocks_have_no_blank_line` 이 걸린다. 그래서 말로 적는다. */
+  [data-testid="stMarkdownContainer"]:has(> div:not([data-testid])) {{
+    margin-bottom: 0;
+  }}
+
   /* 위젯 사이 기본 간격이 들쭉날쭉해 리듬이 깨진다 */
   [data-testid="stVerticalBlock"] {{ gap: {s['3']}; }}
   [data-testid="stHorizontalBlock"] {{ gap: {s['4']}; }}
@@ -332,10 +345,8 @@ def _css() -> str:
      위젯은 HTML 안에 못 넣으므로 컨테이너째 겹쳐 놓고, 줄은 그만큼 오른쪽을
      비워 글이 버튼 밑으로 들어가지 않게 한다. */
   .st-key-dash_alert {{ position: relative; margin-top: {s['6']}; }}
-  /* Streamlit 의 마크다운 컨테이너는 margin-bottom: -16px 를 달고 나온다. 그래서 줄을
-     감싼 상자가 줄보다 16px 짧아지고, 그 절반(8px)만큼 top:50% 가운데가 위로 빗나간다.
-     이 줄에서만 그 음수 여백을 지운다 — 상자와 줄의 높이가 같아야 가운데가 맞는다. */
-  .st-key-dash_alert [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}
+  /* 줄을 감싼 상자와 줄의 높이가 같아야 top:50% 가운데가 맞는다. 그 조건은 위쪽
+     전역 규칙(마크다운 컨테이너의 -16px 제거)이 이미 만들어 준다. */
   /* 높이는 **패딩으로** 만든다. min-height 로 늘리면 줄을 감싼 컨테이너는 그대로라
      줄이 아래로 흘러넘치고, 그 어긋난 만큼 가운데 정렬(top:50%)도 빗나간다. */
   .st-key-dash_alert .alert-bar {{ padding: {s['6']} 252px {s['6']} {s['5']}; }}
