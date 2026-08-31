@@ -76,82 +76,118 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 ```
 SKN35-2nd-1Team
 ├── app/                                    # Streamlit 서비스 — 완성·실제 모델 연동 완료
-│   ├── app.py                              # 진입점 (st.navigation 라우팅)
+│   ├── .streamlit/config.toml
+│   ├── assets
+│   │   ├── demo.gif
+│   │   └── hero_campus.jpg
+│   ├── components/                         # theme(디자인 시스템)·ui·whatif·student_detail 등
+│   │   ├── __init__.py
+│   │   ├── globe.py
+│   │   ├── manual_input.py
+│   │   ├── state.py
+│   │   ├── student_detail.py
+│   │   ├── theme.py
+│   │   ├── ui.py
+│   │   └── whatif.py
+│   ├── data/dummy_students.csv             # 실데이터 없을 때 쓰는 폴백용 합성 데이터
+│   ├── rules/
+│   │   ├── __init__.py
+│   │   └── recommendation_rules.py         # 규칙 기반 추천 엔진 (A1~A6, F1~F3, P1~P4)
+│   │
+│   ├── services/                           # 예측 계층 (dummy ↔ 실제 모델 전환 지점)
+│   │   ├── __init__.py
+│   │   ├── case_sheet.py
+│   │   ├── dummy_predictor.py
+│   │   ├── followup.py
+│   │   ├── model_metrics.py
+│   │   ├── prediction_serive.py            # 실제 예측 처리
+│   │   ├── predictor.py                    # 모델을 이용해 이탈 확률 예측
+│   │   └── roster.py                       # 학생 데이터 관리
+│   ├── tests/                              # unittest
+│   │   ├── __init__.py
+│   │   ├── test_app_smoke.py
+│   │   └── test_logic.py
+│   ├── utils/                              # feature_schema 매핑, 실데이터 역변환
+│   │   ├── __init__.py
+│   │   ├── display_id.py
+│   │   ├── dummy_data.py
+│   │   ├── feature_mapping.py              # 원본 학생 데이터 → 모델 입력 feature로 매핑
+│   │   ├── real_data.py                    # 실제 데이터 처리
+│   │   └── schema.py                       # 모델 입력 feature 구조/순서 정의
+│   │
 │   ├── views/                              # 화면당 파일 1개
 │   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·바로가기
 │   │   ├── 1_dashboard.py                  # 대시보드 — KPI 4개 + 시각화
 │   │   ├── 2_students.py                   # 학생 목록 — 필터 → 상세 3탭
 │   │   ├── 3_risk_list.py                  # 집중관리 대상 — 우선순위 명단·상담 상태
 │   │   └── 4_manual.py                     # 예비학생 예측 — 수동 입력 예측
-│   ├── components/                         # theme(디자인 시스템)·ui·whatif·student_detail 등
-│   ├── services/                           # 예측 계층 (dummy ↔ 실제 모델 전환 지점)
-│   ├── rules/recommendation_rules.py       # 규칙 기반 추천 엔진 (A1~A6, F1~F3, P1~P4)
-│   ├── utils/                              # feature_schema 매핑, 실데이터 역변환
-│   ├── data/dummy_students.csv             # 실데이터 없을 때 쓰는 폴백용 합성 데이터
-│   ├── tests/                              # unittest
-│   ├── .streamlit/config.toml              # 다크 테마 고정 (발표 환경 일관성)
+│   ├── README.md
+│   ├── app.py                              # Streamlit 서비스의 진입점 (st.navigation 라우팅)
 │   └── requirements.txt                    # 배포 전용 최소 의존성 (tensorflow·jupyter 제외)
 │
 ├── data/
-│   ├── raw/
-│   │   └── data.csv                        # 원본 데이터 (UCI CSV)
-│   └── processed/
-│       ├── train.csv / val.csv / test.csv  # 전처리 완료 데이터
-│       └── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
+│   ├── processed/                          # 전처리가 끝난 데이터
+│   │   ├── .gitkeep
+│   │   ├── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
+│   │   └── test.csv / train.csv / val.csv  # 전처리 완료 데이터 
+│   └── raw/
+│   │   ├── .gitkeep
+│       └── data.csv                        # 원본 데이터 (UCI CSV)
+│
+├── models/
+│   ├── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
+│   ├── lightgbm.joblib      
+│   ├── logistic_regression.joblib
+│   ├── mlp.keras                           # MLP는 TensorFlow/Keras 형식
+│   ├── mlp_threshold.json                  # MLP 최종 threshold(0.40) 기록
+│   ├── preprocessor.joblib                 # 전처리 파이프라인 (ColumnTransformer)
+│   ├── random_forest.joblib
+│   └── xgboost.joblib
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb                        # EDA
-│   ├── preprocess.ipynb                    # 전처리 파이프라인
 │   ├── modeling_lightgbm.ipynb
-│   └── modeling_mlp.ipynb
+│   ├── modeling_mlp.ipynb
+│   └── preprocess.ipynb                    # 전처리 파이프라인
 │
-├── src/                                    
-│   ├── modeling_logistic_regression.ipynb
-│   ├── modeling_random_forest.ipynb
-│   ├── modeling_xgboost.ipynb
-│   └── build_model_metrics.py
-│
-├── models/
-│   ├── preprocessor.joblib                 # 전처리 파이프라인 (ColumnTransformer)
-│   ├── logistic_regression.joblib
-│   ├── random_forest.joblib
-│   ├── xgboost.joblib
-│   ├── lightgbm.joblib                     
-│   ├── mlp.keras                           # MLP는 TensorFlow/Keras 형식
-│   ├── mlp_threshold.json                  # MLP 최종 threshold(0.40) 기록
-│   └── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
-│
-├── reports/
+├── reports/                                # 분석 결과/모델 평가 결과 저장
 │   ├── 1) eda_report.md
 │   ├── 2) preprocessing_report.md
 │   ├── 3) model_results.csv
 │   ├── 4) lightgbm_report.md
 │   ├── 5) final_model_selection_report.md
-│   ├── logistic_regression_report.md
-│   ├── logistic_regression_importance.csv
-│   ├── random_forest_report.md
-│   ├── random_forest_importance.csv
-│   ├── random_forest_importance_top10.png
-│   ├── xgboost_report.md
-│   ├── xgboost_importance.csv
-│   ├── mlp_report.md
-│   ├── mlp_architecture.png
 │   ├── lightgbm_importance.csv
 │   ├── lightgbm_importance_top10.png
+│   ├── logistic_regression_importance.csv
+│   ├── logistic_regression_report.md
+│   ├── mlp_architecture.png
+│   ├── mlp_report.md
 │   ├── model_metrics.json                  # 앱 "모델 성능" 비교표가 읽는 파일
+│   ├── model_results.csv
+│   ├── random_forest_importance.csv
+│   ├── random_forest_importance_top10.png
+│   ├── random_forest_report.md
+│   ├── xgboost_importance.csv
+│   ├── xgboost_report.md
 │   └── figures/
-│       ├── target_distribution.png
-│       ├── correlation_heatmap.png
 │       ├── categorical_dropout_rate.png
+│       ├── correlation_heatmap.png
 │       ├── derived_features.png
-│       └── numeric_boxplots.png
+│       ├── numeric_boxplots.png
+│       └── target_distribution.png
+│
+├── src/                                    #  모델링 관련 코드
+│   ├── build_model_metrics.py                   
+│   ├── modeling_logistic_regression.ipynb
+│   ├── modeling_random_forest.ipynb
+│   └── modeling_xgboost.ipynb
 │
 ├── venv/                                   # 가상환경 (커밋 X)
 ├── .gitignore
 ├── .gitattributes
 ├── .python-version
-├── README.md
-└── requirements.txt
+├── README.md                               # 프로젝트 설명서
+└── requirements.txt                        # 프로젝트 전체 의존성
 ```
 
 ---
@@ -232,15 +268,7 @@ Streamlit 앱만 가볍게 실행하려면 `app/requirements.txt`로 별도 설�
     → train.csv / val.csv / test.csv 저장
     → preprocessor.joblib 저장
 ```
-
-| 단계 | 적용 내용 |
-|---|---|
-| 파생변수 | `zero_enrolled_1st_sem`(1학기 0과목 등록 플래그), `sem1_approval_rate`/`sem2_approval_rate`(학기별 이수율), `grade_change`(성적 변화량), `financial_risk_score`(재정 위험도 점수, 등록금 미납+채무+장학금 미수혜 0~3점) |
-| 범주형 그룹화 | `Application mode`(18종) → `Admission_pathway`(전형 유형 **8종**), `Course`(17종) → `Major_field`(전공 계열 **10종**), `Previous qualification`(17종) → `Previous_education_level`(**6단계**), 부모 학력/직업 코드 → `Mother/Father_education_level`, `Mother/Father_occupation_group` — 매핑 후 결측(NaN) 0건 확인 |
-| 인코딩 | 저카디널리티 범주형(`Marital status`, 그룹화된 범주형)은 `OneHotEncoder` |
-| 스케일링 | 연속형 변수(성적, 나이, 실업률 등)는 `StandardScaler` |
-| 이진 플래그 | `Displaced`, `Debtor`, `Tuition fees up to date` 등은 원본 값 그대로 통과(passthrough) |
-| 데이터 분할 | `random_state=42`, Dropout 비율(32.12%)을 유지하는 계층 추출로 Train 60% / Val 20% / Test 20% 분리 |
+<img width="1414" height="1122" alt="2" src="https://github.com/user-attachments/assets/27eb734d-c2a4-4c0a-ba8e-5fbe63774381" />
 
 데이터 누수(leakage) 방지를 위해, 여러 행의 통계가 필요한 변환(`StandardScaler`, `OneHotEncoder`)은 Train 데이터에만 `fit`한 뒤 Val/Test에는 `transform`만 적용했습니다.
 
@@ -351,8 +379,8 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 
 ## 13. 회고
 
-### 👤 조현주 (PM · LightGBM · MLP)
-작성 필요
+### 👤 조현주 (PM · 모델링)
+팀장을 맡게되어 부담이 컸던 프로젝트였지만 팀원분들의 다양한 의견과 적극적인 진행으로 큰 사고없이 만족스러운 프로젝트를 마무리하게 되었습니다. 이번 프로젝트에서는 전체적인 흐름과 역할 분배하는데에 있어서 고민을 많이 하였고, 팀원마다 분배된 역할을 잘 해낼 수 있도록 뒤에서 이끌었습니다. 모델의 성능을 더 높이기 위한 노력들이 많이 담겨진 프로젝트였던 것 같습니다. 우리 팀원 모두 고생많았습니다🔥🔥🔥
 
 ### 👤 박수휘 (데이터 전처리 · EDA)
 
@@ -362,7 +390,7 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 
 전처리 단계의 의사결정이 모델링을 거쳐 최종 서비스 화면까지 직결되는 유기적 과정을 경험하며 프로젝트 전체 구조를 깊이 이해할 수 있었습니다. 나아가 팀원들과 지속적으로 기준을 조율하며 하나의 완성도 높은 서비스를 만들어내는 협업의 가치를 배웠습니다.
 
-### 👤 고은하 (Logistic Regression · Random Forest)
+### 👤 고은하 (모델링)
 이번 프로젝트에서는 Logistic Regression과 Random Forest 모델링을
 담당했고, 전처리 단계에서도 데이터의 특성을 보면서 여러 의견을
 제안했습니다. 포르투갈의 상황에 한정된 거시경제 변수를 제외하고, 부모
@@ -391,7 +419,7 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 완성되는 과정 역시 이번 팀 프로젝트를 통해 배울 수 있었던 부분이라고
 생각합니다.
 
-### 👤 정은미 (XGBoost)
+### 👤 정은미 (모델링)
 이번 프로젝트에서는 XGBoost 머신러닝 모델링을 담당했다.
 XGBoost Baseline을 기준으로 성능을 확인하고, RandomizedSearchCV를 활용해 하이퍼파라미터 튜닝을 진행했다.
 중도탈락 학생을 놓치지 않는 것이 중요하다고 판단하여 Recall을 주요 평가 지표로 설정했으며, 클래스 불균형을 고려해 scale_pos_weight를 적용했다.
@@ -418,7 +446,7 @@ XGBoost Baseline을 기준으로 성능을 확인하고, RandomizedSearchCV를 �
 만들어 화면 다섯 개를 올리고, 예측하는 부분만 별도 계층으로 분리했습니다. LightGBM이 도착했을 때는 스위치 한 줄만 True로 바꾸는 것으로 끝났고 화면 코드는
 한 줄도 수정하지 않았습니다.
 
-기술적으로 가장 신경 쓴 부분은 전처리기와의 계약이었습니다. 팀 전처리기는
+기술적으로 가장 신경 쓴 부분은 전처리기와의 계약이였습니다. 팀 전처리기는
 OneHotEncoder(handle_unknown='ignore')를 쓰기 때문에, 제가 화면에서 만든 범주
 문자열이 노트북의 매핑과 한 글자라도 다르면 에러 없이 조용히 전부 0이 됩니다.
 예측은 계속 나오는데 값만 틀리는, 눈으로는 못 잡는 사고입니다. 그래서 더미 학생
