@@ -173,11 +173,11 @@ SKN35-2nd-1Team
 │       ├── numeric_boxplots.png
 │       └── target_distribution.png
 │
-├── src/                                    
+├── src/
+│   ├── build_model_metrics.py                   
 │   ├── modeling_logistic_regression.ipynb
 │   ├── modeling_random_forest.ipynb
-│   ├── modeling_xgboost.ipynb
-│   └── build_model_metrics.py
+│   └── modeling_xgboost.ipynb
 │
 ├── venv/                                   # 가상환경 (커밋 X)
 ├── .gitignore
