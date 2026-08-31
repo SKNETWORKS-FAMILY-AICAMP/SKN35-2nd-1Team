@@ -69,20 +69,50 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 ```
 SKN35-2nd-1Team
 ├── app/                                    # Streamlit 서비스 — 완성·실제 모델 연동 완료
-│   ├── app.py                              # 진입점 (st.navigation 라우팅)
-│   ├── views/                              # 화면당 파일 1개
-│   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·바로가기
-│   │   ├── 1_dashboard.py                  # 대시보드 — KPI 4개 + 시각화
-│   │   ├── 2_students.py                   # 학생 목록 — 필터 → 상세 3탭
-│   │   ├── 3_risk_list.py                  # 집중관리 대상 — 우선순위 명단·상담 상태
-│   │   └── 4_manual.py                     # 예비학생 예측 — 수동 입력 예측
-│   ├── components/                         # theme(디자인 시스템)·ui·whatif·student_detail 등
-│   ├── services/                           # 예측 계층 (dummy ↔ 실제 모델 전환 지점)
-│   ├── rules/recommendation_rules.py       # 규칙 기반 추천 엔진 (A1~A6, F1~F3, P1~P4)
-│   ├── utils/                              # feature_schema 매핑, 실데이터 역변환
-│   ├── data/dummy_students.csv             # 실데이터 없을 때 쓰는 폴백용 합성 데이터
-│   ├── tests/                              # unittest
 │   ├── .streamlit/config.toml              # 다크 테마 고정 (발표 환경 일관성)
+│   ├── assets
+│   │   ├── demo.gif
+│   │   └── hero_campus.jpg
+│   │
+│   ├── components/                         # theme(디자인 시스템)·ui·whatif·student_detail 등
+│   │   ├── __init__.py
+│   │   ├── globe.py
+│   │   ├── manual_input.py
+│   │   ├── state.py
+│   │   ├── student_detail.py
+│   │   ├── theme.py
+│   │   ├── ui.py
+│   │   └── whatif.py
+│   │
+│   ├── data/dummy_students.csv             # 실데이터 없을 때 쓰는 폴백용 합성 데이터
+│   ├── rules/
+│   │   ├── __init__.py
+│   │   └── recommendation_rules.py         # 규칙 기반 추천 엔진 (A1~A6, F1~F3, P1~P4)
+│   │
+│   ├── services/                           # 예측 계층 (dummy ↔ 실제 모델 전환 지점)
+│   │   ├── __init__.py
+│   │   ├── case_sheet.py
+│   │   ├── dummy_predictor.py
+│   │   ├── followup.py
+│   │   ├── model_metrics.py
+│   │   ├── prediction_serive.py
+│   │   ├── predictor.py
+│   │   └── roster.py
+│   │
+│   ├── tests/                              # unittest
+│   │   ├── __init__.py
+│   │   ├── test_app_smoke.py
+│   │   └── test_logic.py
+│   ├── utils/                              # feature_schema 매핑, 실데이터 역변환
+│   │   ├── __init__.py
+│   │   ├── display_id.py
+│   │   ├── dummy_data.py
+│   │   ├── feature_mapping.py
+│   │   ├── real_data.py
+│   │   └── schema.py
+│   │   
+│   ├── README.md
+│   ├── app.py                              # 진입점 (st.navigation 라우팅)
 │   └── requirements.txt                    # 배포 전용 최소 의존성 (tensorflow·jupyter 제외)
 │
 ├── data/
@@ -91,18 +121,6 @@ SKN35-2nd-1Team
 │   └── processed/
 │       ├── train.csv / val.csv / test.csv  # 전처리 완료 데이터
 │       └── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
-│
-├── notebooks/
-│   ├── 01_eda.ipynb                        # EDA
-│   ├── preprocess.ipynb                    # 전처리 파이프라인
-│   ├── modeling_lightgbm.ipynb
-│   └── modeling_mlp.ipynb
-│
-├── src/                                    
-│   ├── modeling_logistic_regression.ipynb
-│   ├── modeling_random_forest.ipynb
-│   ├── modeling_xgboost.ipynb
-│   └── build_model_metrics.py
 │
 ├── models/
 │   ├── preprocessor.joblib                 # 전처리 파이프라인 (ColumnTransformer)
@@ -113,6 +131,12 @@ SKN35-2nd-1Team
 │   ├── mlp.keras                           # MLP는 TensorFlow/Keras 형식
 │   ├── mlp_threshold.json                  # MLP 최종 threshold(0.40) 기록
 │   └── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
+│
+├── notebooks/
+│   ├── 01_eda.ipynb                        # EDA
+│   ├── preprocess.ipynb                    # 전처리 파이프라인
+│   ├── modeling_lightgbm.ipynb
+│   └── modeling_mlp.ipynb
 │
 ├── reports/
 │   ├── 1) eda_report.md
@@ -138,6 +162,12 @@ SKN35-2nd-1Team
 │       ├── categorical_dropout_rate.png
 │       ├── derived_features.png
 │       └── numeric_boxplots.png
+│
+├── src/                                    
+│   ├── modeling_logistic_regression.ipynb
+│   ├── modeling_random_forest.ipynb
+│   ├── modeling_xgboost.ipynb
+│   └── build_model_metrics.py
 │
 ├── venv/                                   # 가상환경 (커밋 X)
 ├── .gitignore
