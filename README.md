@@ -225,6 +225,7 @@ Streamlit 앱만 가볍게 실행하려면 `app/requirements.txt`로 별도 설�
     → train.csv / val.csv / test.csv 저장
     → preprocessor.joblib 저장
 ```
+<img width="1414" height="1122" alt="2" src="https://github.com/user-attachments/assets/27eb734d-c2a4-4c0a-ba8e-5fbe63774381" />
 
 | 단계 | 적용 내용 |
 |---|---|
