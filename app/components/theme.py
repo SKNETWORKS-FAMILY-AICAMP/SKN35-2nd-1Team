@@ -1483,6 +1483,11 @@ def _css() -> str:
     flex: 1; display: flex; flex-direction: column;
   }}
   .st-key-result_summary .rc, .st-key-result_summary .card {{ flex: 1; }}
+  /* 상담 카드는 폭을 660px 로 묶어 '한 장'으로 읽히게 해 뒀다(.rc 참고). 그런데 이
+     줄에서는 옆 카드와 좌우가 맞아야 한다 — 넓은 화면에서 카드가 660 에서 멈추면
+     칸 오른쪽에 카드 없는 빈 자리가 남는다(실측 2304px 폭에서 227px). 이 줄에서만
+     묶은 폭을 푼다. 팝업 '조치' 탭의 상담 카드는 그대로 660px 로 남는다. */
+  .st-key-result_summary .rc {{ max-width: none; }}
 
   /* 예측 결과의 두 박스(확률 · 왜 위험한가)는 나란히 서므로 높이를 맞추고
      같은 면을 깐다. 한쪽만 짧으면 계단처럼 보이고 아래 블록 시작선도 어긋난다.
