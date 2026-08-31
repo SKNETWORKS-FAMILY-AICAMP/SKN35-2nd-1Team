@@ -227,15 +227,6 @@ Streamlit 앱만 가볍게 실행하려면 `app/requirements.txt`로 별도 설�
 ```
 <img width="1414" height="1122" alt="2" src="https://github.com/user-attachments/assets/27eb734d-c2a4-4c0a-ba8e-5fbe63774381" />
 
-| 단계 | 적용 내용 |
-|---|---|
-| 파생변수 | `zero_enrolled_1st_sem`(1학기 0과목 등록 플래그), `sem1_approval_rate`/`sem2_approval_rate`(학기별 이수율), `grade_change`(성적 변화량), `financial_risk_score`(재정 위험도 점수, 등록금 미납+채무+장학금 미수혜 0~3점) |
-| 범주형 그룹화 | `Application mode`(18종) → `Admission_pathway`(전형 유형 **8종**), `Course`(17종) → `Major_field`(전공 계열 **10종**), `Previous qualification`(17종) → `Previous_education_level`(**6단계**), 부모 학력/직업 코드 → `Mother/Father_education_level`, `Mother/Father_occupation_group` — 매핑 후 결측(NaN) 0건 확인 |
-| 인코딩 | 저카디널리티 범주형(`Marital status`, 그룹화된 범주형)은 `OneHotEncoder` |
-| 스케일링 | 연속형 변수(성적, 나이, 실업률 등)는 `StandardScaler` |
-| 이진 플래그 | `Displaced`, `Debtor`, `Tuition fees up to date` 등은 원본 값 그대로 통과(passthrough) |
-| 데이터 분할 | `random_state=42`, Dropout 비율(32.12%)을 유지하는 계층 추출로 Train 60% / Val 20% / Test 20% 분리 |
-
 데이터 누수(leakage) 방지를 위해, 여러 행의 통계가 필요한 변환(`StandardScaler`, `OneHotEncoder`)은 Train 데이터에만 `fit`한 뒤 Val/Test에는 `transform`만 적용했습니다.
 
 > Model B는 포르투갈 제도에 종속된 세부 범주(전형·전공·부모 직업 등)를 보편적으로 이해 가능한 상위 개념으로 재분류한 버전입니다. 한국형으로 변환한 것이 아니라 분석·해석 편의를 위한 재분류이며, `Major_field`는 한국 대학의 공식 학과 분류가 아닙니다.
