@@ -110,33 +110,42 @@ SKN35-2nd-1Team
 │   │   ├── feature_mapping.py
 │   │   ├── real_data.py
 │   │   └── schema.py
+│   │
+│   ├── views/                              # 화면당 파일 1개
+│   │   ├── 0_home.py                       # 시작 — 소개·전체 학생 수·바로가기
+│   │   ├── 1_dashboard.py                  # 대시보드 — KPI 4개 + 시각화
+│   │   ├── 2_students.py                   # 학생 목록 — 필터 → 상세 3탭
+│   │   ├── 3_risk_list.py                  # 집중관리 대상 — 우선순위 명단·상담 상태
+│   │   └── 4_manual.py                     # 예비학생 예측 — 수동 입력 예측
 │   │   
 │   ├── README.md
 │   ├── app.py                              # 진입점 (st.navigation 라우팅)
 │   └── requirements.txt                    # 배포 전용 최소 의존성 (tensorflow·jupyter 제외)
 │
 ├── data/
-│   ├── raw/
-│   │   └── data.csv                        # 원본 데이터 (UCI CSV)
-│   └── processed/
-│       ├── train.csv / val.csv / test.csv  # 전처리 완료 데이터
-│       └── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
+│   ├── processed/
+│   │   ├── .gitkeep
+│   │   ├── feature_schema.json             # 입력 피처 순서·스키마 (앱이 런타임에 읽음)
+│   │   └── test.csv / train.csv / val.csv  # 전처리 완료 데이터 
+│   └── raw/
+│   │   ├── .gitkeep
+│       └── data.csv                        # 원본 데이터 (UCI CSV)
 │
 ├── models/
-│   ├── preprocessor.joblib                 # 전처리 파이프라인 (ColumnTransformer)
+│   ├── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
+│   ├── lightgbm.joblib      
 │   ├── logistic_regression.joblib
-│   ├── random_forest.joblib
-│   ├── xgboost.joblib
-│   ├── lightgbm.joblib                     
 │   ├── mlp.keras                           # MLP는 TensorFlow/Keras 형식
 │   ├── mlp_threshold.json                  # MLP 최종 threshold(0.40) 기록
-│   └── best_model.joblib                   # 최종 채택 모델 (lightgbm.joblib과 동일, 앱 연동용)
+│   ├── preprocessor.joblib                 # 전처리 파이프라인 (ColumnTransformer)
+│   ├── random_forest.joblib
+│   └── xgboost.joblib
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb                        # EDA
-│   ├── preprocess.ipynb                    # 전처리 파이프라인
 │   ├── modeling_lightgbm.ipynb
-│   └── modeling_mlp.ipynb
+│   ├── modeling_mlp.ipynb
+│   └── preprocess.ipynb                    # 전처리 파이프라인
 │
 ├── reports/
 │   ├── 1) eda_report.md
@@ -144,24 +153,25 @@ SKN35-2nd-1Team
 │   ├── 3) model_results.csv
 │   ├── 4) lightgbm_report.md
 │   ├── 5) final_model_selection_report.md
-│   ├── logistic_regression_report.md
-│   ├── logistic_regression_importance.csv
-│   ├── random_forest_report.md
-│   ├── random_forest_importance.csv
-│   ├── random_forest_importance_top10.png
-│   ├── xgboost_report.md
-│   ├── xgboost_importance.csv
-│   ├── mlp_report.md
-│   ├── mlp_architecture.png
 │   ├── lightgbm_importance.csv
 │   ├── lightgbm_importance_top10.png
+│   ├── logistic_regression_importance.csv
+│   ├── logistic_regression_report.md
+│   ├── mlp_architecture.png
+│   ├── mlp_report.md
 │   ├── model_metrics.json                  # 앱 "모델 성능" 비교표가 읽는 파일
+│   ├── model_results.csv
+│   ├── random_forest_importance.csv
+│   ├── random_forest_importance_top10.png
+│   ├── random_forest_report.md
+│   ├── xgboost_importance.csv
+│   ├── xgboost_report.md
 │   └── figures/
-│       ├── target_distribution.png
-│       ├── correlation_heatmap.png
 │       ├── categorical_dropout_rate.png
+│       ├── correlation_heatmap.png
 │       ├── derived_features.png
-│       └── numeric_boxplots.png
+│       ├── numeric_boxplots.png
+│       └── target_distribution.png
 │
 ├── src/                                    
 │   ├── modeling_logistic_regression.ipynb
