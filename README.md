@@ -1,4 +1,4 @@
-# Dropout Insight: 대학생 중도 자퇴 예측 및 맞춤 대응 전략
+# 대학생 학업 지속 지원 시스템 
 
 ![서비스 데모](app/assets/demo.gif)
 
@@ -7,7 +7,7 @@
 
 프로젝트 실행 화면 데모 영상과 캡처본은 아래 링크에서 확인할 수 있습니다.
 
-📁 [Google Drive - 데모 영상 및 캡처본](https://drive.google.com/drive/folders/여기에_실제_폴더ID)
+📁 [Google Drive - 데모 영상 및 캡처본](https://drive.google.com/drive/folders/1ds5bMIlLWHxEqH-cerMGqLCrdwDtAu9O?usp=drive_link)
 
 ## 목차
 - [1. 프로젝트 개요](#1-프로젝트-개요)
