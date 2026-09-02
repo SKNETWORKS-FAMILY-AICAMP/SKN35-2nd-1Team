@@ -59,54 +59,80 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 
 👥 **팀원**
 
-| 역할 | 담당 | 주요 업무 |
-| --- | --- | --- |
-| **1. PM·서비스 통합** | 조현주 | 전체 산출물 취합, PPT 총괄, LightGBM·MLP 모델링, 모델 성능 지표 취합(model_metrics.json) |
-| **2. 데이터 전처리·EDA** | 박수휘 | 품질점검, EDA, 결측/이상치 처리, Target 정의 근거 마련, 범주 일반화(Model B), 전처리 결과서 |
-| **3. 모델링 A (ML 계열 1)** | 고은하 | Logistic Regression + Random Forest 학습·튜닝, 변수중요도 분석 |
-| **4. 모델링 B (ML 계열 2 + DL)** | 정은미, 조현주 | XGBoost / LightGBM·MLP(딥러닝) 학습·튜닝, 임계값 최적화 |
-| **5. 세그먼트 분석·해석** | 전체 | 규칙 기반 위험 유형 분류·맞춤 대응 전략 설계, 학습 결과서 취합 |
-| **6. Streamlit** | 이세희 | Streamlit 5개 화면 설계·구현, 실제 모델 연동 |
+<div align="center">
 
-<h2>📌 팀 역할 분담</h2>
-
-<table>
+<table width="500">
   <tr>
-    <th>역할</th>
-    <th>담당자</th>
-    <th>주요 업무</th>
-  </tr>
-
-  <tr>
-    <td>① 전처리</td>
-    <td>박수휘</td>
-    <td>EDA, 결측치/이상치 처리, Train/Val/Test 분할, 파생변수 생성, README 작성</td>
-  </tr>
-
-  <tr>
-    <td>② ML&DL 모델링 / PM / PPT 제작</td>
-    <td>조현주</td>
-    <td>LightGBM 모델링, MLP 모델링, GitHub 관리(브랜치 전략·PR 머지), PPT 제작</td>
-  </tr>
-
-  <tr>
-    <td>③ ML 모델링 / 발표</td>
-    <td>고은하</td>
-    <td>Logistic Regression + Random Forest 모델링·평가, 발표</td>
-  </tr>
-
-  <tr>
-    <td>④ ML 모델링</td>
-    <td>정은미</td>
-    <td>XGBoost 모델링·평가</td>
-  </tr>
-
-  <tr>
-    <td>⑤ Streamlit</td>
-    <td>이세희</td>
-    <td>Streamlit 구현</td>
+    <td align="left">
+      <h3>① 전처리</h3>
+      <b>담당자:</b> 박수휘<br><br>
+      <b>주요 업무</b><br>
+      EDA<br>
+      결측치 / 이상치 처리<br>
+      Train / Val / Test 분할<br>
+      파생변수 생성<br>
+      README 작성
+    </td>
   </tr>
 </table>
+
+<br>
+
+<table width="500">
+  <tr>
+    <td align="left">
+      <h3>② ML&DL 모델링 / PM / PPT 제작</h3>
+      <b>담당자:</b> 조현주<br><br>
+      <b>주요 업무</b><br>
+      LightGBM 모델링<br>
+      MLP 모델링<br>
+      GitHub 관리 (브랜치 전략 · PR 머지)<br>
+      PPT 제작
+    </td>
+  </tr>
+</table>
+
+<br>
+
+<table width="500">
+  <tr>
+    <td align="left">
+      <h3>③ ML 모델링 / 발표</h3>
+      <b>담당자:</b> 고은하<br><br>
+      <b>주요 업무</b><br>
+      Logistic Regression + Random Forest 모델링·평가<br>
+      발표
+    </td>
+  </tr>
+</table>
+
+<br>
+
+<table width="500">
+  <tr>
+    <td align="left">
+      <h3>④ ML 모델링</h3>
+      <b>담당자:</b> 정은미<br><br>
+      <b>주요 업무</b><br>
+      XGBoost 모델링·평가
+    </td>
+  </tr>
+</table>
+
+<br>
+
+<table width="500">
+  <tr>
+    <td align="left">
+      <h3>⑤ Streamlit</h3>
+      <b>담당자:</b> 이세희<br><br>
+      <b>주요 업무</b><br>
+      Streamlit 구현
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ---
 
