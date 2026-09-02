@@ -93,6 +93,7 @@ SKN35-2nd-1Team
 │   │   ├── model_metrics.py
 │   │   ├── prediction_service.py           # 실제 예측 처리
 │   │   ├── predictor.py                    # 모델을 이용해 이탈 확률 예측
+│   │   ├── real_predictor.py               # 실제 모델(LightGBM) 연동 — USE_REAL_MODEL=True 전환 지점
 │   │   └── roster.py                       # 학생 데이터 관리
 │   ├── tests/                              # unittest
 │   │   ├── __init__.py
