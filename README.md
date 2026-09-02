@@ -3,6 +3,8 @@
 ![서비스 데모](app/assets/demo.gif)
 
 
+🖥️ site link 📎 https://skn35-2nd-1team-dropout.streamlit.app/
+
 ## 데모 영상 및 캡처본
 
 프로젝트 실행 화면 데모 영상과 캡처본은 아래 링크에서 확인할 수 있습니다.
