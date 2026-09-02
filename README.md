@@ -59,80 +59,10 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 
 👥 **팀원**
 
-<div align="center">
-
-<table width="500">
-  <tr>
-    <td align="left">
-      <h3>① 전처리</h3>
-      <b>담당자:</b> 박수휘<br><br>
-      <b>주요 업무</b><br>
-      EDA<br>
-      결측치 / 이상치 처리<br>
-      Train / Val / Test 분할<br>
-      파생변수 생성<br>
-      README 작성
-    </td>
-  </tr>
-</table>
-
-<br>
-
-<table width="500">
-  <tr>
-    <td align="left">
-      <h3>② ML&DL 모델링 / PM / PPT 제작</h3>
-      <b>담당자:</b> 조현주<br><br>
-      <b>주요 업무</b><br>
-      LightGBM 모델링<br>
-      MLP 모델링<br>
-      GitHub 관리 (브랜치 전략 · PR 머지)<br>
-      PPT 제작
-    </td>
-  </tr>
-</table>
-
-<br>
-
-<table width="500">
-  <tr>
-    <td align="left">
-      <h3>③ ML 모델링 / 발표</h3>
-      <b>담당자:</b> 고은하<br><br>
-      <b>주요 업무</b><br>
-      Logistic Regression + Random Forest 모델링·평가<br>
-      발표
-    </td>
-  </tr>
-</table>
-
-<br>
-
-<table width="500">
-  <tr>
-    <td align="left">
-      <h3>④ ML 모델링</h3>
-      <b>담당자:</b> 정은미<br><br>
-      <b>주요 업무</b><br>
-      XGBoost 모델링·평가
-    </td>
-  </tr>
-</table>
-
-<br>
-
-<table width="500">
-  <tr>
-    <td align="left">
-      <h3>⑤ Streamlit</h3>
-      <b>담당자:</b> 이세희<br><br>
-      <b>주요 업무</b><br>
-      Streamlit 구현
-    </td>
-  </tr>
-</table>
-
-</div>
+| :---: | :---: | :---: | :---: | :---: |
+| 박수휘 | 조현주(PM) | 고은하 | 정은미 | 이세희 |
+| 전처리<br>EDA 및 README | ML&DL 모델링<br>PPT 및 Git 관리 | ML 모델링<br>발표 | ML 모델링<br>XGBoost | Streamlit<br>구현 |
+| [![GitHub](https://img.shields.io/badge/soohwi-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/soohwi) | [![GitHub](https://img.shields.io/badge/zozuzu-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/zozuzu) | [![GitHub](https://img.shields.io/badge/galaxyko2026-maker-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/galaxyko2026-maker) | [![GitHub](https://img.shields.io/badge/unmiii-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/unmiii) | [![GitHub](https://img.shields.io/badge/dltpgml1112-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/dltpgml1112) |
 
 ---
 
