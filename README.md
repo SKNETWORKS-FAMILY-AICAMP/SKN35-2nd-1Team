@@ -7,7 +7,7 @@
 
 프로젝트 실행 화면 데모 영상과 캡처본은 아래 링크에서 확인할 수 있습니다.
 
-📁 [Google Drive - 데모 영상 및 캡처본](https://drive.google.com/drive/folders/1ds5bMIlLWHxEqH-cerMGqLCrdwDtAu9O?usp=drive_link)
+📁 [Google Drive - 데모 영상 및 캡처본](https://drive.google.com/drive/folders/1ds5bMIlLWHxEqH-cerMGqLCrdwDtAu9O?usp=sharing)
 
 ## 목차
 - [1. 프로젝트 개요](#1-프로젝트-개요)
@@ -67,6 +67,46 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 | **4. 모델링 B (ML 계열 2 + DL)** | 정은미, 조현주 | XGBoost / LightGBM·MLP(딥러닝) 학습·튜닝, 임계값 최적화 |
 | **5. 세그먼트 분석·해석** | 전체 | 규칙 기반 위험 유형 분류·맞춤 대응 전략 설계, 학습 결과서 취합 |
 | **6. Streamlit** | 이세희 | Streamlit 5개 화면 설계·구현, 실제 모델 연동 |
+
+<h2>📌 팀 역할 분담</h2>
+
+<table>
+  <tr>
+    <th>역할</th>
+    <th>담당자</th>
+    <th>주요 업무</th>
+  </tr>
+
+  <tr>
+    <td>① 전처리</td>
+    <td>박수휘</td>
+    <td>EDA, 결측치/이상치 처리, Train/Val/Test 분할, 파생변수 생성, README 작성</td>
+  </tr>
+
+  <tr>
+    <td>② ML&DL 모델링 / PM / PPT 제작</td>
+    <td>조현주</td>
+    <td>LightGBM 모델링, MLP 모델링, GitHub 관리(브랜치 전략·PR 머지), PPT 제작</td>
+  </tr>
+
+  <tr>
+    <td>③ ML 모델링 / 발표</td>
+    <td>고은하</td>
+    <td>Logistic Regression + Random Forest 모델링·평가, 발표</td>
+  </tr>
+
+  <tr>
+    <td>④ ML 모델링</td>
+    <td>정은미</td>
+    <td>XGBoost 모델링·평가</td>
+  </tr>
+
+  <tr>
+    <td>⑤ Streamlit</td>
+    <td>이세희</td>
+    <td>Streamlit 구현</td>
+  </tr>
+</table>
 
 ---
 
