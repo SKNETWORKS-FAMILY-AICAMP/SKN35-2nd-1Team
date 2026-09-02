@@ -57,12 +57,10 @@ UCI "Predict Students' Dropout and Academic Success" 데이터셋(4,424명 규�
 
 ## 2. 팀 소개
 
-👥 **팀원**
-
-| :---: | :---: | :---: | :---: | :---: |
 | 박수휘 | 조현주(PM) | 고은하 | 정은미 | 이세희 |
+| :---: | :---: | :---: | :---: | :---: |
 | 전처리<br>EDA 및 README | ML&DL 모델링<br>PPT 및 Git 관리 | ML 모델링<br>발표 | ML 모델링<br>XGBoost | Streamlit<br>구현 |
-| [![GitHub](https://img.shields.io/badge/soohwi-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/soohwi) | [![GitHub](https://img.shields.io/badge/zozuzu-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/zozuzu) | [![GitHub](https://img.shields.io/badge/galaxyko2026-maker-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/galaxyko2026-maker) | [![GitHub](https://img.shields.io/badge/unmiii-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/unmiii) | [![GitHub](https://img.shields.io/badge/dltpgml1112-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/dltpgml1112) |
+| [![GitHub](https://img.shields.io/badge/soohwi-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/soohwi) | [![GitHub](https://img.shields.io/badge/zozuzu-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/zozuzu) | [![GitHub](https://img.shields.io/badge/galaxyko2026--maker-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/galaxyko2026-maker) | [![GitHub](https://img.shields.io/badge/unmiii-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/unmiii) | [![GitHub](https://img.shields.io/badge/dltpgml1112-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/dltpgml1112) |
 
 ---
 
