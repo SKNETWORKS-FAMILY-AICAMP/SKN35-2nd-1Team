@@ -292,7 +292,7 @@ EDA 분석 근거는 [`reports/1) eda_report.md`](reports/1%29%20eda_report.md)�
 - **Precision**: 재정·학습 지원 리소스가 한정적이므로 오탐 비율도 함께 고려
 - **ROC-AUC**: 임계값과 무관한 전반적 분류 능력 확인 (일부 모델만 보고됨, 아래 표 참고)
 
-각 팀원이 개별적으로 모델링하며 서로 다른 threshold를 적용했기 때문에, 최종 후보 비교 시에는 **공통 threshold(0.5) 기준으로 재검증**하여 "모델 자체의 성능 차이"와 "threshold 설정 차이"를 분리했습니다 (LightGBM·Random Forest만 완료, 상세는 `[`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md)` 참고)
+각 팀원이 개별적으로 모델링하며 서로 다른 threshold를 적용했기 때문에, 최종 후보 비교 시에는 **공통 threshold(0.5) 기준으로 재검증**하여 "모델 자체의 성능 차이"와 "threshold 설정 차이"를 분리했습니다 (LightGBM·Random Forest만 완료, 상세는 [`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md) 참고)
 
 ```python
 from sklearn.metrics import classification_report
