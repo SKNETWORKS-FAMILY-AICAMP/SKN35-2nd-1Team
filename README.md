@@ -329,7 +329,7 @@ print(classification_report(y_test, pred))
 3. **거시경제 지표는 개인 단위 예측에 거의 무의미**: 실업률·물가상승률·GDP의 상관계수는 모두 0.05 미만입니다.
 4. **입학 성적 기반 조기 모니터링 규칙(A6) 신설**: Decision Tree(depth=1) 분기점(111.85점)을 기준으로 입학 성적 112점 이하 그룹의 실제 자퇴율이 53.4%(초과 그룹 28.8%)임을 확인했습니다. 단독 Recall은 22.2%로 낮아 즉시 위험 판정이 아닌 **입학 초기 모니터링 전용 규칙(priority=3)**으로 설계해, 기초학습 진단·신입생 튜터링 프로그램과 연결했습니다.
 5. **트리 기반 모델이 신경망보다 근소 우위**: 동일 데이터에서 LightGBM(Recall 0.8596)이 MLP(Recall 0.8421)보다 소폭 높아, 이 데이터 규모(약 4,400행)의 정형 데이터에서는 트리 기반 모델이 신경망보다 안정적으로 소수 클래스를 탐지한다는 비교 포인트를 확인했습니다.
-6. **맞춤 대응 전략**: 위 발견을 바탕으로 학업 부진형(이수율 저조)·재정 위기형(재정 위험 점수 高)·조기 이탈 신호형(1학기 0과목 등록)·배경 위험형(성인학습자 전형·고연령 입학 등)으로 위험 유형을 구분하고, 유형별로 서로 다른 교내 지원 프로그램을 연결하는 규칙 기반 추천 로직(`app/rules/recommendation_rules.py`, 총 13개 규칙: A1~A6·F1~F3·P1~P4)을 구성했습니다.
+6. **맞춤 대응 전략**: 위 발견을 바탕으로 학업 부진형(이수율 저조)·재정 위기형(재정 위험 점수 高)·조기 이탈 신호형(1학기 0과목 등록)·배경 위험형(성인학습자 전형·고연령 입학 등)으로 위험 유형을 구분하고, 유형별로 서로 다른 교내 지원 프로그램을 연결하는 규칙 기반 추천 로직(`app/rules/recommendation_rules.py`, 총 13개 규칙)을 구성했습니다.
 
 > > 모델별 상세 검증 절차는 `reports/` 안의 각 모델 리포트([`logistic_regression_report.md`](reports/logistic_regression_report.md), [`random_forest_report.md`](reports/random_forest_report.md), [`xgboost_report.md`](reports/xgboost_report.md), [`4) lightgbm_report.md`](reports/4%29%20lightgbm_report.md), [`mlp_report.md`](reports/mlp_report.md))를, 공통 threshold 재검증 과정은 [`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md)를 참고하세요.
 
