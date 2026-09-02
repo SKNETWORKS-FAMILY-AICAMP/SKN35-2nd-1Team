@@ -252,6 +252,7 @@ Streamlit 앱만 가볍게 실행하려면 `app/requirements.txt`로 별도 설�
 ## 7. 데이터 전처리
 
 원본 데이터(4,424행 × 37열, 결측치 0건, 중복행 0건)를 대상으로 전처리를 진행한 뒤, Train/Validation/Test 세 파일로 분리하여 저장합니다. 
+
 상세 근거는 [`reports/2) preprocessing_report.md`](reports/2%29%20preprocessing_report.md)를 따릅니다.
 
 ```
@@ -291,7 +292,7 @@ EDA 분석 근거는 [`reports/1) eda_report.md`](reports/1%29%20eda_report.md)�
 - **Precision**: 재정·학습 지원 리소스가 한정적이므로 오탐 비율도 함께 고려
 - **ROC-AUC**: 임계값과 무관한 전반적 분류 능력 확인 (일부 모델만 보고됨, 아래 표 참고)
 
-각 팀원이 개별적으로 모델링하며 서로 다른 threshold를 적용했기 때문에, 최종 후보 비교 시에는 **공통 threshold(0.5) 기준으로 재검증**하여 "모델 자체의 성능 차이"와 "threshold 설정 차이"를 분리했습니다 (LightGBM·Random Forest만 완료, 상세는 `reports/5) final_model_selection_report.md` 참고)
+각 팀원이 개별적으로 모델링하며 서로 다른 threshold를 적용했기 때문에, 최종 후보 비교 시에는 **공통 threshold(0.5) 기준으로 재검증**하여 "모델 자체의 성능 차이"와 "threshold 설정 차이"를 분리했습니다 (LightGBM·Random Forest만 완료, 상세는 `[`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md)` 참고)
 
 ```python
 from sklearn.metrics import classification_report
@@ -330,7 +331,7 @@ print(classification_report(y_test, pred))
 5. **트리 기반 모델이 신경망보다 근소 우위**: 동일 데이터에서 LightGBM(Recall 0.8596)이 MLP(Recall 0.8421)보다 소폭 높아, 이 데이터 규모(약 4,400행)의 정형 데이터에서는 트리 기반 모델이 신경망보다 안정적으로 소수 클래스를 탐지한다는 비교 포인트를 확인했습니다.
 6. **맞춤 대응 전략**: 위 발견을 바탕으로 학업 부진형(이수율 저조)·재정 위기형(재정 위험 점수 高)·조기 이탈 신호형(1학기 0과목 등록)·배경 위험형(성인학습자 전형·고연령 입학 등)으로 위험 유형을 구분하고, 유형별로 서로 다른 교내 지원 프로그램을 연결하는 규칙 기반 추천 로직(`app/rules/recommendation_rules.py`, 총 13개 규칙: A1~A6·F1~F3·P1~P4)을 구성했습니다.
 
-> 모델별 상세 검증 절차는 `reports/` 안의 각 모델 리포트(`logistic_regression_report.md`, `random_forest_report.md`, `xgboost_report.md`, `4) lightgbm_report.md`, `mlp_report.md`)를, 공통 threshold 재검증 과정은 [`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md)를 참고하세요.
+> > 모델별 상세 검증 절차는 `reports/` 안의 각 모델 리포트([`logistic_regression_report.md`](reports/logistic_regression_report.md), [`random_forest_report.md`](reports/random_forest_report.md), [`xgboost_report.md`](reports/xgboost_report.md), [`4) lightgbm_report.md`](reports/4%29%20lightgbm_report.md), [`mlp_report.md`](reports/mlp_report.md))를, 공통 threshold 재검증 과정은 [`reports/5) final_model_selection_report.md`](reports/5%29%20final_model_selection_report.md)를 참고하세요.
 
 ![LightGBM Feature Importance 상위 10개](reports/lightgbm_importance_top10.png)
 
