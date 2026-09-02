@@ -20,9 +20,7 @@
 - [8. 평가 지표](#8-평가-지표)
 - [9. 결과](#9-결과)
 - [10. Streamlit 서비스](#10-streamlit-서비스)
-- [11. Git 협업 규칙](#11-git-협업-규칙)
-- [12. 모델 및 데이터 파일 규칙](#12-모델-및-데이터-파일-규칙)
-- [13. 회고](#13-회고)
+- [11. 회고](#11-회고)
 
 ---
 
@@ -94,7 +92,7 @@ SKN35-2nd-1Team
 │   │   ├── dummy_predictor.py
 │   │   ├── followup.py
 │   │   ├── model_metrics.py
-│   │   ├── prediction_serive.py            # 실제 예측 처리
+│   │   ├── prediction_service.py           # 실제 예측 처리
 │   │   ├── predictor.py                    # 모델을 이용해 이탈 확률 예측
 │   │   └── roster.py                       # 학생 데이터 관리
 │   ├── tests/                              # unittest
@@ -197,7 +195,7 @@ SKN35-2nd-1Team
 | **웹 애플리케이션** | ![Streamlit](https://img.shields.io/badge/Streamlit-1.49-FF4B4B?logo=streamlit&logoColor=white) ![Plotly](https://img.shields.io/badge/Plotly-5.22-3F4F75?logo=plotly&logoColor=white) |
 | **협업** | ![Git](https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white) |
 
-세부 버전은 `requirements.txt`를 따르며, `scikit-learn`은 **1.9.0으로 고정**되어 있습니다. (전처리 파이프라인이 pickle(`preprocessor.joblib`)로 팀 전체에 공유되기 때문에, 버전 불일치 시 로드 오류/결과 불일치가 발생할 수 있어 정확히 고정했습니다.)
+세부 버전은 `requirements.txt`를 따르며, `scikit-learn`은 **1.9.0으로 고정**되어 있습니다.
 
 **루트 `requirements.txt`와 `app/requirements.txt`가 분리되어 있습니다:**
 - 루트: 모델링·노트북 환경용 (`tensorflow`, `jupyter` 포함, 무거움)
@@ -218,7 +216,10 @@ SKN35-2nd-1Team
 
 ```bash
 uv venv
-source .venv\Scripts\activate      # Mac은 .venv/bin/activate
+# Windows(Git Bash)
+source .venv/Scripts/activate
+# Mac/Linux
+source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
@@ -353,25 +354,7 @@ streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 
 ---
 
-## 11. Git 협업 규칙
-
-- 팀원별 개인 브랜치에서 작업 후 `main`으로 병합합니다.
-- 파일 단위가 아닌 **의미 단위**로 커밋을 분리합니다. (예: EDA 노트북 / EDA 리포트+그림 / 전처리 노트북 / 전처리 산출물을 각각 별도 커밋)
-- 여러 명이 동시에 다루는 바이너리 산출물(`preprocessor.joblib` 등)은 임의로 덮어쓰지 않고, 변경 시 팀에 공지합니다.
-
----
-
-## 12. 모델 및 데이터 파일 규칙
-
-- `data/raw/`의 원본 데이터는 절대 직접 수정하지 않습니다.
-- `models/preprocessor.joblib`은 Streamlit 등 후속 단계에서 동일한 변환을 재현하기 위한 목적으로 Git에 커밋합니다.
-- `scikit-learn`은 **1.9.0으로 고정**합니다 (`requirements.txt` 참고). 버전이 다르면 `preprocessor.joblib` 로드 시 호환성 경고/오류가 발생하거나, 동일 코드라도 결과가 미묘하게 달라질 수 있습니다.
-- 전처리 파이프라인이나 데이터 분할 방식이 변경되면 `train.csv` / `val.csv` / `test.csv` / `preprocessor.joblib`을 함께 재생성하여 팀 전체에 공지합니다.
-- `app/`은 `reports/`와 `models/`를 **읽기만 하고 쓰지 않습니다.** 팀원이 산출물을 정해진 경로(섹션 3 참고)에 두기만 하면 앱 코드 수정 없이 자동으로 반영됩니다.
-
----
-
-## 13. 회고
+## 11. 회고
 
 ### 👤 조현주 (PM · 모델링)
 팀장을 맡게되어 부담이 컸던 프로젝트였지만 팀원분들의 다양한 의견과 적극적인 진행으로 큰 사고없이 만족스러운 프로젝트를 마무리하게 되었습니다. 이번 프로젝트에서는 전체적인 흐름과 역할 분배하는데에 있어서 고민을 많이 하였고, 팀원마다 분배된 역할을 잘 해낼 수 있도록 뒤에서 이끌었습니다. 모델의 성능을 더 높이기 위한 노력들이 많이 담겨진 프로젝트였던 것 같습니다. 우리 팀원 모두 고생많았습니다🔥🔥🔥
