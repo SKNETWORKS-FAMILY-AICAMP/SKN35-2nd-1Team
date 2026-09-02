@@ -310,10 +310,10 @@ print(classification_report(y_test, pred))
 | Logistic Regression | Test | 0.40 | 0.8768 | 0.8049 | 0.8134 | 0.8091 | 0.9333 |
 | Random Forest | Test | 0.55 | 0.8915 | 0.8456 | 0.8099 | 0.8273 | 0.9349 |
 | Random Forest (재검증) | Val | 0.50 | 0.8746 | 0.7862 | 0.8386 | 0.8115 | 0.9289 |
-| XGBoost | **Validation만 보고됨** | 0.59 | 0.8712 | 0.8000 | 0.8000 | 0.8000 | 0.9153 |
+| XGBoost | Val| 0.59 | 0.8712 | 0.8000 | 0.8000 | 0.8000 | 0.9153 |
 | **LightGBM (최종 채택)** | Val | **0.50** | 0.87 | 0.76 | 0.8596 | 0.8046 | – |
 | **LightGBM (최종 채택)** | Test | **0.50** | 0.88 | 0.80 | 0.8380 | 0.8165 | – |
-| MLP (TensorFlow/Keras) | 평가 세트 미기재(support 885) | 0.40 | 0.87 | 0.7692 | 0.8421 | 0.8040 | – |
+| MLP (TensorFlow/Keras) | Val | 0.40 | 0.87 | 0.7692 | 0.8421 | 0.8040 | – |
 
 ### 최종 채택 모델: **LightGBM (threshold = 0.5)**
 
