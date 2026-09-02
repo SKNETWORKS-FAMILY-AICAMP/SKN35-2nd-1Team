@@ -343,7 +343,9 @@ print(classification_report(y_test, pred))
 streamlit run app/app.py   # 반드시 저장소 루트에서 실행
 ```
 
-기본 주소는 `http://localhost:8501` 입니다. 화면은 파일 하나당 하나로 분리되어 있어 여러 명이 동시에 다른 화면을 작업해도 충돌하지 않습니다.
+기본 주소: `http://localhost:8501`
+
+🖥️ site link 📎 https://skn35-2nd-1team-dropout.streamlit.app/
 
 | 화면 | 파일 | 내용 |
 |---|---|---|
